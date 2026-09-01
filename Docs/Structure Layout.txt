@@ -1,0 +1,65 @@
+InventStock/
+├── backend/
+│   ├── InventStock.sln
+│   ├── InventStock.Api/
+│   │   ├── Controllers/
+│   │   │   ├── PartsController.cs
+│   │   │   ├── SuppliersController.cs
+│   │   │   ├── CategoriesController.cs
+│   │   │   ├── StockMovementsController.cs
+│   │   │   └── AuthController.cs
+│   │   ├── Hubs/
+│   │   │   └── StockHub.cs
+│   │   ├── Program.cs
+│   │   ├── appsettings.json
+│   │   └── InventStock.Api.csproj
+│   │
+│   ├── InventStock.Application/
+│   │   ├── DTOs/
+│   │   │   ├── PartDto.cs
+│   │   │   └── StockMovementDto.cs
+│   │   ├── Interfaces/
+│   │   │   └── IPartService.cs
+│   │   ├── Services/
+│   │   │   └── PartService.cs
+│   │   └── InventStock.Application.csproj
+│   │
+│   ├── InventStock.Domain/
+│   │   ├── Entities/
+│   │   │   ├── Part.cs
+│   │   │   ├── Category.cs
+│   │   │   ├── Supplier.cs
+│   │   │   ├── StockMovement.cs
+│   │   │   └── ApplicationUser.cs
+│   │   ├── Enums/
+│   │   │   └── MovementType.cs
+│   │   └── InventStock.Domain.csproj
+│   │
+│   └── InventStock.Infrastructure/
+│       ├── Data/
+│       │   ├── AppDbContext.cs
+│       │   └── Migrations/
+│       ├── Repositories/
+│       │   └── PartRepository.cs
+│       └── InventStock.Infrastructure.csproj
+│
+├── frontend/
+│   ├── app/
+│   │   ├── (public)/
+│   │   │   └── catalog/page.tsx
+│   │   ├── (admin)/
+│   │   │   ├── dashboard/page.tsx
+│   │   │   └── parts/page.tsx
+│   │   ├── layout.tsx
+│   │   └── globals.css
+│   ├── components/
+│   │   ├── ui/
+│   │   └── parts/
+│   ├── lib/
+│   │   ├── api.ts          # fetch wrappers
+│   │   └── queryClient.ts  # TanStack Query setup
+│   ├── package.json
+│   └── tsconfig.json
+│
+├── .gitignore
+└── README.md
