@@ -1,0 +1,83 @@
+using InventStock.Application.Common.Models;
+
+namespace InventStock.Application.DTOs.Catalog;
+
+public sealed record PartDto
+{
+    public Guid Id { get; init; }
+
+    public string PartNumber { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public string? Description { get; init; }
+
+    public Guid CategoryId { get; init; }
+
+    public string CategoryName { get; init; } = string.Empty;
+
+    public Guid? SupplierId { get; init; }
+
+    public string? SupplierName { get; init; }
+
+    public decimal UnitPrice { get; init; }
+
+    public int LowStockThreshold { get; init; }
+
+    public string? Barcode { get; init; }
+
+    public bool IsActive { get; init; }
+
+    public int QuantityOnHand { get; init; }
+
+    public DateTime CreatedAtUtc { get; init; }
+
+    public bool IsLowStock => QuantityOnHand <= LowStockThreshold;
+
+    public decimal StockValue => QuantityOnHand * UnitPrice;
+}
+
+public sealed record SavePartRequest
+{
+    public string PartNumber { get; init; } = string.Empty;
+
+    public string Name { get; init; } = string.Empty;
+
+    public string? Description { get; init; }
+
+    public Guid CategoryId { get; init; }
+
+    public Guid? SupplierId { get; init; }
+
+    public decimal UnitPrice { get; init; }
+
+    public int LowStockThreshold { get; init; }
+
+    public string? Barcode { get; init; }
+}
+
+public enum PartSortField
+{
+    PartNumber = 0,
+    Name = 1,
+    UnitPrice = 2,
+    QuantityOnHand = 3,
+    CreatedAtUtc = 4
+}
+
+public sealed class PartQuery : PagedQuery
+{
+    public string? Search { get; set; }
+
+    public Guid? CategoryId { get; set; }
+
+    public Guid? SupplierId { get; set; }
+
+    public bool LowStockOnly { get; set; }
+
+    public bool IncludeInactive { get; set; }
+
+    public PartSortField SortBy { get; set; } = PartSortField.PartNumber;
+
+    public bool SortDescending { get; set; }
+}
