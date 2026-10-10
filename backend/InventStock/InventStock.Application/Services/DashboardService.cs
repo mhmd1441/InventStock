@@ -23,6 +23,21 @@ public sealed class DashboardService : IDashboardService
         _parts = parts;
     }
 
+    public async Task<CounterDashboardDto> GetCounterSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var totals = await _statistics.GetInventoryTotalsAsync(cancellationToken, includePrivate: false);
+        return new CounterDashboardDto
+        {
+            TotalParts = totals.TotalParts,
+            ActiveParts = totals.ActiveParts,
+            LowStockCount = totals.LowStockCount,
+            TotalCategories = totals.TotalCategories,
+            TotalStockUnits = totals.TotalStockUnits,
+            RecentMovements = await _movements.GetRecentAsync(RecentMovementCount, cancellationToken),
+            LowStockParts = await _parts.GetCounterLowStockAsync(LowStockPreviewCount, cancellationToken)
+        };
+    }
+
     public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
         var totals = await _statistics.GetInventoryTotalsAsync(cancellationToken);

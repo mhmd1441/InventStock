@@ -23,7 +23,7 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString, npgsql =>
             {
                 npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
-                npgsql.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+                // Explicit business transactions must not be replayed without idempotency.
             }));
 
         services.AddIdentityCore(configuration);
@@ -44,6 +44,7 @@ public static class DependencyInjection
 
         services.AddSingleton<ITokenService, TokenService>();
         services.AddScoped<IIdentityService, IdentityService>();
+        services.AddScoped<IReferenceService, ReferenceService>();
         services.AddScoped<DatabaseSeeder>();
 
         return services;

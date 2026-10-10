@@ -45,6 +45,9 @@ public class PostgresModelTests
         Assert.Contains("IX_Parts_PartNumber", script);
         Assert.Contains("IX_RefreshTokens_TokenHash", script);
         Assert.Contains("timestamp with time zone", script);
+        Assert.Contains("pg_trgm", script);
+        Assert.Contains("gin_trgm_ops", script);
+        Assert.Contains("GENERATED ALWAYS AS", script);
     }
 
     [Fact]

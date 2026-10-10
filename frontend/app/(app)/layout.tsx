@@ -12,7 +12,7 @@ const navigation = [
   { href: "/parts", label: "Parts", adminOnly: false },
   { href: "/movements", label: "Movements", adminOnly: false },
   { href: "/categories", label: "Categories", adminOnly: false },
-  { href: "/suppliers", label: "Suppliers", adminOnly: false },
+  { href: "/suppliers", label: "Suppliers", adminOnly: true },
   { href: "/users", label: "Users", adminOnly: true },
 ];
 

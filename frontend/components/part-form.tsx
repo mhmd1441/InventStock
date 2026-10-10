@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
 import { useCategories, useSavePart, useSuppliers } from "@/lib/queries";
-import type { Part } from "@/lib/types";
+import type { AdminPart } from "@/lib/types";
 import {
   Alert,
   Button,
@@ -18,6 +18,8 @@ import {
 } from "./ui";
 
 const schema = z.object({
+  brand: z.string().max(80),
+  variant: z.string().max(120),
   partNumber: z
     .string()
     .min(1, "Part number is required")
@@ -41,7 +43,7 @@ export function PartFormModal({
   part,
   onClose,
 }: {
-  part: Part | null;
+  part: AdminPart | null;
   onClose: () => void;
 }) {
   const { data: categories } = useCategories();
@@ -57,6 +59,8 @@ export function PartFormModal({
     resolver: zodResolver(schema),
     defaultValues: {
       partNumber: part?.partNumber ?? "",
+      brand: part?.brand ?? "",
+      variant: part?.variant ?? "",
       name: part?.name ?? "",
       description: part?.description ?? "",
       categoryId: part?.categoryId ?? "",
@@ -73,6 +77,8 @@ export function PartFormModal({
     try {
       await save.mutateAsync({
         partNumber: values.partNumber,
+        brand: values.brand,
+        variant: values.variant,
         name: values.name,
         description: values.description || null,
         categoryId: values.categoryId,
@@ -111,6 +117,15 @@ export function PartFormModal({
           <Input {...register("name")} placeholder="Front brake pad set" />
         </Field>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Brand" error={errors.brand?.message} hint="Example: FEBI or Bosch">
+            <Input {...register("brand")} />
+          </Field>
+          <Field label="Variant" error={errors.variant?.message} hint="Example: includes seal; keep different products separate">
+            <Input {...register("variant")} />
+          </Field>
+        </div>
+
         <Field label="Description" error={errors.description?.message}>
           <Textarea rows={2} {...register("description")} />
         </Field>
@@ -140,7 +155,7 @@ export function PartFormModal({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Unit price" error={errors.unitPrice?.message}>
+          <Field label="Purchase cost (USD)" error={errors.unitPrice?.message}>
             <Input type="number" step="0.01" min="0" {...register("unitPrice")} />
           </Field>
 

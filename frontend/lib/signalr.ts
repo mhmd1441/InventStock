@@ -66,7 +66,10 @@ export function useStockFeed({ enabled, onStockChanged }: UseStockFeedOptions) {
       });
 
       connection.onreconnecting(() => setStatus("connecting"));
-      connection.onreconnected(() => setStatus("live"));
+      connection.onreconnected(() => {
+        setStatus("live");
+        void invalidateStockViews(queryClient);
+      });
       connection.onclose(() => setStatus("offline"));
 
       // Held so teardown can wait for negotiation to settle. Calling stop() while the handshake is

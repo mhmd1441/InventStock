@@ -26,6 +26,23 @@ public sealed class PartService : IPartService
         _unitOfWork = unitOfWork;
     }
 
+    public Task<PagedResult<CounterPartDto>> SearchCounterAsync(PartQuery query, CancellationToken cancellationToken = default)
+    {
+        if (query.SupplierId.HasValue || query.SortBy == PartSortField.UnitPrice)
+            throw new ConflictException("Supplier filters and purchase-cost sorting require the administration catalogue.");
+        return _parts.SearchCounterAsync(query, cancellationToken);
+    }
+
+    public async Task<CounterPartDto> GetCounterAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _parts.GetCounterAsync(id, cancellationToken) ?? throw new NotFoundException("Part", id);
+
+    public async Task<CounterPartDto> GetCounterByNumberAsync(string number, CancellationToken cancellationToken = default) =>
+        await _parts.GetCounterByNumberAsync(Part.NormalizePartNumber(number), cancellationToken)
+        ?? throw new NotFoundException("Part was not found.");
+
+    public Task<IReadOnlyList<CounterPartDto>> GetCounterLowStockAsync(int limit, CancellationToken cancellationToken = default) =>
+        _parts.GetCounterLowStockAsync(Math.Clamp(limit, 1, 100), cancellationToken);
+
     public Task<PagedResult<PartDto>> SearchAsync(PartQuery query, CancellationToken cancellationToken = default) =>
         _parts.SearchAsync(query, cancellationToken);
 
@@ -43,12 +60,12 @@ public sealed class PartService : IPartService
     }
 
     public Task<IReadOnlyList<PartDto>> GetLowStockAsync(int limit, CancellationToken cancellationToken = default) =>
-        _parts.GetLowStockAsync(limit <= 0 ? 10 : limit, cancellationToken);
+        _parts.GetLowStockAsync(Math.Clamp(limit, 1, 100), cancellationToken);
 
     public async Task<PartDto> CreateAsync(SavePartRequest request, CancellationToken cancellationToken = default)
     {
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
-        await EnsurePartNumberIsFreeAsync(partNumber, null, cancellationToken);
+        await EnsurePartNumberIsFreeAsync(partNumber, null, cancellationToken, request.Brand, request.Variant);
         await EnsureBarcodeIsFreeAsync(request.Barcode, null, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
@@ -62,6 +79,7 @@ public sealed class PartService : IPartService
             request.LowStockThreshold,
             request.Barcode);
 
+        part.SetIdentity(request.Brand, request.Variant);
         await _parts.AddAsync(part, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -74,10 +92,11 @@ public sealed class PartService : IPartService
                    ?? throw new NotFoundException("Part", id);
 
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
-        await EnsurePartNumberIsFreeAsync(partNumber, id, cancellationToken);
+        await EnsurePartNumberIsFreeAsync(partNumber, id, cancellationToken, request.Brand, request.Variant);
         await EnsureBarcodeIsFreeAsync(request.Barcode, id, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
+        part.SetIdentity(request.Brand, request.Variant);
         part.Update(
             partNumber,
             request.Name,
@@ -110,9 +129,9 @@ public sealed class PartService : IPartService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task EnsurePartNumberIsFreeAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken)
+    private async Task EnsurePartNumberIsFreeAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken, string? brand, string? variant)
     {
-        if (await _parts.PartNumberExistsAsync(partNumber, excludeId, cancellationToken))
+        if (await _parts.PartNumberExistsAsync(partNumber, excludeId, cancellationToken, brand?.Trim().ToUpperInvariant() ?? "", variant?.Trim().ToUpperInvariant() ?? ""))
         {
             throw new ConflictException($"Part number '{partNumber}' is already in use.");
         }

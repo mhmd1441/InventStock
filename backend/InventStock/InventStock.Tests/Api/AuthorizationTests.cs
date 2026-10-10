@@ -175,7 +175,8 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         var response = await client.PostAsJsonAsync($"/api/parts/{part.Id}/stock/out", new StockOutRequest
         {
-            Quantity = part.QuantityOnHand + 1_000
+            Quantity = part.QuantityOnHand + 1_000,
+            Reason = "Oversell test"
         });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

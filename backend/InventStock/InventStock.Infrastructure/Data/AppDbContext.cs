@@ -31,6 +31,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.HasPostgresExtension("pg_trgm");
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 
@@ -48,6 +49,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     private void ApplyAuditInformation()
     {
+        if (ChangeTracker.Entries<ReferenceLinkEvent>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Reference audit events cannot be edited or deleted.");
         var now = DateTime.UtcNow;
         var userId = _currentUser?.UserId;
 

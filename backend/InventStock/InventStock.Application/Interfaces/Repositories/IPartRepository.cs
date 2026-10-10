@@ -6,6 +6,14 @@ namespace InventStock.Application.Interfaces.Repositories;
 
 public interface IPartRepository
 {
+    Task<PagedResult<CounterPartDto>> SearchCounterAsync(PartQuery query, CancellationToken cancellationToken = default);
+
+    Task<CounterPartDto?> GetCounterAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<CounterPartDto?> GetCounterByNumberAsync(string number, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CounterPartDto>> GetCounterLowStockAsync(int limit, CancellationToken cancellationToken = default);
+
     Task<Part?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<PartDto?> GetDtoByIdAsync(Guid id, CancellationToken cancellationToken = default);
@@ -16,7 +24,7 @@ public interface IPartRepository
 
     Task<IReadOnlyList<PartDto>> GetLowStockAsync(int limit, CancellationToken cancellationToken = default);
 
-    Task<bool> PartNumberExistsAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken = default);
+    Task<bool> PartNumberExistsAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken = default, string brand = "", string variant = "");
 
     Task<bool> BarcodeExistsAsync(string barcode, Guid? excludeId, CancellationToken cancellationToken = default);
 

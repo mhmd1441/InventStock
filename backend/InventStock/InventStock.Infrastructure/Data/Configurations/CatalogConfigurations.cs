@@ -60,13 +60,23 @@ public sealed class PartConfiguration : IEntityTypeConfiguration<Part>
             .HasMaxLength(Part.PartNumberMaxLength);
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(Part.NameMaxLength);
+        builder.Property(x => x.Brand).HasMaxLength(80).HasDefaultValue("").IsRequired();
+        builder.Property(x => x.Variant).HasMaxLength(120).HasDefaultValue("").IsRequired();
+        builder.Property(x => x.SearchNumber)
+            .HasComputedColumnSql("upper(replace(replace(\"PartNumber\", ' ', ''), '-', ''))", stored: true);
+        builder.Property(x => x.SearchName)
+            .HasComputedColumnSql("upper(\"Name\")", stored: true);
+        builder.HasIndex(x => x.SearchNumber).HasDatabaseName("IX_Parts_SearchNumber_Exact");
+        builder.HasIndex(x => x.SearchNumber, "IX_Parts_SearchNumber_Trigram")
+            .HasMethod("gin").HasOperators("gin_trgm_ops");
+        builder.HasIndex(x => x.SearchName).HasMethod("gin").HasOperators("gin_trgm_ops");
         builder.Property(x => x.Description).HasMaxLength(Part.DescriptionMaxLength);
         builder.Property(x => x.Barcode).HasMaxLength(Part.BarcodeMaxLength);
         builder.Property(x => x.UnitPrice).HasPrecision(18, 2);
         builder.Property(x => x.LowStockThreshold).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
 
-        builder.HasIndex(x => x.PartNumber).IsUnique();
+        builder.HasIndex(x => new { x.PartNumber, x.Brand, x.Variant }).IsUnique();
         builder.HasIndex(x => x.Barcode).IsUnique().HasFilter(null);
         builder.HasIndex(x => x.CategoryId);
         builder.HasIndex(x => x.SupplierId);

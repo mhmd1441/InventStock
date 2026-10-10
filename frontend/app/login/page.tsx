@@ -80,8 +80,8 @@ export default function LoginPage() {
             />
           </Field>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? "Signing in…" : "Sign in"}
+          <Button type="submit" className="w-full" disabled={isSubmitting || status === "loading"}>
+            {status === "loading" ? "Checking session…" : isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
       </div>

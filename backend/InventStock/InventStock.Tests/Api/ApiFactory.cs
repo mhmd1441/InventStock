@@ -25,6 +25,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public const string StaffPassword = "St@ffPassw0rd2026";
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
+    private readonly Dictionary<string, string> _tokens = new();
+    private readonly SemaphoreSlim _loginLock = new(1, 1);
 
     public ApiFactory()
     {
@@ -102,17 +104,26 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public async Task<HttpClient> CreateClientForAsync(string email, string password)
     {
         var client = CreateClient();
-        var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+        // Reuse a test user's session for authorization checks. The real login/rate-limit
+        // middleware remains enabled; testing many routes must not consume a login per route.
+        await _loginLock.WaitAsync();
+        try
         {
-            Email = email,
-            Password = password
-        });
-
-        response.EnsureSuccessStatusCode();
-
-        var auth = await response.Content.ReadFromJsonAsync<AuthResult>();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
-
+            if (!_tokens.TryGetValue(email, out var token))
+            {
+                using var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest
+                {
+                    Email = email,
+                    Password = password
+                });
+                response.EnsureSuccessStatusCode();
+                var auth = await response.Content.ReadFromJsonAsync<AuthResult>();
+                token = auth!.AccessToken;
+                _tokens[email] = token;
+            }
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
+        finally { _loginLock.Release(); }
         return client;
     }
 

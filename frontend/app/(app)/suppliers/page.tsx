@@ -133,6 +133,8 @@ export default function SuppliersPage() {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [creating, setCreating] = useState(false);
 
+  if (!isAdmin) return <Alert>Supplier information is available to administrators only.</Alert>;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

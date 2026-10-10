@@ -20,7 +20,77 @@ namespace InventStock.Infrastructure.Data.Migrations
                 .HasAnnotation("ProductVersion", "8.0.11")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CatalogueReference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IdentityKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Issuer")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("MatchValue")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SearchValue")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchValue")
+                        .HasDatabaseName("IX_CatalogueReferences_MatchValue_Exact");
+
+                    b.HasIndex("SearchValue");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchValue"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("SearchValue"), new[] { "gin_trgm_ops" });
+
+                    b.HasIndex("Kind", "Issuer", "IdentityKey")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "MatchValue" }, "IX_CatalogueReferences_MatchValue_Trigram");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "MatchValue" }, "IX_CatalogueReferences_MatchValue_Trigram"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "MatchValue" }, "IX_CatalogueReferences_MatchValue_Trigram"), new[] { "gin_trgm_ops" });
+
+                    b.ToTable("CatalogueReferences", (string)null);
+                });
 
             modelBuilder.Entity("InventStock.Domain.Entities.Category", b =>
                 {
@@ -67,6 +137,13 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("Brand")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasDefaultValue("");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -96,6 +173,18 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("SearchName")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("upper(\"Name\")", true);
+
+                    b.Property<string>("SearchNumber")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("upper(replace(replace(\"PartNumber\", ' ', ''), '-', ''))", true);
+
                     b.Property<Guid?>("SupplierId")
                         .HasColumnType("uuid");
 
@@ -109,6 +198,13 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid?>("UpdatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Variant")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasDefaultValue("");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Barcode")
@@ -116,12 +212,92 @@ namespace InventStock.Infrastructure.Data.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.HasIndex("PartNumber")
-                        .IsUnique();
+                    b.HasIndex("SearchName");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchName"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("SearchName"), new[] { "gin_trgm_ops" });
+
+                    b.HasIndex("SearchNumber")
+                        .HasDatabaseName("IX_Parts_SearchNumber_Exact");
 
                     b.HasIndex("SupplierId");
 
+                    b.HasIndex("PartNumber", "Brand", "Variant")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram"), new[] { "gin_trgm_ops" });
+
                     b.ToTable("Parts", (string)null);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.ReferenceLinkEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId", "ReferenceId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("ReferenceLinkEvents", (string)null);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SkuReference", b =>
+                {
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("LinkedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LinkedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.HasKey("PartId", "ReferenceId");
+
+                    b.HasIndex("ReferenceId", "PartId");
+
+                    b.ToTable("SkuReferences", (string)null);
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.StockMovement", b =>
@@ -500,6 +676,34 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Navigation("Supplier");
                 });
 
+            modelBuilder.Entity("InventStock.Domain.Entities.ReferenceLinkEvent", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.SkuReference", null)
+                        .WithMany()
+                        .HasForeignKey("PartId", "ReferenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SkuReference", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Part", "Part")
+                        .WithMany("References")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.CatalogueReference", "Reference")
+                        .WithMany()
+                        .HasForeignKey("ReferenceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Reference");
+                });
+
             modelBuilder.Entity("InventStock.Domain.Entities.StockMovement", b =>
                 {
                     b.HasOne("InventStock.Domain.Entities.Part", "Part")
@@ -581,6 +785,8 @@ namespace InventStock.Infrastructure.Data.Migrations
             modelBuilder.Entity("InventStock.Domain.Entities.Part", b =>
                 {
                     b.Navigation("Movements");
+
+                    b.Navigation("References");
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.Supplier", b =>

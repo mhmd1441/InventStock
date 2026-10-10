@@ -46,6 +46,8 @@ public class StockMovement : AuditableEntity
 
     public static StockMovement StockOut(Guid partId, int quantity, Guid performedByUserId, string? reason, string? reference)
     {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new DomainException("A reason is required for raw stock-out. This movement does not record a sale or payment.");
         if (quantity <= 0)
         {
             throw new DomainException("Stock-out quantity must be greater than zero.");

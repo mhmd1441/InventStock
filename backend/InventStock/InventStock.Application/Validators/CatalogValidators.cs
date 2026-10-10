@@ -45,6 +45,8 @@ public sealed class SavePartRequestValidator : AbstractValidator<SavePartRequest
 {
     public SavePartRequestValidator()
     {
+        RuleFor(x => x.Brand).MaximumLength(80);
+        RuleFor(x => x.Variant).MaximumLength(120);
         RuleFor(x => x.PartNumber)
             .NotEmpty()
             .MaximumLength(Part.PartNumberMaxLength)

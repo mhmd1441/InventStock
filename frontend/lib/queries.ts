@@ -7,6 +7,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { api } from "./api";
+import { useAuth } from "./auth";
 import type {
   Category,
   DashboardSummary,
@@ -46,18 +47,23 @@ export function invalidateStockViews(client: QueryClient) {
 }
 
 export function useDashboard() {
+  const { isAdmin } = useAuth();
   return useQuery({
-    queryKey: queryKeys.dashboard,
-    queryFn: () => api.get<DashboardSummary>("/api/dashboard"),
+    queryKey: [...queryKeys.dashboard, isAdmin],
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) => api.get<DashboardSummary>(isAdmin ? "/api/admin/dashboard" : "/api/dashboard", undefined, signal),
   });
 }
 
 export function useParts(query: PartQuery) {
+  const { isAdmin } = useAuth();
   return useQuery({
-    queryKey: queryKeys.parts(query),
-    queryFn: () =>
-      api.get<PagedResult<Part>>("/api/parts", {
+    queryKey: [...queryKeys.parts(query), isAdmin],
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) =>
+      api.get<PagedResult<Part>>(isAdmin ? "/api/admin/parts" : "/api/parts", {
         search: query.search,
+        searchMode: query.searchMode,
         categoryId: query.categoryId,
         supplierId: query.supplierId,
         lowStockOnly: query.lowStockOnly,
@@ -66,15 +72,17 @@ export function useParts(query: PartQuery) {
         sortDescending: query.sortDescending,
         page: query.page,
         pageSize: query.pageSize,
-      }),
+      }, signal),
     placeholderData: (previous) => previous,
   });
 }
 
 export function usePart(id: string) {
+  const { isAdmin } = useAuth();
   return useQuery({
-    queryKey: queryKeys.part(id),
-    queryFn: () => api.get<Part>(`/api/parts/${id}`),
+    queryKey: [...queryKeys.part(id), isAdmin],
+    refetchInterval: 30_000,
+    queryFn: ({ signal }) => api.get<Part>(`${isAdmin ? "/api/admin/parts" : "/api/parts"}/${id}`, undefined, signal),
   });
 }
 
@@ -110,10 +118,12 @@ export function useCategories() {
 }
 
 export function useSuppliers(includeInactive = false) {
+  const { isAdmin } = useAuth();
   return useQuery({
+    enabled: isAdmin,
     queryKey: queryKeys.suppliers(includeInactive),
-    queryFn: () =>
-      api.get<Supplier[]>("/api/suppliers", { includeInactive }),
+    queryFn: ({ signal }) =>
+      api.get<Supplier[]>("/api/suppliers", { includeInactive }, signal),
   });
 }
 

@@ -10,6 +10,10 @@ public sealed record PartDto
 
     public string Name { get; init; } = string.Empty;
 
+    public string Brand { get; init; } = string.Empty;
+
+    public string Variant { get; init; } = string.Empty;
+
     public string? Description { get; init; }
 
     public Guid CategoryId { get; init; }
@@ -39,6 +43,10 @@ public sealed record PartDto
 
 public sealed record SavePartRequest
 {
+    public string? Brand { get; init; }
+
+    public string? Variant { get; init; }
+
     public string PartNumber { get; init; } = string.Empty;
 
     public string Name { get; init; } = string.Empty;
@@ -69,6 +77,8 @@ public sealed class PartQuery : PagedQuery
 {
     public string? Search { get; set; }
 
+    public PartSearchMode SearchMode { get; set; } = PartSearchMode.Auto;
+
     public Guid? CategoryId { get; set; }
 
     public Guid? SupplierId { get; set; }
@@ -81,3 +91,5 @@ public sealed class PartQuery : PagedQuery
 
     public bool SortDescending { get; set; }
 }
+
+public enum PartSearchMode { Auto, Exact, Prefix, Suffix, Contains }

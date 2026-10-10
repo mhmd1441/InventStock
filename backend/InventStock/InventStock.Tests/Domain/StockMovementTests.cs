@@ -84,7 +84,7 @@ public class StockMovementTests
         var movements = new[]
         {
             StockMovement.StockIn(PartId, 20, UserId, null, null),
-            StockMovement.StockOut(PartId, 5, UserId, null, null),
+            StockMovement.StockOut(PartId, 5, UserId, "Workshop issue", null),
             StockMovement.Adjustment(PartId, -2, UserId, "Damaged", null)
         };
 

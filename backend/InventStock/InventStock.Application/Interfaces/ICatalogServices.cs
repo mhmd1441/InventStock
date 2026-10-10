@@ -31,6 +31,14 @@ public interface ISupplierService
 
 public interface IPartService
 {
+    Task<PagedResult<CounterPartDto>> SearchCounterAsync(PartQuery query, CancellationToken cancellationToken = default);
+
+    Task<CounterPartDto> GetCounterAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<CounterPartDto> GetCounterByNumberAsync(string number, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CounterPartDto>> GetCounterLowStockAsync(int limit, CancellationToken cancellationToken = default);
+
     Task<PagedResult<PartDto>> SearchAsync(PartQuery query, CancellationToken cancellationToken = default);
 
     Task<PartDto> GetAsync(Guid id, CancellationToken cancellationToken = default);

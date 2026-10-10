@@ -1,5 +1,9 @@
 # InventStock
 
+> **Shop-development plan:** [Reviewed production design](Docs/Production-Design.md) records the
+> owner's workflow, the code-risk review, pending business rules, and the implementation gates.
+> It describes planned capabilities; the current application below is still the inventory baseline.
+
 Inventory and parts management for an automotive parts business: a normalized catalogue of parts,
 categories and suppliers, an append-only stock ledger with a full audit trail, role-based access
 control, and live stock updates pushed to connected clients.
@@ -166,6 +170,25 @@ SQLite fails in the test suite rather than on deployment.
 
 ## Database migrations
 
+Catalogue update (10 October 2026): counter responses omit purchase costs and suppliers; admin
+reads use `/api/admin/parts` and `/api/admin/dashboard`. Parts now have brand/variant identity and
+public many-to-many references. `~/12582` searches number endings; Exact/Prefix/Suffix/Contains
+modes are also available. MercedesOE references support their explicit optional-A match rule.
+
+New migrations `CatalogueSearchKeys` and `SkuReferences` were verified on disposable PostgreSQL,
+not applied to the configured shop database. Back up and review before applying. `pg_trgm` must
+be available to the migration role. Downgrading after adding multiple brands for one number may
+fail the old unique-number constraint; use a reviewed restore/migration plan, not a blind downgrade.
+
+Optional real PostgreSQL regression tests require `INVENTSTOCK_TEST_POSTGRES` pointing to a
+**disposable database named `inventstock_test`**. Tests create and remove a random isolated schema.
+Never point this at business data. The benchmark seeds 20,000 parts, 20,000 references and 100,000
+movements. On the development machine warm search p95 was approximately 12–27 ms and stock-quantity
+sorting 108 ms; these are repository timings, not end-to-end performance guarantees.
+
+Frontend verification: `npm run test:client`, `npm run lint`, `npx tsc --noEmit`, and
+`npx next build --webpack`. The client tests cover session switching, refresh races and cancellation.
+
 ```bash
 cd backend/InventStock
 dotnet dotnet-ef migrations add <Name> --project InventStock.Infrastructure --startup-project InventStock.Api --output-dir Data/Migrations
@@ -182,6 +205,10 @@ The EF tool is pinned in `.config/dotnet-tools.json`; run `dotnet tool restore` 
 | `GET` | `/api/auth/me` | any |
 | `POST` | `/api/auth/change-password` | any |
 | `GET` | `/api/dashboard` | any |
+| `GET` | `/api/admin/dashboard`, `/api/admin/parts` (including detail/by-number/low-stock) | Admin |
+| `GET` | `/api/suppliers`, `/api/suppliers/{id}` | Admin |
+| `GET` | `/api/parts/{id}/references` | any |
+| `POST` | `/api/parts/{id}/references` | Admin |
 | `GET` | `/api/parts`, `/api/parts/{id}`, `/api/parts/by-number/{n}`, `/api/parts/low-stock` | any |
 | `GET` | `/api/parts/{id}/movements`, `/api/stock-movements` | any |
 | `POST` | `/api/parts/{id}/stock/in`, `/api/parts/{id}/stock/out` | any |

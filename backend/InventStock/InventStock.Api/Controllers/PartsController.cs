@@ -23,30 +23,30 @@ public sealed class PartsController : ControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType(typeof(PagedResult<PartDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<PartDto>>> Search(
+    [ProducesResponseType(typeof(PagedResult<CounterPartDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<PagedResult<CounterPartDto>>> Search(
         [FromQuery] PartQuery query,
         CancellationToken cancellationToken) =>
-        Ok(await _parts.SearchAsync(query, cancellationToken));
+        Ok(await _parts.SearchCounterAsync(query, cancellationToken));
 
     [HttpGet("low-stock")]
-    [ProducesResponseType(typeof(IReadOnlyList<PartDto>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IReadOnlyList<PartDto>>> LowStock(
+    [ProducesResponseType(typeof(IReadOnlyList<CounterPartDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<CounterPartDto>>> LowStock(
         [FromQuery] int limit = 20,
         CancellationToken cancellationToken = default) =>
-        Ok(await _parts.GetLowStockAsync(limit, cancellationToken));
+        Ok(await _parts.GetCounterLowStockAsync(limit, cancellationToken));
 
     [HttpGet("by-number/{partNumber}")]
-    [ProducesResponseType(typeof(PartDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CounterPartDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PartDto>> GetByNumber(string partNumber, CancellationToken cancellationToken) =>
-        Ok(await _parts.GetByPartNumberAsync(partNumber, cancellationToken));
+    public async Task<ActionResult<CounterPartDto>> GetByNumber(string partNumber, CancellationToken cancellationToken) =>
+        Ok(await _parts.GetCounterByNumberAsync(partNumber, cancellationToken));
 
     [HttpGet("{id:guid}")]
-    [ProducesResponseType(typeof(PartDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(CounterPartDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PartDto>> Get(Guid id, CancellationToken cancellationToken) =>
-        Ok(await _parts.GetAsync(id, cancellationToken));
+    public async Task<ActionResult<CounterPartDto>> Get(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _parts.GetCounterAsync(id, cancellationToken));
 
     [HttpGet("{id:guid}/movements")]
     [ProducesResponseType(typeof(PagedResult<StockMovementDto>), StatusCodes.Status200OK)]

@@ -13,22 +13,22 @@ public sealed class StatisticsRepository : IStatisticsRepository
         _db = db;
     }
 
-    public async Task<InventoryTotals> GetInventoryTotalsAsync(CancellationToken cancellationToken = default)
+    public async Task<InventoryTotals> GetInventoryTotalsAsync(CancellationToken cancellationToken = default, bool includePrivate = true)
     {
         var totalParts = await _db.Parts.CountAsync(cancellationToken);
         var activeParts = await _db.Parts.CountAsync(p => p.IsActive, cancellationToken);
         var totalCategories = await _db.Categories.CountAsync(cancellationToken);
-        var totalSuppliers = await _db.Suppliers.CountAsync(cancellationToken);
+        var totalSuppliers = includePrivate ? await _db.Suppliers.CountAsync(cancellationToken) : 0;
 
         var totalStockUnits = await _db.StockMovements
             .SumAsync(m => (int?)m.QuantityChange, cancellationToken) ?? 0;
 
-        var totalStockValue = await _db.Parts
+        var totalStockValue = includePrivate ? await _db.Parts
             .Where(p => p.IsActive)
             .SumAsync(
                 p => (decimal?)((_db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)
                                 * p.UnitPrice),
-                cancellationToken) ?? 0m;
+                cancellationToken) ?? 0m : 0m;
 
         var lowStockCount = await _db.Parts
             .CountAsync(

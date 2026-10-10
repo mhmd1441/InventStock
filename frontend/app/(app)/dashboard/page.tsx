@@ -16,7 +16,7 @@ export default function DashboardPage() {
   const stats = [
     { label: "Active parts", value: formatNumber(data.activeParts) },
     { label: "Units in stock", value: formatNumber(data.totalStockUnits) },
-    { label: "Stock value", value: formatCurrency(data.totalStockValue) },
+    ...("totalStockValue" in data ? [{ label: "Stock value", value: formatCurrency(data.totalStockValue) }] : []),
     {
       label: "Needs reorder",
       value: formatNumber(data.lowStockCount),
@@ -30,7 +30,7 @@ export default function DashboardPage() {
         <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted">
           {formatNumber(data.totalCategories)} categories ·{" "}
-          {formatNumber(data.totalSuppliers)} suppliers ·{" "}
+          {"totalSuppliers" in data ? `${formatNumber(data.totalSuppliers)} suppliers · ` : ""}
           {formatNumber(data.totalParts)} parts on record
         </p>
       </div>

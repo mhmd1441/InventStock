@@ -8,7 +8,8 @@ namespace InventStock.Api.Controllers;
 
 [ApiController]
 [Route("api/suppliers")]
-[Authorize]
+[Authorize(Roles = RoleNames.Admin)]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _suppliers;

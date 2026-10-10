@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { usePart, usePartMovements, useSetPartActive } from "@/lib/queries";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { isAdminPart } from "@/lib/types";
 import {
   Alert,
   Badge,
@@ -17,6 +18,7 @@ import {
 import { MovementTable } from "@/components/movement-table";
 import { PartFormModal } from "@/components/part-form";
 import { StockMovementModal } from "@/components/stock-dialog";
+import { PartReferences } from "@/components/part-references";
 
 export default function PartDetailPage({
   params,
@@ -39,10 +41,14 @@ export default function PartDetailPage({
   if (!part) return null;
 
   const details = [
+    { label: "Brand", value: part.brand || "Not specified" },
+    { label: "Variant", value: part.variant || "—" },
     { label: "Category", value: part.categoryName },
-    { label: "Supplier", value: part.supplierName ?? "—" },
-    { label: "Unit price", value: formatCurrency(part.unitPrice) },
-    { label: "Stock value", value: formatCurrency(part.stockValue) },
+    ...(isAdmin && isAdminPart(part) ? [
+      { label: "Supplier", value: part.supplierName ?? "—" },
+      { label: "Purchase cost", value: formatCurrency(part.unitPrice) },
+      { label: "Stock value", value: formatCurrency(part.stockValue) },
+    ] : []),
     { label: "Reorder threshold", value: String(part.lowStockThreshold) },
     { label: "Barcode", value: part.barcode ?? "—" },
     { label: "Added", value: formatDateTime(part.createdAtUtc) },
@@ -120,6 +126,8 @@ export default function PartDetailPage({
         </Card>
       </div>
 
+      <PartReferences partId={id} />
+
       <Card title="Movement history">
         {movements.isLoading ? (
           <Spinner label="Loading history…" />
@@ -138,7 +146,7 @@ export default function PartDetailPage({
         )}
       </Card>
 
-      {editing && (
+      {editing && isAdmin && isAdminPart(part) && (
         <PartFormModal part={part} onClose={() => setEditing(false)} />
       )}
       {movement && (

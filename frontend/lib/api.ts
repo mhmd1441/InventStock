@@ -27,6 +27,17 @@ export class ApiError extends Error {
 let accessToken: string | null = null;
 let refreshInFlight: Promise<string | null> | null = null;
 let onSessionLost: (() => void) | null = null;
+let sessionVersion = 0;
+let sessionRequests = new AbortController();
+
+/** End the old request scope before another person can use this browser. */
+export function resetSession() {
+  sessionVersion += 1;
+  sessionRequests.abort();
+  sessionRequests = new AbortController();
+  accessToken = null;
+  refreshInFlight = null;
+}
 
 export function setAccessToken(token: string | null) {
   accessToken = token;
@@ -72,22 +83,26 @@ function buildUrl(path: string, query?: Record<string, unknown>) {
 }
 
 async function refreshAccessToken(): Promise<string | null> {
+  const version = sessionVersion;
   refreshInFlight ??= (async () => {
     try {
       const response = await fetch(buildUrl("/api/auth/refresh"), {
         method: "POST",
         credentials: "include",
+        signal: sessionRequests.signal,
+        cache: "no-store",
       });
 
       if (!response.ok) return null;
 
       const auth = (await response.json()) as AuthResult;
+      if (version !== sessionVersion) return null;
       accessToken = auth.accessToken;
       return auth.accessToken;
     } catch {
       return null;
     } finally {
-      refreshInFlight = null;
+      if (version === sessionVersion) refreshInFlight = null;
     }
   })();
 
@@ -95,6 +110,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 interface RequestOptions {
+  signal?: AbortSignal;
   method?: string;
   body?: unknown;
   query?: Record<string, unknown>;
@@ -104,12 +120,20 @@ interface RequestOptions {
 
 export async function apiFetch<T>(
   path: string,
-  { method = "GET", body, query, skipRefresh = false }: RequestOptions = {},
+  { method = "GET", body, query, skipRefresh = false, signal }: RequestOptions = {},
 ): Promise<T> {
+  const version = sessionVersion;
+  const requestSignal = signal ? AbortSignal.any([signal, sessionRequests.signal]) : sessionRequests.signal;
+  const assertCurrentSession = () => {
+    if (version !== sessionVersion || requestSignal.aborted)
+      throw new DOMException("Request belongs to an ended session.", "AbortError");
+  };
   const send = async (token: string | null) =>
     fetch(buildUrl(path, query), {
       method,
       credentials: "include",
+      signal: requestSignal,
+      cache: "no-store",
       headers: {
         ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -118,17 +142,20 @@ export async function apiFetch<T>(
     });
 
   let response = await send(accessToken);
+  assertCurrentSession();
 
   if (response.status === 401 && !skipRefresh) {
     const refreshed = await refreshAccessToken();
+    assertCurrentSession();
 
     if (!refreshed) {
-      accessToken = null;
+      resetSession();
       onSessionLost?.();
       throw await parseError(response);
     }
 
     response = await send(refreshed);
+    assertCurrentSession();
   }
 
   if (!response.ok) {
@@ -139,12 +166,14 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const result = (await response.json()) as T;
+  assertCurrentSession();
+  return result;
 }
 
 export const api = {
-  get: <T>(path: string, query?: Record<string, unknown>) =>
-    apiFetch<T>(path, { query }),
+  get: <T>(path: string, query?: Record<string, unknown>, signal?: AbortSignal) =>
+    apiFetch<T>(path, { query, signal }),
   post: <T>(path: string, body?: unknown) =>
     apiFetch<T>(path, { method: "POST", body }),
   put: <T>(path: string, body?: unknown) =>
@@ -155,6 +184,7 @@ export const api = {
 };
 
 export async function login(email: string, password: string) {
+  resetSession();
   const auth = await apiFetch<AuthResult>("/api/auth/login", {
     method: "POST",
     body: { email, password },
@@ -173,12 +203,14 @@ export async function restoreSession() {
 }
 
 export async function logout() {
+  resetSession();
+  const version = sessionVersion;
   try {
     await apiFetch<void>("/api/auth/logout", {
       method: "POST",
       skipRefresh: true,
     });
   } finally {
-    accessToken = null;
+    if (version === sessionVersion) resetSession();
   }
 }

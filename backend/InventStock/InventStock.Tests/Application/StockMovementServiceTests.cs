@@ -100,7 +100,7 @@ public class StockMovementServiceTests
         await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 5 });
 
         var exception = await Assert.ThrowsAsync<InsufficientStockException>(() =>
-            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 6 }));
+            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 6, Reason = "Workshop issue" }));
 
         Assert.Equal(5, exception.Available);
         Assert.Equal(6, exception.Requested);
@@ -113,7 +113,7 @@ public class StockMovementServiceTests
         await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 5 });
 
         await Assert.ThrowsAsync<InsufficientStockException>(() =>
-            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 99 }));
+            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 99, Reason = "Workshop issue" }));
 
         var movements = harness.Db.StockMovements.Count(m => m.PartId == harness.PartId);
         Assert.Equal(1, movements);
@@ -180,7 +180,7 @@ public class StockMovementServiceTests
         using var harness = new Harness(notifier, lowStockThreshold: 10);
 
         await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 12 });
-        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 4 });
+        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 4, Reason = "Workshop issue" });
 
         Assert.Equal(2, notifier.Notifications.Count);
 

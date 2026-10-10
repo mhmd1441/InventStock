@@ -50,8 +50,8 @@ export function StockMovementModal({
       return;
     }
 
-    if (mode === "Adjustment" && reason.trim() === "") {
-      setFormError("Adjustments require a reason so the audit trail stays useful.");
+    if (mode !== "In" && reason.trim() === "") {
+      setFormError("Stock-out and adjustments require a reason for the audit trail.");
       return;
     }
 
@@ -140,7 +140,7 @@ export function StockMovementModal({
 
         <Field
           label="Reason"
-          hint={mode === "Adjustment" ? "Required" : "Optional"}
+          hint={mode !== "In" ? "Required — public to shop users; do not enter supplier costs" : "Optional"}
         >
           <Input
             value={reason}
@@ -179,6 +179,7 @@ export function StockMovementModal({
             This would take stock below zero and will be rejected by the server.
           </Alert>
         )}
+        {mode === "Out" && <Alert tone="warning">Raw stock-out records inventory only, not a sale or payment.</Alert>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

@@ -66,10 +66,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await apiClient.logout();
     setUser(null);
-    setStatus("anonymous");
-    router.replace("/login");
+    setStatus("loading");
+    try {
+      await apiClient.logout();
+    } finally {
+      // Clear local identity even if cookie revocation could not reach the server.
+      setStatus("anonymous");
+      router.replace("/login");
+    }
   }, [router]);
 
   const value = useMemo<AuthState>(

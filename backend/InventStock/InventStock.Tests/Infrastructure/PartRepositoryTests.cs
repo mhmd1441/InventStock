@@ -25,7 +25,7 @@ public class PartRepositoryTests
         {
             context.Db.StockMovements.Add(quantity >= 0
                 ? StockMovement.StockIn(part.Id, quantity, userId, null, null)
-                : StockMovement.StockOut(part.Id, -quantity, userId, null, null));
+                : StockMovement.StockOut(part.Id, -quantity, userId, "Workshop issue", null));
         }
 
         await context.Db.SaveChangesAsync();

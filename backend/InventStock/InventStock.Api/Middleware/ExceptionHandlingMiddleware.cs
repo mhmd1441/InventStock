@@ -13,7 +13,6 @@ public sealed class ExceptionHandlingMiddleware
 
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
-    private readonly IHostEnvironment _environment;
 
     public ExceptionHandlingMiddleware(
         RequestDelegate next,
@@ -22,7 +21,6 @@ public sealed class ExceptionHandlingMiddleware
     {
         _next = next;
         _logger = logger;
-        _environment = environment;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -90,11 +88,11 @@ public sealed class ExceptionHandlingMiddleware
 
         OperationCanceledException => Build(ClientClosedRequest, "Request cancelled", "The request was cancelled."),
 
-        // Internal failures never leak their message to the caller outside development.
+        // Developer diagnostics belong in server logs, not an employee's API response.
         _ => Build(
             StatusCodes.Status500InternalServerError,
             "Unexpected error",
-            _environment.IsDevelopment() ? exception.ToString() : "An unexpected error occurred.")
+            "An unexpected error occurred.")
     };
 
     private static ValidationProblemDetails BuildValidationProblem(ValidationException exception)

@@ -11,5 +11,5 @@ public sealed record InventoryTotals(
 
 public interface IStatisticsRepository
 {
-    Task<InventoryTotals> GetInventoryTotalsAsync(CancellationToken cancellationToken = default);
+    Task<InventoryTotals> GetInventoryTotalsAsync(CancellationToken cancellationToken = default, bool includePrivate = true);
 }

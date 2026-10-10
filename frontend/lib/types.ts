@@ -44,23 +44,34 @@ export interface Supplier {
   partCount: number;
 }
 
-export interface Part {
+export interface CounterPart {
   id: string;
   partNumber: string;
+  brand: string;
+  variant: string;
   name: string;
   description: string | null;
   categoryId: string;
   categoryName: string;
-  supplierId: string | null;
-  supplierName: string | null;
-  unitPrice: number;
   lowStockThreshold: number;
   barcode: string | null;
   isActive: boolean;
   quantityOnHand: number;
   createdAtUtc: string;
   isLowStock: boolean;
+}
+
+export interface AdminPart extends CounterPart {
+  supplierId: string | null;
+  supplierName: string | null;
+  unitPrice: number;
   stockValue: number;
+}
+
+export type Part = CounterPart | AdminPart;
+
+export function isAdminPart(part: Part): part is AdminPart {
+  return "unitPrice" in part;
 }
 
 export interface StockMovement {
@@ -90,17 +101,24 @@ export interface StockChangedNotification {
   occurredAtUtc: string;
 }
 
-export interface DashboardSummary {
+export interface CounterDashboardSummary {
   totalParts: number;
   activeParts: number;
   lowStockCount: number;
   totalCategories: number;
-  totalSuppliers: number;
   totalStockUnits: number;
-  totalStockValue: number;
   recentMovements: StockMovement[];
   lowStockParts: Part[];
 }
+
+export interface AdminDashboardSummary extends CounterDashboardSummary {
+  totalSuppliers: number;
+  totalStockValue: number;
+}
+
+export type DashboardSummary = CounterDashboardSummary | AdminDashboardSummary;
+
+export type PartSearchMode = "Auto" | "Exact" | "Prefix" | "Suffix" | "Contains";
 
 export type PartSortField =
   | "PartNumber"
@@ -111,6 +129,7 @@ export type PartSortField =
 
 export interface PartQuery {
   search?: string;
+  searchMode?: PartSearchMode;
   categoryId?: string;
   supplierId?: string;
   lowStockOnly?: boolean;
@@ -123,6 +142,8 @@ export interface PartQuery {
 
 export interface SavePartRequest {
   partNumber: string;
+  brand?: string;
+  variant?: string;
   name: string;
   description?: string | null;
   categoryId: string;
