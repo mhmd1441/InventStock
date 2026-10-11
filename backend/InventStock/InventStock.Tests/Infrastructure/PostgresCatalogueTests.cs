@@ -35,7 +35,8 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
 
     public AppDbContext Open(params IInterceptor[] interceptors)
     {
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(_connectionString)
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(_connectionString,
+                npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", _schema))
             .AddInterceptors(interceptors).Options;
         return new AppDbContext(options);
     }
@@ -180,7 +181,7 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
             var service = new StockMovementService(new PartRepository(db), new StockMovementRepository(db),
                 new UnitOfWork(db), new TestCurrentUser(Guid.NewGuid()), Substitute.For<IStockNotifier>(),
                 NullLogger<StockMovementService>.Instance);
-            try { await service.StockOutAsync(part.Id, new() { Quantity = 1, Reason = "Race test" }); return true; }
+            try { await service.StockOutAsync(part.Id, new() { OperationId = Guid.NewGuid(), Quantity = 1, Reason = "Race test" }); return true; }
             catch (InsufficientStockException) { return false; }
         }
         var first = Sell();
@@ -203,5 +204,31 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
         Assert.Single(results, succeeded => succeeded);
         Assert.Equal(0, await new PartRepository(setup).GetQuantityOnHandAsync(part.Id));
         Assert.Equal(2, await setup.StockMovements.CountAsync(m => m.PartId == part.Id));
+    }
+
+    [PostgresFact]
+    public async Task ConcurrentDuplicateOperation_CommitsOneMovementAndReturnsSameOutcome()
+    {
+        await using var setup = fixture.Open();
+        var part = Part.Create("RETRY-" + Guid.NewGuid().ToString("N"), "Retry test", null, fixture.CategoryId, null, 1, 0, null);
+        setup.Parts.Add(part);
+        await setup.SaveChangesAsync();
+        var userId = Guid.NewGuid();
+        var operationId = Guid.NewGuid();
+
+        async Task<StockMovementDto> Submit()
+        {
+            await using var db = fixture.Open();
+            var service = new StockMovementService(new PartRepository(db), new StockMovementRepository(db),
+                new UnitOfWork(db), new TestCurrentUser(userId), Substitute.For<IStockNotifier>(),
+                NullLogger<StockMovementService>.Instance);
+            return await service.StockInAsync(part.Id, new() { OperationId = operationId, Quantity = 4, Reason = "Delivery" });
+        }
+
+        var results = await Task.WhenAll(Submit(), Submit());
+
+        Assert.Equal(results[0].Id, results[1].Id);
+        Assert.Equal(4, await new PartRepository(setup).GetQuantityOnHandAsync(part.Id));
+        Assert.Single(await setup.StockMovements.Where(x => x.PartId == part.Id).ToListAsync());
     }
 }

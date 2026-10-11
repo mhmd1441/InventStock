@@ -23,6 +23,47 @@ namespace InventStock.Infrastructure.Data.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("InventStock.Domain.Entities.BrandAlias", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NormalizedValue")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("ProductBrandId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedValue")
+                        .IsUnique();
+
+                    b.HasIndex("ProductBrandId");
+
+                    b.ToTable("BrandAliases", (string)null);
+                });
+
             modelBuilder.Entity("InventStock.Domain.Entities.CatalogueReference", b =>
                 {
                     b.Property<Guid>("Id")
@@ -144,6 +185,9 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(80)")
                         .HasDefaultValue("");
 
+                    b.Property<Guid>("BrandId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -210,6 +254,8 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.HasIndex("Barcode")
                         .IsUnique();
 
+                    b.HasIndex("BrandId");
+
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("SearchName");
@@ -222,7 +268,7 @@ namespace InventStock.Infrastructure.Data.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.HasIndex("PartNumber", "Brand", "Variant")
+                    b.HasIndex("PartNumber", "BrandId", "Variant")
                         .IsUnique();
 
                     b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram");
@@ -231,6 +277,55 @@ namespace InventStock.Infrastructure.Data.Migrations
                     NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram"), new[] { "gin_trgm_ops" });
 
                     b.ToTable("Parts", (string)null);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.ProductBrand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique();
+
+                    b.ToTable("ProductBrands", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            CreatedAtUtc = new DateTime(2026, 10, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsActive = true,
+                            Name = "Unknown / not set",
+                            NormalizedName = "UNKNOWN / NOT SET"
+                        });
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.ReferenceLinkEvent", b =>
@@ -320,8 +415,15 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("PartId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<Guid>("PerformedByUserId")
                         .HasColumnType("uuid");
@@ -346,6 +448,10 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique()
+                        .HasFilter("\"OperationId\" IS NOT NULL");
 
                     b.HasIndex("PerformedByUserId");
 
@@ -537,6 +643,9 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("TokenHash")
                         .IsRequired()
                         .HasMaxLength(88)
@@ -546,6 +655,8 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
 
                     b.HasIndex("TokenHash")
                         .IsUnique();
@@ -658,8 +769,25 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("InventStock.Domain.Entities.BrandAlias", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.ProductBrand", "ProductBrand")
+                        .WithMany("Aliases")
+                        .HasForeignKey("ProductBrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ProductBrand");
+                });
+
             modelBuilder.Entity("InventStock.Domain.Entities.Part", b =>
                 {
+                    b.HasOne("InventStock.Domain.Entities.ProductBrand", "BrandRecord")
+                        .WithMany("Parts")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("InventStock.Domain.Entities.Category", "Category")
                         .WithMany("Parts")
                         .HasForeignKey("CategoryId")
@@ -670,6 +798,8 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .WithMany("Parts")
                         .HasForeignKey("SupplierId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BrandRecord");
 
                     b.Navigation("Category");
 
@@ -787,6 +917,13 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Navigation("Movements");
 
                     b.Navigation("References");
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.ProductBrand", b =>
+                {
+                    b.Navigation("Aliases");
+
+                    b.Navigation("Parts");
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.Supplier", b =>

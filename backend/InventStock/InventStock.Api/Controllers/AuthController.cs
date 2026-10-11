@@ -54,12 +54,19 @@ public sealed class AuthController : ControllerBase
     [HttpPost("logout")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> Logout(CancellationToken cancellationToken)
+    public async Task<IActionResult> Logout(LogoutRequest? request, CancellationToken cancellationToken)
     {
+        if (request?.SessionId is Guid sessionId)
+        {
+            await _identity.RevokeSessionAsync(sessionId, cancellationToken);
+        }
+        else
+        {
         var token = Request.Cookies[RefreshCookieName];
         if (!string.IsNullOrWhiteSpace(token))
         {
             await _identity.RevokeRefreshTokenAsync(token, cancellationToken);
+        }
         }
 
         Response.Cookies.Delete(RefreshCookieName, BuildCookieOptions(DateTime.UnixEpoch));

@@ -8,6 +8,7 @@ public sealed class StockInRequestValidator : AbstractValidator<StockInRequest>
 {
     public StockInRequestValidator()
     {
+        RuleFor(x => x.OperationId).NotEmpty();
         RuleFor(x => x.Quantity)
             .GreaterThan(0)
             .LessThanOrEqualTo(1_000_000);
@@ -21,6 +22,7 @@ public sealed class StockOutRequestValidator : AbstractValidator<StockOutRequest
 {
     public StockOutRequestValidator()
     {
+        RuleFor(x => x.OperationId).NotEmpty();
         RuleFor(x => x.Quantity)
             .GreaterThan(0)
             .LessThanOrEqualTo(1_000_000);
@@ -34,6 +36,7 @@ public sealed class StockAdjustmentRequestValidator : AbstractValidator<StockAdj
 {
     public StockAdjustmentRequestValidator()
     {
+        RuleFor(x => x.OperationId).NotEmpty();
         RuleFor(x => x.QuantityChange)
             .NotEqual(0)
             .WithMessage("Adjustment quantity must not be zero.")

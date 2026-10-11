@@ -4,6 +4,44 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace InventStock.Infrastructure.Data.Configurations;
 
+public sealed class ProductBrandConfiguration : IEntityTypeConfiguration<ProductBrand>
+{
+    public void Configure(EntityTypeBuilder<ProductBrand> builder)
+    {
+        builder.ToTable("ProductBrands");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Name).IsRequired().HasMaxLength(ProductBrand.NameMaxLength);
+        builder.Property(x => x.NormalizedName).IsRequired().HasMaxLength(ProductBrand.NameMaxLength);
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.HasIndex(x => x.NormalizedName).IsUnique();
+        builder.HasData(new
+        {
+            Id = ProductBrand.UnknownId,
+            Name = "Unknown / not set",
+            NormalizedName = "UNKNOWN / NOT SET",
+            IsActive = true,
+            CreatedAtUtc = new DateTime(2026, 10, 11, 0, 0, 0, DateTimeKind.Utc),
+            CreatedByUserId = (Guid?)null,
+            UpdatedAtUtc = (DateTime?)null,
+            UpdatedByUserId = (Guid?)null
+        });
+    }
+}
+
+public sealed class BrandAliasConfiguration : IEntityTypeConfiguration<BrandAlias>
+{
+    public void Configure(EntityTypeBuilder<BrandAlias> builder)
+    {
+        builder.ToTable("BrandAliases");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Value).IsRequired().HasMaxLength(ProductBrand.AliasMaxLength);
+        builder.Property(x => x.NormalizedValue).IsRequired().HasMaxLength(ProductBrand.AliasMaxLength);
+        builder.HasIndex(x => x.NormalizedValue).IsUnique();
+        builder.HasOne(x => x.ProductBrand).WithMany(x => x.Aliases)
+            .HasForeignKey(x => x.ProductBrandId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 {
     public void Configure(EntityTypeBuilder<Category> builder)
@@ -76,10 +114,11 @@ public sealed class PartConfiguration : IEntityTypeConfiguration<Part>
         builder.Property(x => x.LowStockThreshold).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
 
-        builder.HasIndex(x => new { x.PartNumber, x.Brand, x.Variant }).IsUnique();
+        builder.HasIndex(x => new { x.PartNumber, x.BrandId, x.Variant }).IsUnique();
         builder.HasIndex(x => x.Barcode).IsUnique().HasFilter(null);
         builder.HasIndex(x => x.CategoryId);
         builder.HasIndex(x => x.SupplierId);
+        builder.HasIndex(x => x.BrandId);
 
         builder.HasOne(x => x.Category)
             .WithMany(c => c.Parts)
@@ -89,6 +128,12 @@ public sealed class PartConfiguration : IEntityTypeConfiguration<Part>
         builder.HasOne(x => x.Supplier)
             .WithMany(s => s.Parts)
             .HasForeignKey(x => x.SupplierId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(x => x.BrandRecord)
+            .WithMany(x => x.Parts)
+            .HasForeignKey(x => x.BrandId)
+            .IsRequired()
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.Metadata

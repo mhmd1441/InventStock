@@ -8,10 +8,43 @@ obj/
 node_modules/
 .next/
 out/
+.test-build/
+coverage/
+playwright-report/
+test-results/
+
+# IDE and local tooling
+.idea/
+.vscode/
+*.suo
+*.cache
+*.log
 
 # Environment files
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Local databases, exports and backups
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.dump
+*.backup
+*.bak
+backups/
+imports/private/
 
 # OS
 .DS_Store

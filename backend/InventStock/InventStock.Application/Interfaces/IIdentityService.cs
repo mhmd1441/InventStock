@@ -12,6 +12,8 @@ public interface IIdentityService
 
     Task RevokeRefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
 
+    Task RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default);
+
     Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<UserDto>> ListUsersAsync(CancellationToken cancellationToken = default);

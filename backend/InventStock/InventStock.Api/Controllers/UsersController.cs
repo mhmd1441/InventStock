@@ -1,6 +1,7 @@
 using InventStock.Application.Common;
 using InventStock.Application.Common.Exceptions;
 using InventStock.Application.DTOs.Auth;
+using InventStock.Application.DTOs;
 using InventStock.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,14 +45,14 @@ public sealed class UsersController : ControllerBase
     [HttpPatch("{id:guid}/active")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetActive(Guid id, [FromQuery] bool isActive, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetActive(Guid id, SetActiveRequest request, CancellationToken cancellationToken)
     {
-        if (!isActive && _currentUser.UserId == id)
+        if (!request.IsActive && _currentUser.UserId == id)
         {
             throw new ConflictException("You cannot deactivate your own account.");
         }
 
-        await _identity.SetUserActiveAsync(id, isActive, cancellationToken);
+        await _identity.SetUserActiveAsync(id, request.IsActive, cancellationToken);
         return NoContent();
     }
 }

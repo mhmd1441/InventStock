@@ -125,7 +125,7 @@ function SupplierModal({
 }
 
 export default function SuppliersPage() {
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
   const [includeInactive, setIncludeInactive] = useState(false);
   const { data, isLoading, error } = useSuppliers(includeInactive);
   const setActive = useSetSupplierActive();
@@ -133,7 +133,7 @@ export default function SuppliersPage() {
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [creating, setCreating] = useState(false);
 
-  if (!isAdmin) return <Alert>Supplier information is available to administrators only.</Alert>;
+  if (!canViewPrivate) return <Alert>Use “Reveal admin costs” to open private supplier information.</Alert>;
 
   return (
     <div className="space-y-6">
@@ -151,7 +151,7 @@ export default function SuppliersPage() {
             />
             Include inactive
           </label>
-          {isAdmin && (
+          {canViewPrivate && (
             <Button onClick={() => setCreating(true)}>New supplier</Button>
           )}
         </div>
@@ -177,7 +177,7 @@ export default function SuppliersPage() {
                 <Th>Email</Th>
                 <Th>Phone</Th>
                 <Th className="text-right">Parts</Th>
-                {isAdmin && <Th />}
+                {canViewPrivate && <Th />}
               </tr>
             </thead>
             <tbody>
@@ -197,7 +197,7 @@ export default function SuppliersPage() {
                   <Td className="text-right tabular-nums">
                     {supplier.partCount}
                   </Td>
-                  {isAdmin && (
+                  {canViewPrivate && (
                     <Td className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button

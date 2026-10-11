@@ -12,17 +12,20 @@ public sealed class PartService : IPartService
     private readonly IPartRepository _parts;
     private readonly ICategoryRepository _categories;
     private readonly ISupplierRepository _suppliers;
+    private readonly IBrandRepository _brands;
     private readonly IUnitOfWork _unitOfWork;
 
     public PartService(
         IPartRepository parts,
         ICategoryRepository categories,
         ISupplierRepository suppliers,
+        IBrandRepository brands,
         IUnitOfWork unitOfWork)
     {
         _parts = parts;
         _categories = categories;
         _suppliers = suppliers;
+        _brands = brands;
         _unitOfWork = unitOfWork;
     }
 
@@ -65,7 +68,8 @@ public sealed class PartService : IPartService
     public async Task<PartDto> CreateAsync(SavePartRequest request, CancellationToken cancellationToken = default)
     {
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
-        await EnsurePartNumberIsFreeAsync(partNumber, null, cancellationToken, request.Brand, request.Variant);
+        var brand = await ResolveBrandAsync(request.BrandId, request.Brand, cancellationToken);
+        await EnsurePartNumberIsFreeAsync(partNumber, null, cancellationToken, brand?.NormalizedName, request.Variant);
         await EnsureBarcodeIsFreeAsync(request.Barcode, null, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
@@ -79,7 +83,8 @@ public sealed class PartService : IPartService
             request.LowStockThreshold,
             request.Barcode);
 
-        part.SetIdentity(request.Brand, request.Variant);
+        part.SetIdentity(brand?.NormalizedName, request.Variant);
+        part.SetBrand(brand);
         await _parts.AddAsync(part, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -92,11 +97,13 @@ public sealed class PartService : IPartService
                    ?? throw new NotFoundException("Part", id);
 
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
-        await EnsurePartNumberIsFreeAsync(partNumber, id, cancellationToken, request.Brand, request.Variant);
+        var brand = await ResolveBrandAsync(request.BrandId, request.Brand, cancellationToken);
+        await EnsurePartNumberIsFreeAsync(partNumber, id, cancellationToken, brand?.NormalizedName, request.Variant);
         await EnsureBarcodeIsFreeAsync(request.Barcode, id, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
-        part.SetIdentity(request.Brand, request.Variant);
+        part.SetIdentity(brand?.NormalizedName, request.Variant);
+        part.SetBrand(brand);
         part.Update(
             partNumber,
             request.Name,
@@ -161,5 +168,21 @@ public sealed class PartService : IPartService
         {
             throw new NotFoundException("Supplier", supplierId.Value);
         }
+    }
+
+    private async Task<ProductBrand?> ResolveBrandAsync(Guid? brandId, string? legacyBrand, CancellationToken cancellationToken)
+    {
+        if (brandId.HasValue)
+        {
+            var brand = await _brands.GetAsync(brandId.Value, cancellationToken)
+                ?? throw new NotFoundException("Brand", brandId.Value);
+            if (!brand.IsActive) throw new ConflictException("The selected brand is inactive.");
+            return brand;
+        }
+
+        if (!string.IsNullOrWhiteSpace(legacyBrand))
+            throw new ConflictException("Select a controlled brand instead of entering free text.");
+        return await _brands.GetAsync(ProductBrand.UnknownId, cancellationToken)
+            ?? throw new InvalidOperationException("The system Unknown brand is missing.");
     }
 }

@@ -3,6 +3,15 @@ using InventStock.Application.DTOs.Catalog;
 
 namespace InventStock.Application.Interfaces;
 
+public interface IBrandService
+{
+    Task<IReadOnlyList<BrandDto>> ListAsync(bool includeInactive, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<BrandDto>> FindCandidatesAsync(string name, CancellationToken cancellationToken = default);
+    Task<BrandDto> CreateAsync(SaveBrandRequest request, CancellationToken cancellationToken = default);
+    Task<BrandDto> AddAliasAsync(Guid id, SaveBrandAliasRequest request, CancellationToken cancellationToken = default);
+    Task SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default);
+}
+
 public interface ICategoryService
 {
     Task<IReadOnlyList<CategoryDto>> ListAsync(CancellationToken cancellationToken = default);

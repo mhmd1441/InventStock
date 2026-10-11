@@ -10,8 +10,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 function SessionQueries({ children }: { children: React.ReactNode }) {
-  const { user, status } = useAuth();
-  return <QueryScope key={`${status}:${user?.id ?? ""}:${user?.roles.join(",") ?? ""}`}>{children}</QueryScope>;
+  const { user, status, privateMode } = useAuth();
+  return <QueryScope key={`${status}:${user?.id ?? ""}:${user?.roles.join(",") ?? ""}:${privateMode}`}>{children}</QueryScope>;
 }
 
 function QueryScope({ children }: { children: React.ReactNode }) {

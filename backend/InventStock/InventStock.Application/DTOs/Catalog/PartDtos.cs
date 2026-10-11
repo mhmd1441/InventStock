@@ -12,6 +12,8 @@ public sealed record PartDto
 
     public string Brand { get; init; } = string.Empty;
 
+    public Guid BrandId { get; init; }
+
     public string Variant { get; init; } = string.Empty;
 
     public string? Description { get; init; }
@@ -43,6 +45,9 @@ public sealed record PartDto
 
 public sealed record SavePartRequest
 {
+    public Guid? BrandId { get; init; }
+
+    // Kept temporarily for old clients. New writes must select BrandId.
     public string? Brand { get; init; }
 
     public string? Variant { get; init; }

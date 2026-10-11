@@ -29,6 +29,63 @@ let refreshInFlight: Promise<string | null> | null = null;
 let onSessionLost: (() => void) | null = null;
 let sessionVersion = 0;
 let sessionRequests = new AbortController();
+export const EXPLICIT_SIGN_OUT_KEY = "inventstock.explicitly-signed-out";
+const CURRENT_SESSION_KEY = "inventstock.current-session";
+const PENDING_REVOCATION_KEY = "inventstock.pending-session-revocation";
+
+function browserStorage() {
+  return typeof window !== "undefined" ? window.localStorage : undefined;
+}
+
+export function isExplicitlySignedOut() {
+  return browserStorage()?.getItem(EXPLICIT_SIGN_OUT_KEY) === "1";
+}
+
+export function markExplicitlySignedOut() {
+  browserStorage()?.setItem(EXPLICIT_SIGN_OUT_KEY, "1");
+  resetSession();
+}
+
+function clearExplicitSignOut() {
+  browserStorage()?.removeItem(EXPLICIT_SIGN_OUT_KEY);
+}
+
+function setCurrentSession(sessionId: string) {
+  browserStorage()?.setItem(CURRENT_SESSION_KEY, sessionId);
+}
+
+function takeCurrentSession() {
+  const storage = browserStorage();
+  const sessionId = storage?.getItem(CURRENT_SESSION_KEY) ?? null;
+  storage?.removeItem(CURRENT_SESSION_KEY);
+  return sessionId;
+}
+
+function queueRevocation(sessionId: string) {
+  browserStorage()?.setItem(PENDING_REVOCATION_KEY, JSON.stringify({ sessionId, attemptedAt: Date.now() }));
+}
+
+export async function retryPendingRevocation() {
+  const storage = browserStorage();
+  const raw = storage?.getItem(PENDING_REVOCATION_KEY);
+  if (!raw) return;
+  try {
+    const pending = JSON.parse(raw) as { sessionId: string; attemptedAt: number };
+    // Refresh tokens expire after seven days by default; do not retry stale cleanup forever.
+    if (Date.now() - pending.attemptedAt > 8 * 24 * 60 * 60 * 1000) {
+      storage?.removeItem(PENDING_REVOCATION_KEY);
+      return;
+    }
+    const response = await fetch(buildUrl("/api/auth/logout"), {
+      method: "POST", credentials: "include", cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId: pending.sessionId }),
+    });
+    if (response.ok) storage?.removeItem(PENDING_REVOCATION_KEY);
+  } catch {
+    // Offline: retain the old session-specific revocation request for the next online attempt.
+  }
+}
 
 /** End the old request scope before another person can use this browser. */
 export function resetSession() {
@@ -98,6 +155,7 @@ async function refreshAccessToken(): Promise<string | null> {
       const auth = (await response.json()) as AuthResult;
       if (version !== sessionVersion) return null;
       accessToken = auth.accessToken;
+      setCurrentSession(auth.sessionId);
       return auth.accessToken;
     } catch {
       return null;
@@ -178,12 +236,13 @@ export const api = {
     apiFetch<T>(path, { method: "POST", body }),
   put: <T>(path: string, body?: unknown) =>
     apiFetch<T>(path, { method: "PUT", body }),
-  patch: <T>(path: string, query?: Record<string, unknown>) =>
-    apiFetch<T>(path, { method: "PATCH", query }),
+  patch: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, { method: "PATCH", body }),
   delete: <T>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
 };
 
 export async function login(email: string, password: string) {
+  await retryPendingRevocation();
   resetSession();
   const auth = await apiFetch<AuthResult>("/api/auth/login", {
     method: "POST",
@@ -191,11 +250,14 @@ export async function login(email: string, password: string) {
     skipRefresh: true,
   });
 
+  clearExplicitSignOut();
   accessToken = auth.accessToken;
+  setCurrentSession(auth.sessionId);
   return auth;
 }
 
 export async function restoreSession() {
+  if (isExplicitlySignedOut()) return null;
   const token = await refreshAccessToken();
   if (!token) return null;
 
@@ -203,13 +265,19 @@ export async function restoreSession() {
 }
 
 export async function logout() {
-  resetSession();
+  // Persist this before attempting the network call. An unreachable server cannot revoke its
+  // HttpOnly cookie, but reloads and other tabs must still remain visibly signed out.
+  const sessionId = takeCurrentSession();
+  if (sessionId) queueRevocation(sessionId);
+  markExplicitlySignedOut();
   const version = sessionVersion;
   try {
     await apiFetch<void>("/api/auth/logout", {
       method: "POST",
+      body: sessionId ? { sessionId } : undefined,
       skipRefresh: true,
     });
+    if (sessionId) browserStorage()?.removeItem(PENDING_REVOCATION_KEY);
   } finally {
     if (version === sessionVersion) resetSession();
   }

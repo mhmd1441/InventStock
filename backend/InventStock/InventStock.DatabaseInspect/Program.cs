@@ -2,7 +2,8 @@ using System.Text.Json;
 using Npgsql;
 
 // Deliberately does not start the API, construct a DbContext, migrate, or seed.
-var apiDirectory = Path.GetFullPath(args.Length > 0 ? args[0] : "InventStock.Api");
+var apiDirectory = Path.GetFullPath(args.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal)) ?? "InventStock.Api");
+var allowRemote = args.Contains("--allow-remote", StringComparer.Ordinal);
 string? connectionString = null;
 void ReadSetting(string path)
 {
@@ -17,7 +18,7 @@ ReadSetting(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.App
 connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection") ?? connectionString;
 if (string.IsNullOrWhiteSpace(connectionString)) throw new InvalidOperationException("No local connection configured.");
 var builder = new NpgsqlConnectionStringBuilder(connectionString) { Timeout = 5, CommandTimeout = 15, IncludeErrorDetail = false };
-if (builder.Host is not ("localhost" or "127.0.0.1" or "::1"))
+if (!allowRemote && builder.Host is not ("localhost" or "127.0.0.1" or "::1"))
     throw new InvalidOperationException("This inspection tool permits local database hosts only.");
 await using var connection = new NpgsqlConnection(builder.ConnectionString);
 try { await connection.OpenAsync(); }
@@ -44,9 +45,11 @@ if (await Exists("StockMovements")) await Report("Movement count / net quantity"
 if (await Exists("CatalogueReferences"))
 {
     await Report("Reference count", "SELECT count(*) FROM \"CatalogueReferences\"");
-    await Report("Generic references potentially affected by old separator identity (review candidates, NOT proven collapses)", """
-        SELECT "Id", "Kind", "Issuer", "Value", "SearchValue" FROM "CatalogueReferences"
-        WHERE "Kind" <> 'MercedesOE' ORDER BY "Id"
+    await Report("Generic reference review summary (not proof of collapsed inputs)", """
+        SELECT count(*) AS total_generic,
+               count(*) FILTER (WHERE "Value" LIKE '%-%' OR "Value" LIKE '% %') AS formatted_values,
+               count(DISTINCT ("Kind", "Issuer", "SearchValue")) AS normalized_groups
+        FROM "CatalogueReferences" WHERE "Kind" <> 'MercedesOE'
         """);
     Console.WriteLine("Previous alternate submitted spellings were not retained. Actual collapsed references cannot be reconstructed from these rows.");
 }

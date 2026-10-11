@@ -110,16 +110,16 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
 export default function UsersPage() {
   const router = useRouter();
-  const { isAdmin, user } = useAuth();
+  const { canViewPrivate, user } = useAuth();
   const { data, isLoading, error } = useUsers();
   const setActive = useSetUserActive();
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin) router.replace("/dashboard");
-  }, [isAdmin, router]);
+    if (!canViewPrivate) router.replace("/dashboard");
+  }, [canViewPrivate, router]);
 
-  if (!isAdmin) return null;
+  if (!canViewPrivate) return null;
 
   return (
     <div className="space-y-6">

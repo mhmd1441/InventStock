@@ -12,6 +12,7 @@ public class StockMovement : AuditableEntity
 {
     public const int ReasonMaxLength = 500;
     public const int ReferenceMaxLength = 64;
+    public const int PayloadFingerprintMaxLength = 64;
 
     private StockMovement()
     {
@@ -33,6 +34,17 @@ public class StockMovement : AuditableEntity
     public Guid PerformedByUserId { get; private set; }
 
     public DateTime OccurredAtUtc { get; private set; }
+
+    public Guid? OperationId { get; private set; }
+
+    public string? PayloadFingerprint { get; private set; }
+
+    public void SetOperation(Guid operationId, string payloadFingerprint)
+    {
+        if (operationId == Guid.Empty) throw new DomainException("A stock operation ID is required.");
+        OperationId = operationId;
+        PayloadFingerprint = Guard.AgainstNullOrWhiteSpace(payloadFingerprint, nameof(PayloadFingerprint), PayloadFingerprintMaxLength);
+    }
 
     public static StockMovement StockIn(Guid partId, int quantity, Guid performedByUserId, string? reason, string? reference)
     {

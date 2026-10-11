@@ -34,7 +34,7 @@ const sortOptions: { value: PartSortField; label: string }[] = [
 
 function PartsPageContent() {
   const searchParams = useSearchParams();
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
 
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState<PartQuery>({
@@ -78,7 +78,7 @@ function PartsPageContent() {
             Search the catalogue and record stock movements.
           </p>
         </div>
-        {isAdmin && <Button onClick={() => setCreating(true)}>New part</Button>}
+        {canViewPrivate && <Button onClick={() => setCreating(true)}>New part</Button>}
       </div>
 
       <Card>
@@ -127,7 +127,7 @@ function PartsPageContent() {
               patch({ sortBy: event.target.value as PartSortField })
             }
           >
-            {sortOptions.filter((option) => isAdmin || option.value !== "UnitPrice").map((option) => (
+            {sortOptions.filter((option) => canViewPrivate || option.value !== "UnitPrice").map((option) => (
               <option key={option.value} value={option.value}>
                 Sort: {option.label}
               </option>
@@ -176,10 +176,10 @@ function PartsPageContent() {
                   <tr>
                     <Th>Part</Th>
                     <Th>Category</Th>
-                    {isAdmin && <Th>Supplier</Th>}
+                    {canViewPrivate && <Th>Supplier</Th>}
                     <Th className="text-right">On hand</Th>
-                    {isAdmin && <Th className="text-right">Purchase cost</Th>}
-                    {isAdmin && <Th className="text-right">Value</Th>}
+                    {canViewPrivate && <Th className="text-right">Purchase cost</Th>}
+                    {canViewPrivate && <Th className="text-right">Value</Th>}
                     <Th />
                   </tr>
                 </thead>
@@ -200,7 +200,7 @@ function PartsPageContent() {
                         </span>
                       </Td>
                       <Td className="text-muted">{part.categoryName}</Td>
-                      {isAdmin && <Td className="text-muted">{isAdminPart(part) ? part.supplierName ?? "—" : "—"}</Td>}
+                      {canViewPrivate && <Td className="text-muted">{isAdminPart(part) ? part.supplierName ?? "—" : "—"}</Td>}
                       <Td className="text-right tabular-nums">
                         <span className="font-medium">{part.quantityOnHand}</span>
                         <span className="ml-2 inline-flex gap-1">
@@ -208,10 +208,10 @@ function PartsPageContent() {
                           {!part.isActive && <Badge>Inactive</Badge>}
                         </span>
                       </Td>
-                      {isAdmin && <Td className="text-right tabular-nums text-muted">
+                      {canViewPrivate && <Td className="text-right tabular-nums text-muted">
                         {isAdminPart(part) ? formatCurrency(part.unitPrice) : "—"}
                       </Td>}
-                      {isAdmin && <Td className="text-right tabular-nums">
+                      {canViewPrivate && <Td className="text-right tabular-nums">
                         {isAdminPart(part) ? formatCurrency(part.stockValue) : "—"}
                       </Td>}
                       <Td className="text-right">
@@ -223,7 +223,7 @@ function PartsPageContent() {
                           >
                             Stock
                           </Button>
-                          {isAdmin && isAdminPart(part) && (
+                          {canViewPrivate && isAdminPart(part) && (
                             <Button
                               variant="ghost"
                               onClick={() => setEditing(part)}

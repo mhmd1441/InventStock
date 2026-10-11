@@ -154,7 +154,7 @@ cd backend/InventStock
 dotnet test
 ```
 
-59 tests covering four levels:
+108 tests covering four levels:
 
 - **Domain** — the movement invariants (sign per type, adjustments need a reason, no zero-quantity rows).
 - **Services** — insufficient stock is rejected and leaves no row behind, inactive parts reject
@@ -179,6 +179,20 @@ New migrations `CatalogueSearchKeys` and `SkuReferences` were verified on dispos
 not applied to the configured shop database. Back up and review before applying. `pg_trgm` must
 be available to the migration role. Downgrading after adding multiple brands for one number may
 fail the old unique-number constraint; use a reviewed restore/migration plan, not a blind downgrade.
+
+`ReferenceIdentityAndAudit` is deliberately forward-only: it separates exact reference identity from
+separator-insensitive searching and preserves an audit trail when a link is deactivated/restored. Restore
+a reviewed backup instead of attempting to downgrade through that migration.
+
+`ControlledBrands` introduces canonical brand IDs and aliases. It backfills each existing non-empty
+brand without changing part IDs or stock movements; new part writes select a brand ID rather than accept
+free-text spelling. It has been tested by upgrading a populated previous schema only. It has not been
+applied to the configured normal database.
+
+`StockOperationIdempotency` gives stock-in, raw stock-out and adjustments stable operation IDs. A
+true retry returns the original movement; changing the payload under the same ID returns a conflict.
+Legacy movements remain valid with a null operation ID. This migration is also unapplied outside the
+disposable test database.
 
 Optional real PostgreSQL regression tests require `INVENTSTOCK_TEST_POSTGRES` pointing to a
 **disposable database named `inventstock_test`**. Tests create and remove a random isolated schema.
@@ -208,6 +222,8 @@ The EF tool is pinned in `.config/dotnet-tools.json`; run `dotnet tool restore` 
 | `GET` | `/api/admin/dashboard`, `/api/admin/parts` (including detail/by-number/low-stock) | Admin |
 | `GET` | `/api/suppliers`, `/api/suppliers/{id}` | Admin |
 | `GET` | `/api/parts/{id}/references` | any |
+| `GET` | `/api/brands` | any |
+| `POST`/`PATCH` | `/api/brands`, `/api/brands/{id}/aliases`, `/api/brands/{id}/active` | Admin |
 | `POST` | `/api/parts/{id}/references` | Admin |
 | `GET` | `/api/parts`, `/api/parts/{id}`, `/api/parts/by-number/{n}`, `/api/parts/low-stock` | any |
 | `GET` | `/api/parts/{id}/movements`, `/api/stock-movements` | any |

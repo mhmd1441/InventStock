@@ -7,6 +7,8 @@ public sealed record CounterPartDto
     public string PartNumber { get; init; } = string.Empty;
     public string Name { get; init; } = string.Empty;
     public string Brand { get; init; } = string.Empty;
+
+    public Guid BrandId { get; init; }
     public string Variant { get; init; } = string.Empty;
     public string? Description { get; init; }
     public Guid CategoryId { get; init; }

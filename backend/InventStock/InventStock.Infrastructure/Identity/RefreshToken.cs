@@ -10,6 +10,8 @@ public class RefreshToken
 
     public Guid UserId { get; set; }
 
+    public Guid SessionId { get; set; }
+
     public ApplicationUser User { get; set; } = null!;
 
     public string TokenHash { get; set; } = string.Empty;

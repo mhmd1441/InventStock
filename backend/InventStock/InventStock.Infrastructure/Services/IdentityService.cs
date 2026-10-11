@@ -163,6 +163,17 @@ public sealed class IdentityService : IIdentityService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task RevokeSessionAsync(Guid sessionId, CancellationToken cancellationToken = default)
+    {
+        if (sessionId == Guid.Empty) return;
+        var now = DateTime.UtcNow;
+        var active = await _db.RefreshTokens
+            .Where(x => x.SessionId == sessionId && x.RevokedAtUtc == null)
+            .ToListAsync(cancellationToken);
+        foreach (var token in active) token.RevokedAtUtc = now;
+        if (active.Count > 0) await _db.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request, CancellationToken cancellationToken = default)
     {
         var user = await _userManager.FindByIdAsync(userId.ToString())
@@ -237,9 +248,12 @@ public sealed class IdentityService : IIdentityService
             rotatedFrom.ReplacedByTokenHash = refreshHash;
         }
 
+        var sessionId = rotatedFrom?.SessionId ?? Guid.NewGuid();
+
         _db.RefreshTokens.Add(new RefreshToken
         {
             UserId = user.Id,
+            SessionId = sessionId,
             TokenHash = refreshHash,
             ExpiresAtUtc = refreshExpiresAt,
             CreatedByIp = ipAddress
@@ -253,6 +267,7 @@ public sealed class IdentityService : IIdentityService
             {
                 AccessToken = accessToken,
                 AccessTokenExpiresAtUtc = accessExpiresAt,
+                SessionId = sessionId,
                 User = Map(user, roles)
             },
             RefreshToken = refreshToken,

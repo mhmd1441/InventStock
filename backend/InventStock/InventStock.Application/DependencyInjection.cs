@@ -13,6 +13,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly(), includeInternalTypes: true);
 
         services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IBrandService, BrandService>();
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IPartService, PartService>();
         services.AddScoped<IStockMovementService, StockMovementService>();

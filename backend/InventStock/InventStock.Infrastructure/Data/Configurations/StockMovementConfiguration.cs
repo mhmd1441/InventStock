@@ -24,10 +24,13 @@ public sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockM
         builder.Property(x => x.Reference).HasMaxLength(StockMovement.ReferenceMaxLength);
         builder.Property(x => x.PerformedByUserId).IsRequired();
         builder.Property(x => x.OccurredAtUtc).IsRequired();
+        builder.Property(x => x.PayloadFingerprint).HasMaxLength(StockMovement.PayloadFingerprintMaxLength);
 
         builder.HasIndex(x => new { x.PartId, x.OccurredAtUtc });
         builder.HasIndex(x => x.OccurredAtUtc);
         builder.HasIndex(x => x.PerformedByUserId);
+        builder.HasIndex(x => x.OperationId)
+            .IsUnique().HasFilter("\"OperationId\" IS NOT NULL");
 
         builder.HasOne(x => x.Part)
             .WithMany(p => p.Movements)

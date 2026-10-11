@@ -24,6 +24,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<Part> Parts => Set<Part>();
 
+    public DbSet<ProductBrand> ProductBrands => Set<ProductBrand>();
+
+    public DbSet<BrandAlias> BrandAliases => Set<BrandAlias>();
+
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

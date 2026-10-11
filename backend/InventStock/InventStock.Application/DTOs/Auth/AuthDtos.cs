@@ -25,6 +25,11 @@ public sealed record ChangePasswordRequest
     public string NewPassword { get; init; } = string.Empty;
 }
 
+public sealed record LogoutRequest
+{
+    public Guid? SessionId { get; init; }
+}
+
 public sealed record UserDto
 {
     public Guid Id { get; init; }
@@ -47,6 +52,8 @@ public sealed record AuthResult
     public string AccessToken { get; init; } = string.Empty;
 
     public DateTime AccessTokenExpiresAtUtc { get; init; }
+
+    public Guid SessionId { get; init; }
 
     public UserDto User { get; init; } = new();
 }

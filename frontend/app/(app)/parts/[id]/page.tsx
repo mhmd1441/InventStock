@@ -26,7 +26,7 @@ export default function PartDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
 
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -44,7 +44,7 @@ export default function PartDetailPage({
     { label: "Brand", value: part.brand || "Not specified" },
     { label: "Variant", value: part.variant || "—" },
     { label: "Category", value: part.categoryName },
-    ...(isAdmin && isAdminPart(part) ? [
+    ...(canViewPrivate && isAdminPart(part) ? [
       { label: "Supplier", value: part.supplierName ?? "—" },
       { label: "Purchase cost", value: formatCurrency(part.unitPrice) },
       { label: "Stock value", value: formatCurrency(part.stockValue) },
@@ -73,7 +73,7 @@ export default function PartDetailPage({
           <Button onClick={() => setMovement(true)} disabled={!part.isActive}>
             Record movement
           </Button>
-          {isAdmin && (
+          {canViewPrivate && (
             <>
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 Edit
@@ -146,7 +146,7 @@ export default function PartDetailPage({
         )}
       </Card>
 
-      {editing && isAdmin && isAdminPart(part) && (
+      {editing && canViewPrivate && isAdminPart(part) && (
         <PartFormModal part={part} onClose={() => setEditing(false)} />
       )}
       {movement && (

@@ -55,6 +55,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
         var auth = await response.Content.ReadFromJsonAsync<AuthResult>();
 
         Assert.False(string.IsNullOrWhiteSpace(auth!.AccessToken));
+        Assert.NotEqual(Guid.Empty, auth.SessionId);
         Assert.Contains("Admin", auth.User.Roles);
 
         var cookies = response.Headers.GetValues("Set-Cookie").ToList();
@@ -100,6 +101,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         var response = await client.PostAsJsonAsync($"/api/parts/{partId}/stock/adjust", new StockAdjustmentRequest
         {
+            OperationId = Guid.NewGuid(),
             QuantityChange = -1,
             Reason = "Shrinkage"
         });
@@ -116,6 +118,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         var response = await client.PostAsJsonAsync($"/api/parts/{part.Id}/stock/in", new StockInRequest
         {
+            OperationId = Guid.NewGuid(),
             Quantity = 3,
             Reason = "Delivery"
         });
@@ -175,6 +178,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         var response = await client.PostAsJsonAsync($"/api/parts/{part.Id}/stock/out", new StockOutRequest
         {
+            OperationId = Guid.NewGuid(),
             Quantity = part.QuantityOnHand + 1_000,
             Reason = "Oversell test"
         });

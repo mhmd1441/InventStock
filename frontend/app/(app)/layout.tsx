@@ -6,12 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useStockFeed } from "@/lib/signalr";
 import { Badge, Button, Spinner } from "@/components/ui";
+import { PendingOperationRecovery } from "@/components/pending-operation-recovery";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false },
   { href: "/parts", label: "Parts", adminOnly: false },
   { href: "/movements", label: "Movements", adminOnly: false },
   { href: "/categories", label: "Categories", adminOnly: false },
+  { href: "/brands", label: "Brands", adminOnly: false },
   { href: "/suppliers", label: "Suppliers", adminOnly: true },
   { href: "/users", label: "Users", adminOnly: true },
 ];
@@ -21,7 +23,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, status, signOut, isAdmin } = useAuth();
+  const { user, status, signOut, isAdmin, canViewPrivate, showPrivate, hidePrivate } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -42,10 +44,11 @@ export default function AppLayout({
     );
   }
 
-  const links = navigation.filter((item) => !item.adminOnly || isAdmin);
+  const links = navigation.filter((item) => !item.adminOnly || canViewPrivate);
 
   return (
     <div className="min-h-screen">
+      <PendingOperationRecovery actorId={user.id} />
       <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           <Link href="/dashboard" className="text-base font-semibold">
@@ -73,6 +76,11 @@ export default function AppLayout({
           </nav>
 
           <div className="ml-auto flex items-center gap-3">
+            {isAdmin && (
+              <Button variant={canViewPrivate ? "danger" : "secondary"} onClick={canViewPrivate ? hidePrivate : showPrivate}>
+                {canViewPrivate ? "Hide private costs" : "Reveal admin costs"}
+              </Button>
+            )}
             <span
               title={
                 feed.status === "live"

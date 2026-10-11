@@ -1,5 +1,6 @@
 using InventStock.Application.Common;
 using InventStock.Application.DTOs.Catalog;
+using InventStock.Application.DTOs;
 using InventStock.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -53,9 +54,9 @@ public sealed class SuppliersController : ControllerBase
     [Authorize(Roles = RoleNames.Admin)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> SetActive(Guid id, [FromQuery] bool isActive, CancellationToken cancellationToken)
+    public async Task<IActionResult> SetActive(Guid id, SetActiveRequest request, CancellationToken cancellationToken)
     {
-        await _suppliers.SetActiveAsync(id, isActive, cancellationToken);
+        await _suppliers.SetActiveAsync(id, request.IsActive, cancellationToken);
         return NoContent();
     }
 }

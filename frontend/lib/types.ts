@@ -13,6 +13,7 @@ export interface User {
 export interface AuthResult {
   accessToken: string;
   accessTokenExpiresAtUtc: string;
+  sessionId: string;
   user: User;
 }
 
@@ -44,10 +45,18 @@ export interface Supplier {
   partCount: number;
 }
 
+export interface ProductBrand {
+  id: string;
+  name: string;
+  isActive: boolean;
+  aliases: string[];
+}
+
 export interface CounterPart {
   id: string;
   partNumber: string;
   brand: string;
+  brandId: string;
   variant: string;
   name: string;
   description: string | null;
@@ -76,6 +85,7 @@ export function isAdminPart(part: Part): part is AdminPart {
 
 export interface StockMovement {
   id: string;
+  operationId: string | null;
   partId: string;
   partNumber: string;
   partName: string;
@@ -86,6 +96,11 @@ export interface StockMovement {
   performedByUserId: string;
   performedByUserName: string;
   occurredAtUtc: string;
+}
+
+export interface StockOperationStatus {
+  status: "Committed";
+  movement: StockMovement;
 }
 
 export interface StockChangedNotification {
@@ -142,7 +157,7 @@ export interface PartQuery {
 
 export interface SavePartRequest {
   partNumber: string;
-  brand?: string;
+  brandId?: string | null;
   variant?: string;
   name: string;
   description?: string | null;
@@ -151,6 +166,11 @@ export interface SavePartRequest {
   unitPrice: number;
   lowStockThreshold: number;
   barcode?: string | null;
+}
+
+export interface SaveBrandRequest {
+  name: string;
+  confirmPossibleDuplicate?: boolean;
 }
 
 export interface SaveCategoryRequest {

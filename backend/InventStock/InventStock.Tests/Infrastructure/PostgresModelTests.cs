@@ -32,6 +32,8 @@ public class PostgresModelTests
         Assert.Contains("Category", entityTypes);
         Assert.Contains("Supplier", entityTypes);
         Assert.Contains("RefreshToken", entityTypes);
+        Assert.Contains("ProductBrand", entityTypes);
+        Assert.Contains("BrandAlias", entityTypes);
     }
 
     [Fact]

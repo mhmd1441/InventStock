@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { clearPendingStockOperation, rememberPendingStockOperation } from "@/lib/pending-stock-operation";
 import { useStockAdjust, useStockIn, useStockOut } from "@/lib/queries";
 import type { Part } from "@/lib/types";
 import { Alert, Badge, Button, Field, Input, Modal } from "./ui";
@@ -16,7 +17,7 @@ export function StockMovementModal({
   part: Part;
   onClose: () => void;
 }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const stockIn = useStockIn();
   const stockOut = useStockOut();
   const adjust = useStockAdjust();
@@ -26,6 +27,8 @@ export function StockMovementModal({
   const [reason, setReason] = useState("");
   const [reference, setReference] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // Kept stable after an uncertain response so pressing Record again replays rather than duplicates.
+  const [operationId] = useState(() => crypto.randomUUID());
 
   const modes: Mode[] = isAdmin ? ["In", "Out", "Adjustment"] : ["In", "Out"];
   const pending = stockIn.isPending || stockOut.isPending || adjust.isPending;
@@ -56,9 +59,15 @@ export function StockMovementModal({
     }
 
     try {
+      if (!user) throw new Error("Your session ended. Sign in again.");
+      rememberPendingStockOperation({
+        operationId, actorId: user.id, partId: part.id, partNumber: part.partNumber,
+        kind: mode, quantity: parsedQuantity, createdAtUtc: new Date().toISOString(),
+      });
       if (mode === "In") {
         await stockIn.mutateAsync({
           partId: part.id,
+          operationId,
           quantity: Math.abs(parsedQuantity),
           reason: reason || undefined,
           reference: reference || undefined,
@@ -66,6 +75,7 @@ export function StockMovementModal({
       } else if (mode === "Out") {
         await stockOut.mutateAsync({
           partId: part.id,
+          operationId,
           quantity: Math.abs(parsedQuantity),
           reason: reason || undefined,
           reference: reference || undefined,
@@ -73,14 +83,18 @@ export function StockMovementModal({
       } else {
         await adjust.mutateAsync({
           partId: part.id,
+          operationId,
           quantityChange: parsedQuantity,
           reason,
           reference: reference || undefined,
         });
       }
 
+      clearPendingStockOperation(operationId);
       onClose();
     } catch (error) {
+      // An HTTP problem is a definite server answer. Network/abort failures remain unresolved.
+      if (error instanceof ApiError) clearPendingStockOperation(operationId);
       setFormError(
         error instanceof ApiError
           ? [error.message, ...error.fieldMessages].join(" ")

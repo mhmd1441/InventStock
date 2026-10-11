@@ -86,7 +86,7 @@ public class StockMovementServiceTests
     {
         using var harness = new Harness();
 
-        var movement = await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 20 });
+        var movement = await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 20 });
 
         Assert.Equal(MovementType.In, movement.MovementType);
         Assert.Equal(20, movement.QuantityChange);
@@ -97,10 +97,10 @@ public class StockMovementServiceTests
     public async Task StockOut_BeyondAvailableStock_IsRejected()
     {
         using var harness = new Harness();
-        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 5 });
+        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 5 });
 
         var exception = await Assert.ThrowsAsync<InsufficientStockException>(() =>
-            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 6, Reason = "Workshop issue" }));
+            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { OperationId = Guid.NewGuid(), Quantity = 6, Reason = "Workshop issue" }));
 
         Assert.Equal(5, exception.Available);
         Assert.Equal(6, exception.Requested);
@@ -110,10 +110,10 @@ public class StockMovementServiceTests
     public async Task RejectedStockOut_LeavesNoMovementBehind()
     {
         using var harness = new Harness();
-        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 5 });
+        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 5 });
 
         await Assert.ThrowsAsync<InsufficientStockException>(() =>
-            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 99, Reason = "Workshop issue" }));
+            harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { OperationId = Guid.NewGuid(), Quantity = 99, Reason = "Workshop issue" }));
 
         var movements = harness.Db.StockMovements.Count(m => m.PartId == harness.PartId);
         Assert.Equal(1, movements);
@@ -123,12 +123,12 @@ public class StockMovementServiceTests
     public async Task NegativeAdjustment_CannotDriveStockBelowZero()
     {
         using var harness = new Harness();
-        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 3 });
+        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 3 });
 
         await Assert.ThrowsAsync<InsufficientStockException>(() =>
             harness.Service.AdjustAsync(
                 harness.PartId,
-                new StockAdjustmentRequest { QuantityChange = -4, Reason = "Damaged" }));
+                new StockAdjustmentRequest { OperationId = Guid.NewGuid(), QuantityChange = -4, Reason = "Damaged" }));
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class StockMovementServiceTests
         await Assert.ThrowsAsync<DomainException>(() =>
             harness.Service.AdjustAsync(
                 harness.PartId,
-                new StockAdjustmentRequest { QuantityChange = 5, Reason = "  " }));
+                new StockAdjustmentRequest { OperationId = Guid.NewGuid(), QuantityChange = 5, Reason = "  " }));
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public class StockMovementServiceTests
         await harness.Db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<ConflictException>(() =>
-            harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 1 }));
+            harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 1 }));
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class StockMovementServiceTests
         using var harness = new Harness();
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            harness.Service.StockInAsync(Guid.NewGuid(), new StockInRequest { Quantity = 1 }));
+            harness.Service.StockInAsync(Guid.NewGuid(), new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 1 }));
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class StockMovementServiceTests
         harness.Context.CurrentUser.UserId = null;
 
         await Assert.ThrowsAsync<AuthenticationFailedException>(() =>
-            harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 1 }));
+            harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 1 }));
     }
 
     [Fact]
@@ -179,8 +179,8 @@ public class StockMovementServiceTests
         var notifier = new RecordingNotifier();
         using var harness = new Harness(notifier, lowStockThreshold: 10);
 
-        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 12 });
-        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 4, Reason = "Workshop issue" });
+        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 12 });
+        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { OperationId = Guid.NewGuid(), Quantity = 4, Reason = "Workshop issue" });
 
         Assert.Equal(2, notifier.Notifications.Count);
 
@@ -198,10 +198,55 @@ public class StockMovementServiceTests
     {
         using var harness = new Harness(new ThrowingNotifier());
 
-        var movement = await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 7 });
+        var movement = await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 7 });
 
         Assert.Equal(7, movement.QuantityChange);
         Assert.Equal(1, harness.Db.StockMovements.Count(m => m.PartId == harness.PartId));
+    }
+
+    [Fact]
+    public async Task RetryingSameOperation_ReturnsOriginalMovementWithoutAnotherEffectOrNotification()
+    {
+        var notifier = new RecordingNotifier();
+        using var harness = new Harness(notifier);
+        var operationId = Guid.NewGuid();
+        var request = new StockInRequest { OperationId = operationId, Quantity = 7, Reason = "Delivery" };
+
+        var first = await harness.Service.StockInAsync(harness.PartId, request);
+        var replay = await harness.Service.StockInAsync(harness.PartId, request);
+
+        Assert.Equal(first.Id, replay.Id);
+        Assert.Equal(operationId, replay.OperationId);
+        Assert.Single(harness.Db.StockMovements);
+        Assert.Single(notifier.Notifications);
+    }
+
+    [Fact]
+    public async Task ReusingOperationWithDifferentPayload_IsRejected()
+    {
+        using var harness = new Harness();
+        var operationId = Guid.NewGuid();
+        await harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = operationId, Quantity = 7, Reason = "Delivery" });
+
+        await Assert.ThrowsAsync<ConflictException>(() => harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = operationId, Quantity = 8, Reason = "Delivery" }));
+        Assert.Single(harness.Db.StockMovements);
+    }
+
+    [Fact]
+    public async Task AnotherUser_CannotReplayOrReuseAnOperationId()
+    {
+        using var harness = new Harness();
+        var operationId = Guid.NewGuid();
+        await harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = operationId, Quantity = 2 });
+        harness.Context.CurrentUser.UserId = Guid.NewGuid();
+
+        await Assert.ThrowsAsync<ConflictException>(() => harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = operationId, Quantity = 2 }));
+        await Assert.ThrowsAsync<ConflictException>(() => harness.Service.GetOperationStatusAsync(operationId));
+        Assert.Single(harness.Db.StockMovements);
     }
 
     [Fact]
@@ -209,8 +254,8 @@ public class StockMovementServiceTests
     {
         using var harness = new Harness();
 
-        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { Quantity = 10, Reason = "Opening" });
-        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { Quantity = 2, Reason = "Issue" });
+        await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 10, Reason = "Opening" });
+        await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { OperationId = Guid.NewGuid(), Quantity = 2, Reason = "Issue" });
 
         var history = await harness.Service.SearchAsync(new StockMovementQuery { PartId = harness.PartId });
 

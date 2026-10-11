@@ -7,6 +7,8 @@ public sealed record StockMovementDto
 {
     public Guid Id { get; init; }
 
+    public Guid? OperationId { get; init; }
+
     public Guid PartId { get; init; }
 
     public string PartNumber { get; init; } = string.Empty;
@@ -30,6 +32,8 @@ public sealed record StockMovementDto
 
 public sealed record StockInRequest
 {
+    public Guid OperationId { get; init; }
+
     public int Quantity { get; init; }
 
     public string? Reason { get; init; }
@@ -39,6 +43,8 @@ public sealed record StockInRequest
 
 public sealed record StockOutRequest
 {
+    public Guid OperationId { get; init; }
+
     public int Quantity { get; init; }
 
     public string? Reason { get; init; }
@@ -48,6 +54,8 @@ public sealed record StockOutRequest
 
 public sealed record StockAdjustmentRequest
 {
+    public Guid OperationId { get; init; }
+
     public int QuantityChange { get; init; }
 
     public string Reason { get; init; } = string.Empty;
@@ -88,3 +96,5 @@ public sealed record StockChangedNotification
 
     public DateTime OccurredAtUtc { get; init; }
 }
+
+public sealed record StockOperationStatusDto(string Status, StockMovementDto Movement);

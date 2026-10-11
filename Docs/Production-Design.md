@@ -306,6 +306,42 @@ backup recovery. Current `UnitPrice`/single supplier remain legacy admin-only ca
 Generated migrations have not been applied to the shop database. Runtime Npgsql automatic retries
 were disabled because the existing services own explicit transactions and lack replay idempotency.
 
+Later checkpoint (11 October 2026): reference identity is distinct from broad search normalization;
+product/reference links can be deactivated and restored with required reasons, actors, timestamps and
+optimistic revisions. Raw stock-out requires a reason and remains explicitly labelled as inventory-only.
+A populated previous-schema migration test preserves product/movement IDs, quantities and links without
+inventing old audit events. Explicit logout now persists a local restoration block before attempting the
+network call and signals other tabs; a successful explicit login is the only action that clears it.
+Admins start in customer-safe mode: private catalogue routes/caches are only used after deliberate reveal,
+and are cleared on hide, inactivity, backgrounding or session change. The latest isolated run passed 100
+backend tests and seven client request/session tests, plus TypeScript, ESLint and a production build.
+Actual multi-tab browser automation is still pending.
+
+Controlled-brand checkpoint (11 October 2026): products now retain their historical uppercase brand
+snapshot while also linking to a canonical brand ID. Brand names normalize case and repeated whitespace;
+known alternate spellings are unique aliases. The management screen warns on compact/expanded duplicate
+candidates and part entry uses a brand selector instead of free text. The migration promotes existing
+non-empty brands and preserves part/movement IDs. A populated-schema upgrade test verifies this path.
+Brand reads are available to counter users; create, alias and activation changes are admin-only. The
+activation endpoints for parts, suppliers and users were also aligned with the frontend's JSON PATCH
+contract. The isolated validation run passed 105 backend tests, seven client tests, TypeScript, ESLint
+and a Webpack production build. The disposable PostgreSQL container was removed afterward.
+
+Stock idempotency checkpoint (11 October 2026): stock-in, raw stock-out and adjustment commands now
+require a client-generated operation ID. Each committed movement stores that ID plus a SHA-256 payload
+fingerprint. The server takes a transaction-scoped PostgreSQL advisory lock for that user/operation,
+then the existing part-row lock. An exact retry returns the original movement without another stock
+effect or duplicate live notification; reusing the ID with changed details returns a conflict. The stock
+dialog keeps its ID stable across an uncertain response. A two-connection PostgreSQL test proves two
+concurrent duplicate submissions produce one movement and the same result. Legacy movement rows remain
+valid with null operation IDs. The complete isolated suite now passes 108 backend tests; the seven client
+tests, TypeScript, ESLint and Webpack production build also pass.
+
+The configured normal database connection appears remote (likely an old Supabase project). An authorized
+read-only connection attempt failed before inspection, so its migrations and data remain unknown. It was
+not migrated, seeded or modified. Local PostgreSQL is the intended shop primary, but changing connection
+configuration and migrating real data require a separate backup/recovery deployment step.
+
 - PostgreSQL pg_trgm: supports indexed LIKE/ILIKE without a left-anchored pattern; patterns without extractable trigrams may require a full-index scan. This supports testing GIN for both contains and suffix searches, rather than assuming every suffix search needs another index: https://www.postgresql.org/docs/current/pgtrgm.html
 - PostgreSQL explicit locking: FOR UPDATE protection lasts through the transaction; locking order and deadlock handling matter when operations span several resources: https://www.postgresql.org/docs/current/explicit-locking.html
 - PostgreSQL numeric types: exact numeric storage is appropriate for monetary values, with deliberately chosen precision and rounding: https://www.postgresql.org/docs/current/datatype-numeric.html

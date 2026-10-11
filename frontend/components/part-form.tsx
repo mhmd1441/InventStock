@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ApiError } from "@/lib/api";
-import { useCategories, useSavePart, useSuppliers } from "@/lib/queries";
+import { useBrands, useCategories, useSavePart, useSuppliers } from "@/lib/queries";
 import type { AdminPart } from "@/lib/types";
 import {
   Alert,
@@ -18,7 +18,7 @@ import {
 } from "./ui";
 
 const schema = z.object({
-  brand: z.string().max(80),
+  brandId: z.string().optional(),
   variant: z.string().max(120),
   partNumber: z
     .string()
@@ -47,6 +47,7 @@ export function PartFormModal({
   onClose: () => void;
 }) {
   const { data: categories } = useCategories();
+  const { data: brands } = useBrands();
   const { data: suppliers } = useSuppliers();
   const save = useSavePart(part?.id);
   const [formError, setFormError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export function PartFormModal({
     resolver: zodResolver(schema),
     defaultValues: {
       partNumber: part?.partNumber ?? "",
-      brand: part?.brand ?? "",
+      brandId: part?.brandId ?? "",
       variant: part?.variant ?? "",
       name: part?.name ?? "",
       description: part?.description ?? "",
@@ -77,7 +78,7 @@ export function PartFormModal({
     try {
       await save.mutateAsync({
         partNumber: values.partNumber,
-        brand: values.brand,
+        brandId: values.brandId || null,
         variant: values.variant,
         name: values.name,
         description: values.description || null,
@@ -118,8 +119,13 @@ export function PartFormModal({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Brand" error={errors.brand?.message} hint="Example: FEBI or Bosch">
-            <Input {...register("brand")} />
+          <Field label="Brand" error={errors.brandId?.message} hint="Choose a canonical brand; manage spellings on the Brands page">
+            <Select {...register("brandId")}>
+              <option value="">No brand</option>
+              {(brands ?? []).map((brand) => (
+                <option key={brand.id} value={brand.id}>{brand.name}</option>
+              ))}
+            </Select>
           </Field>
           <Field label="Variant" error={errors.variant?.message} hint="Example: includes seal; keep different products separate">
             <Input {...register("variant")} />

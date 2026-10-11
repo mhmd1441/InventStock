@@ -18,6 +18,12 @@ public sealed class StockController : ControllerBase
         _movements = movements;
     }
 
+    [HttpGet("api/stock-operations/{operationId:guid}")]
+    [ProducesResponseType(typeof(StockOperationStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<StockOperationStatusDto>> OperationStatus(Guid operationId, CancellationToken cancellationToken) =>
+        Ok(await _movements.GetOperationStatusAsync(operationId, cancellationToken));
+
     [HttpPost("api/parts/{partId:guid}/stock/in")]
     [ProducesResponseType(typeof(StockMovementDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

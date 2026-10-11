@@ -170,7 +170,7 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
     // Counter projection never selects purchase fields or joins Suppliers.
     private IQueryable<CounterPartDto> ProjectCounter(IQueryable<Part> source) => source.Select(p => new CounterPartDto
     {
-        Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, Variant = p.Variant, Name = p.Name, Description = p.Description,
+        Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, BrandId = p.BrandId, Variant = p.Variant, Name = p.Name, Description = p.Description,
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
         Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc,
         QuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0
@@ -178,7 +178,7 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
 
     private IQueryable<PartDto> ProjectAdmin(IQueryable<Part> source) => source.Select(p => new PartDto
     {
-        Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, Variant = p.Variant, Name = p.Name, Description = p.Description,
+        Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, BrandId = p.BrandId, Variant = p.Variant, Name = p.Name, Description = p.Description,
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
         Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc,
         SupplierId = p.SupplierId, SupplierName = p.Supplier != null ? p.Supplier.Name : null, UnitPrice = p.UnitPrice,

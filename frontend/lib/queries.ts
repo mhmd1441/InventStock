@@ -14,9 +14,11 @@ import type {
   PagedResult,
   Part,
   PartQuery,
+  ProductBrand,
   RegisterUserRequest,
   SaveCategoryRequest,
   SavePartRequest,
+  SaveBrandRequest,
   SaveSupplierRequest,
   StockMovement,
   Supplier,
@@ -31,6 +33,7 @@ export const queryKeys = {
     ["part", id, "movements", page] as const,
   movements: (page: number) => ["movements", page] as const,
   categories: ["categories"] as const,
+  brands: (includeInactive: boolean) => ["brands", includeInactive] as const,
   suppliers: (includeInactive: boolean) =>
     ["suppliers", includeInactive] as const,
   users: ["users"] as const,
@@ -47,21 +50,21 @@ export function invalidateStockViews(client: QueryClient) {
 }
 
 export function useDashboard() {
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
   return useQuery({
-    queryKey: [...queryKeys.dashboard, isAdmin],
+    queryKey: [...queryKeys.dashboard, canViewPrivate],
     refetchInterval: 30_000,
-    queryFn: ({ signal }) => api.get<DashboardSummary>(isAdmin ? "/api/admin/dashboard" : "/api/dashboard", undefined, signal),
+    queryFn: ({ signal }) => api.get<DashboardSummary>(canViewPrivate ? "/api/admin/dashboard" : "/api/dashboard", undefined, signal),
   });
 }
 
 export function useParts(query: PartQuery) {
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
   return useQuery({
-    queryKey: [...queryKeys.parts(query), isAdmin],
+    queryKey: [...queryKeys.parts(query), canViewPrivate],
     refetchInterval: 30_000,
     queryFn: ({ signal }) =>
-      api.get<PagedResult<Part>>(isAdmin ? "/api/admin/parts" : "/api/parts", {
+      api.get<PagedResult<Part>>(canViewPrivate ? "/api/admin/parts" : "/api/parts", {
         search: query.search,
         searchMode: query.searchMode,
         categoryId: query.categoryId,
@@ -78,11 +81,11 @@ export function useParts(query: PartQuery) {
 }
 
 export function usePart(id: string) {
-  const { isAdmin } = useAuth();
+  const { canViewPrivate } = useAuth();
   return useQuery({
-    queryKey: [...queryKeys.part(id), isAdmin],
+    queryKey: [...queryKeys.part(id), canViewPrivate],
     refetchInterval: 30_000,
-    queryFn: ({ signal }) => api.get<Part>(`${isAdmin ? "/api/admin/parts" : "/api/parts"}/${id}`, undefined, signal),
+    queryFn: ({ signal }) => api.get<Part>(`${canViewPrivate ? "/api/admin/parts" : "/api/parts"}/${id}`, undefined, signal),
   });
 }
 
@@ -117,10 +120,43 @@ export function useCategories() {
   });
 }
 
-export function useSuppliers(includeInactive = false) {
-  const { isAdmin } = useAuth();
+export function useBrands(includeInactive = false) {
   return useQuery({
-    enabled: isAdmin,
+    queryKey: queryKeys.brands(includeInactive),
+    queryFn: ({ signal }) => api.get<ProductBrand[]>("/api/brands", { includeInactive }, signal),
+  });
+}
+
+export function useCreateBrand() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: SaveBrandRequest) => api.post<ProductBrand>("/api/brands", request),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["brands"] }),
+  });
+}
+
+export function useAddBrandAlias() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, value }: { id: string; value: string }) =>
+      api.post<ProductBrand>(`/api/brands/${id}/aliases`, { value }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["brands"] }),
+  });
+}
+
+export function useSetBrandActive() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      api.patch<void>(`/api/brands/${id}/active`, { isActive }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["brands"] }),
+  });
+}
+
+export function useSuppliers(includeInactive = false) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate,
     queryKey: queryKeys.suppliers(includeInactive),
     queryFn: ({ signal }) =>
       api.get<Supplier[]>("/api/suppliers", { includeInactive }, signal),
@@ -128,7 +164,9 @@ export function useSuppliers(includeInactive = false) {
 }
 
 export function useUsers() {
+  const { canViewPrivate } = useAuth();
   return useQuery({
+    enabled: canViewPrivate,
     queryKey: queryKeys.users,
     queryFn: () => api.get<User[]>("/api/users"),
   });
@@ -165,6 +203,7 @@ export function useSetPartActive() {
 
 interface StockMovementInput {
   partId: string;
+  operationId: string;
   quantity: number;
   reason?: string;
   reference?: string;
@@ -196,16 +235,19 @@ export function useStockAdjust() {
   return useMutation({
     mutationFn: ({
       partId,
+      operationId,
       quantityChange,
       reason,
       reference,
     }: {
       partId: string;
+      operationId: string;
       quantityChange: number;
       reason: string;
       reference?: string;
     }) =>
       api.post<StockMovement>(`/api/parts/${partId}/stock/adjust`, {
+        operationId,
         quantityChange,
         reason,
         reference,

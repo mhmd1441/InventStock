@@ -27,6 +27,10 @@ public class Part : AuditableEntity
 
     public string Brand { get; private set; } = string.Empty;
 
+    public Guid BrandId { get; private set; } = ProductBrand.UnknownId;
+
+    public ProductBrand BrandRecord { get; private set; } = null!;
+
     public string Variant { get; private set; } = string.Empty;
 
     public ICollection<SkuReference> References { get; private set; } = new List<SkuReference>();
@@ -35,6 +39,12 @@ public class Part : AuditableEntity
     {
         Brand = Guard.AgainstTooLong(brand?.Trim().ToUpperInvariant(), nameof(Brand), 80) ?? string.Empty;
         Variant = Guard.AgainstTooLong(variant?.Trim().ToUpperInvariant(), nameof(Variant), 120) ?? string.Empty;
+    }
+
+    public void SetBrand(ProductBrand? brand)
+    {
+        BrandId = brand?.Id ?? ProductBrand.UnknownId;
+        Brand = brand is null || brand.Id == ProductBrand.UnknownId ? string.Empty : brand.NormalizedName;
     }
 
     public string? Description { get; private set; }

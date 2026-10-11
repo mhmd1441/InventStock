@@ -33,9 +33,11 @@ public sealed class RefreshTokenConfiguration : IEntityTypeConfiguration<Refresh
         builder.Property(x => x.CreatedByIp).HasMaxLength(64);
         builder.Property(x => x.RevokedByIp).HasMaxLength(64);
         builder.Property(x => x.ExpiresAtUtc).IsRequired();
+        builder.Property(x => x.SessionId).IsRequired();
 
         builder.HasIndex(x => x.TokenHash).IsUnique();
         builder.HasIndex(x => x.UserId);
+        builder.HasIndex(x => x.SessionId);
 
         builder.Ignore(x => x.IsRevoked);
         builder.Ignore(x => x.IsExpired);

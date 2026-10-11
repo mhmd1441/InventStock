@@ -41,6 +41,16 @@ public sealed class SaveSupplierRequestValidator : AbstractValidator<SaveSupplie
     }
 }
 
+public sealed class SaveBrandRequestValidator : AbstractValidator<SaveBrandRequest>
+{
+    public SaveBrandRequestValidator() => RuleFor(x => x.Name).NotEmpty().MaximumLength(ProductBrand.NameMaxLength);
+}
+
+public sealed class SaveBrandAliasRequestValidator : AbstractValidator<SaveBrandAliasRequest>
+{
+    public SaveBrandAliasRequestValidator() => RuleFor(x => x.Value).NotEmpty().MaximumLength(ProductBrand.AliasMaxLength);
+}
+
 public sealed class SavePartRequestValidator : AbstractValidator<SavePartRequest>
 {
     public SavePartRequestValidator()
