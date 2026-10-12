@@ -7,7 +7,9 @@ public sealed record InventoryTotals(
     int TotalSuppliers,
     int TotalStockUnits,
     decimal TotalStockValue,
-    int LowStockCount);
+    int LowStockCount,
+    int CountedParts,
+    int NotCountedParts);
 
 public interface IStatisticsRepository
 {

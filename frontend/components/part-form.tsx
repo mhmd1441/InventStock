@@ -35,6 +35,7 @@ const schema = z.object({
     .int("Whole units only")
     .min(0, "Cannot be negative"),
   barcode: z.string().max(64).optional(),
+  stockUnit: z.enum(["Piece", "Centimeter"]),
 });
 
 type FormValues = z.input<typeof schema>;
@@ -69,6 +70,7 @@ export function PartFormModal({
       unitPrice: part?.unitPrice ?? 0,
       lowStockThreshold: part?.lowStockThreshold ?? 0,
       barcode: part?.barcode ?? "",
+      stockUnit: part?.stockUnit ?? "Piece",
     },
   });
 
@@ -87,6 +89,7 @@ export function PartFormModal({
         unitPrice: Number(values.unitPrice),
         lowStockThreshold: Number(values.lowStockThreshold),
         barcode: values.barcode || null,
+        stockUnit: values.stockUnit,
       });
 
       onClose();
@@ -159,6 +162,13 @@ export function PartFormModal({
             </Select>
           </Field>
         </div>
+
+        <Field label="Stock unit" error={errors.stockUnit?.message} hint={part ? "Cannot change after the first stock movement or count" : "Use centimetres only for hose sold by length"}>
+          <Select {...register("stockUnit")}>
+            <option value="Piece">Piece</option>
+            <option value="Centimeter">Centimeter (cut hose)</option>
+          </Select>
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Purchase cost (USD)" error={errors.unitPrice?.message}>

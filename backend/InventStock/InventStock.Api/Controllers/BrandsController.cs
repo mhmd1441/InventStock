@@ -41,4 +41,9 @@ public sealed class BrandsController(IBrandService brands) : ControllerBase
         await brands.SetActiveAsync(id, request.IsActive, cancellationToken);
         return NoContent();
     }
+
+    [HttpPost("{sourceId:guid}/merge")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<BrandMergeDto>> Merge(Guid sourceId, MergeBrandRequest request, CancellationToken cancellationToken) =>
+        Ok(await brands.MergeAsync(sourceId, request, cancellationToken));
 }

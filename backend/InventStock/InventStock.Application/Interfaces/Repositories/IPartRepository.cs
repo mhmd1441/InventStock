@@ -24,11 +24,17 @@ public interface IPartRepository
 
     Task<IReadOnlyList<PartDto>> GetLowStockAsync(int limit, CancellationToken cancellationToken = default);
 
-    Task<bool> PartNumberExistsAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken = default, string brand = "", string variant = "");
+    Task<bool> PartNumberExistsAsync(string partNumber, Guid brandId, string variant, Guid? excludeId, CancellationToken cancellationToken = default);
 
     Task<bool> BarcodeExistsAsync(string barcode, Guid? excludeId, CancellationToken cancellationToken = default);
 
     Task<int> GetQuantityOnHandAsync(Guid partId, CancellationToken cancellationToken = default);
+    Task<int> GetAvailableQuantityAsync(Guid partId, CancellationToken cancellationToken = default);
+    Task<int> GetQuarantinedQuantityAsync(Guid partId, CancellationToken cancellationToken = default);
+
+    Task<bool> HasStockHistoryAsync(Guid partId, CancellationToken cancellationToken = default);
+
+    Task<bool> HasBeenCountedAsync(Guid partId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Takes a row-level write lock on the part so concurrent stock movements are serialised

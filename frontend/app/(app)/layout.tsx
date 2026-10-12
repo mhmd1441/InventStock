@@ -15,6 +15,9 @@ const navigation = [
   { href: "/categories", label: "Categories", adminOnly: false },
   { href: "/brands", label: "Brands", adminOnly: false },
   { href: "/suppliers", label: "Suppliers", adminOnly: true },
+  { href: "/receiving", label: "Receiving", adminOnly: true },
+  { href: "/imports", label: "Imports", adminOnly: true },
+  { href: "/cash", label: "Cash out", adminOnly: true },
   { href: "/users", label: "Users", adminOnly: true },
 ];
 
@@ -146,9 +149,9 @@ export default function AppLayout({
             <span className="text-muted">
               {feed.lastChange.partNumber} is now at{" "}
               <strong className="text-foreground">
-                {feed.lastChange.quantityOnHand}
+                {feed.lastChange.stockConfidence === "Counted" ? feed.lastChange.quantityOnHand : "not counted"}
               </strong>{" "}
-              units — {feed.lastChange.performedByUserName}
+              {feed.lastChange.stockConfidence === "Counted" ? "units" : ""} — {feed.lastChange.performedByUserName}
             </span>
             {feed.lastChange.isLowStock && <Badge tone="warning">Low stock</Badge>}
           </div>

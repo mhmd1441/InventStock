@@ -62,11 +62,11 @@ public sealed class AuthController : ControllerBase
         }
         else
         {
-        var token = Request.Cookies[RefreshCookieName];
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            await _identity.RevokeRefreshTokenAsync(token, cancellationToken);
-        }
+            var token = Request.Cookies[RefreshCookieName];
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                await _identity.RevokeRefreshTokenAsync(token, cancellationToken);
+            }
         }
 
         Response.Cookies.Delete(RefreshCookieName, BuildCookieOptions(DateTime.UnixEpoch));

@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IPartService, PartService>();
         services.AddScoped<IStockMovementService, StockMovementService>();
+        services.AddScoped<ISupplierCostService, SupplierCostService>();
         services.AddScoped<IDashboardService, DashboardService>();
 
         return services;

@@ -93,7 +93,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Staff_CannotPostStockAdjustments()
+    public async Task Staff_CannotPostStockAdjustmentsOrPhysicalCounts()
     {
         var client = await _factory.CreateStaffClientAsync();
         var parts = await client.GetFromJsonAsync<PagedResult<PartDto>>("/api/parts");
@@ -107,6 +107,14 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
         });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        var countResponse = await client.PostAsJsonAsync($"/api/parts/{partId}/stock/count", new StockCountRequest
+        {
+            OperationId = Guid.NewGuid(),
+            CountedQuantity = 1,
+            ExpectedBookQuantity = 1
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, countResponse.StatusCode);
     }
 
     [Fact]
@@ -131,6 +139,30 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task Staff_CanPhysicallyHoldStock_ButOnlyAdminCanReleaseIt()
+    {
+        var staff = await _factory.CreateStaffClientAsync();
+        var admin = await _factory.CreateAdminClientAsync();
+        var parts = await staff.GetFromJsonAsync<PagedResult<CounterPartDto>>("/api/parts");
+        var partId = parts!.Items[0].Id;
+        await staff.PostAsJsonAsync($"/api/parts/{partId}/stock/in", new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 5 });
+
+        var hold = await staff.PostAsJsonAsync($"/api/parts/{partId}/stock/hold", new StockHoldRequest(
+            Guid.NewGuid(), 3, "Suspected short hose", true));
+        hold.EnsureSuccessStatusCode();
+        var afterHold = await staff.GetFromJsonAsync<CounterPartDto>($"/api/parts/{partId}");
+        Assert.Equal(3, afterHold!.QuarantinedQuantity);
+        Assert.Equal(afterHold.PhysicalQuantityOnHand - 3, afterHold.QuantityOnHand);
+
+        var blocked = await staff.PostAsJsonAsync($"/api/parts/{partId}/stock/out", new StockOutRequest {
+            OperationId = Guid.NewGuid(), Quantity = afterHold.QuantityOnHand + 1, Reason = "Must not consume hold" });
+        Assert.Equal(HttpStatusCode.Conflict, blocked.StatusCode);
+        var releaseRequest = new StockReleaseRequest(Guid.NewGuid(), 3, "Supplier confirmed correct");
+        Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync($"/api/parts/{partId}/stock/release", releaseRequest)).StatusCode);
+        (await admin.PostAsJsonAsync($"/api/parts/{partId}/stock/release", releaseRequest)).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
     public async Task Admin_CanManageTheCatalogue()
     {
         var client = await _factory.CreateAdminClientAsync();
@@ -152,7 +184,8 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
 
         Assert.Equal("ADM-0001", created!.PartNumber);
         Assert.Equal(0, created.QuantityOnHand);
-        Assert.True(created.IsLowStock);
+        Assert.Equal(InventStock.Domain.Enums.StockConfidence.NotCounted, created.StockConfidence);
+        Assert.False(created.IsLowStock);
     }
 
     [Fact]

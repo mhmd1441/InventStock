@@ -51,8 +51,8 @@
   --color-success-surface: var(--success-surface);
   --color-warning-surface: var(--warning-surface);
   --color-danger-surface: var(--danger-surface);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Segoe UI", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, monospace;
 }
 
 body {

@@ -1,4 +1,5 @@
 using InventStock.Application.Common.Models;
+using InventStock.Domain.Enums;
 
 namespace InventStock.Application.DTOs.Catalog;
 
@@ -35,12 +36,18 @@ public sealed record PartDto
     public bool IsActive { get; init; }
 
     public int QuantityOnHand { get; init; }
+    public int PhysicalQuantityOnHand { get; init; }
+    public int QuarantinedQuantity { get; init; }
+
+    public StockConfidence StockConfidence { get; init; }
+
+    public StockUnit StockUnit { get; init; }
 
     public DateTime CreatedAtUtc { get; init; }
 
-    public bool IsLowStock => QuantityOnHand <= LowStockThreshold;
+    public bool IsLowStock => StockConfidence == StockConfidence.Counted && QuantityOnHand <= LowStockThreshold;
 
-    public decimal StockValue => QuantityOnHand * UnitPrice;
+    public decimal? StockValue => StockConfidence == StockConfidence.Counted ? QuantityOnHand * UnitPrice : null;
 }
 
 public sealed record SavePartRequest
@@ -67,6 +74,8 @@ public sealed record SavePartRequest
     public int LowStockThreshold { get; init; }
 
     public string? Barcode { get; init; }
+
+    public StockUnit StockUnit { get; init; } = StockUnit.Piece;
 }
 
 public enum PartSortField

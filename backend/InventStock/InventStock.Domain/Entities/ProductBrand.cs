@@ -70,4 +70,24 @@ public sealed class BrandAlias : AuditableEntity
             NormalizedValue = ProductBrand.Normalize(display)
         };
     }
+
+    public void Reassign(Guid productBrandId) => ProductBrandId = productBrandId;
+}
+
+public sealed class BrandMergeEvent : AuditableEntity
+{
+    public const int ReasonMaxLength = 500;
+    private BrandMergeEvent() { }
+    public Guid SourceBrandId { get; private set; }
+    public Guid TargetBrandId { get; private set; }
+    public string SourceName { get; private set; } = null!;
+    public string TargetName { get; private set; } = null!;
+    public string Reason { get; private set; } = null!;
+    public int ReassignedPartCount { get; private set; }
+
+    public static BrandMergeEvent Create(ProductBrand source, ProductBrand target, string reason, int partCount) => new()
+    {
+        SourceBrandId = source.Id, TargetBrandId = target.Id, SourceName = source.Name, TargetName = target.Name,
+        Reason = Guard.AgainstNullOrWhiteSpace(reason, nameof(Reason), ReasonMaxLength), ReassignedPartCount = partCount
+    };
 }

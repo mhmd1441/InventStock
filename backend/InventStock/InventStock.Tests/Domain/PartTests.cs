@@ -1,5 +1,6 @@
 using InventStock.Domain.Entities;
 using InventStock.Domain.Exceptions;
+using InventStock.Domain.Enums;
 
 namespace InventStock.Tests.Domain;
 
@@ -59,5 +60,15 @@ public class PartTests
 
         part.Reactivate();
         Assert.True(part.IsActive);
+    }
+
+    [Fact]
+    public void StockUnit_CannotChangeAfterHistoryExists()
+    {
+        var part = Part.Create("HOSE-1", "Cut hose", null, CategoryId, null, 10m, 5, null);
+        part.SetStockUnit(StockUnit.Centimeter, hasStockHistory: false);
+        Assert.Equal(StockUnit.Centimeter, part.StockUnit);
+
+        Assert.Throws<DomainException>(() => part.SetStockUnit(StockUnit.Piece, hasStockHistory: true));
     }
 }

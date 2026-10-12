@@ -19,6 +19,10 @@ public sealed record StockMovementDto
 
     public int QuantityChange { get; init; }
 
+    public int? CountedQuantity { get; init; }
+
+    public int? BookQuantityBeforeCount { get; init; }
+
     public string? Reason { get; init; }
 
     public string? Reference { get; init; }
@@ -63,6 +67,14 @@ public sealed record StockAdjustmentRequest
     public string? Reference { get; init; }
 }
 
+public sealed record StockCountRequest
+{
+    public Guid OperationId { get; init; }
+    public int CountedQuantity { get; init; }
+    public int ExpectedBookQuantity { get; init; }
+    public string? Reason { get; init; }
+}
+
 public sealed class StockMovementQuery : PagedQuery
 {
     public Guid? PartId { get; set; }
@@ -87,6 +99,8 @@ public sealed record StockChangedNotification
     public int LowStockThreshold { get; init; }
 
     public bool IsLowStock { get; init; }
+
+    public StockConfidence StockConfidence { get; init; }
 
     public MovementType MovementType { get; init; }
 

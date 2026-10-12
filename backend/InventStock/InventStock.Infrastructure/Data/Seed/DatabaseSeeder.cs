@@ -42,12 +42,39 @@ public sealed class DatabaseSeeder
     public async Task SeedAsync(SeedOptions options, CancellationToken cancellationToken = default)
     {
         await SeedRolesAsync();
+        await SeedCashFoundationAsync(cancellationToken);
         var adminId = await SeedAdminAsync(options);
 
         if (options.IncludeDemoData && adminId.HasValue)
         {
             await SeedDemoCatalogAsync(adminId.Value, cancellationToken);
         }
+    }
+
+    private async Task SeedCashFoundationAsync(CancellationToken cancellationToken)
+    {
+        var existingAccountCodes = await _db.CashAccounts.Select(x => x.Code).ToListAsync(cancellationToken);
+        var accounts = new[]
+        {
+            CashAccount.Create("SAFE_USD", "Physical safe — USD", Domain.Enums.MoneyCurrency.USD, Domain.Enums.CashAccountKind.PhysicalSafe),
+            CashAccount.Create("SAFE_LBP", "Physical safe — LBP", Domain.Enums.MoneyCurrency.LBP, Domain.Enums.CashAccountKind.PhysicalSafe),
+            CashAccount.Create("SAFE_EUR", "Physical safe — EUR", Domain.Enums.MoneyCurrency.EUR, Domain.Enums.CashAccountKind.PhysicalSafe),
+            CashAccount.Create("WHISH_USD", "Whish wallet — USD", Domain.Enums.MoneyCurrency.USD, Domain.Enums.CashAccountKind.Whish),
+            CashAccount.Create("WHISH_LBP", "Whish wallet — LBP", Domain.Enums.MoneyCurrency.LBP, Domain.Enums.CashAccountKind.Whish)
+        }.Where(x => !existingAccountCodes.Contains(x.Code)).ToArray();
+        if (accounts.Length > 0) _db.CashAccounts.AddRange(accounts);
+
+        var categoryNames = new[]
+        {
+            "Municipality / government fees", "Utilities", "Internet installation / subscription",
+            "Professional fees", "Shop refreshments", "Personal / family withdrawal", "Charity", "Other"
+        };
+        var existingCategoryNames = await _db.ExpenseCategories.Select(x => x.Name).ToListAsync(cancellationToken);
+        var categories = categoryNames.Where(x => !existingCategoryNames.Contains(x, StringComparer.OrdinalIgnoreCase))
+            .Select(ExpenseCategory.Create).ToArray();
+        if (categories.Length > 0) _db.ExpenseCategories.AddRange(categories);
+
+        if (accounts.Length > 0 || categories.Length > 0) await _db.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedRolesAsync()

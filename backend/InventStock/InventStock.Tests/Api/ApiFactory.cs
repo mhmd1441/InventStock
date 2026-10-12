@@ -17,7 +17,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace InventStock.Tests.Api;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
+public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string AdminEmail = "admin@inventstock.local";
     public const string AdminPassword = "Adm!nPassw0rd2026";
@@ -70,7 +70,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         var provider = scope.ServiceProvider;
 
         var db = provider.GetRequiredService<AppDbContext>();
-        await db.Database.EnsureCreatedAsync();
+        await PrepareDatabaseAsync(db);
 
         var seeder = provider.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedAsync(new SeedOptions
@@ -95,7 +95,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await userManager.AddToRoleAsync(staff, RoleNames.Staff);
     }
 
-    public new async Task DisposeAsync()
+    protected virtual Task PrepareDatabaseAsync(AppDbContext db) => db.Database.EnsureCreatedAsync();
+
+    public new virtual async Task DisposeAsync()
     {
         await _connection.DisposeAsync();
         await base.DisposeAsync();

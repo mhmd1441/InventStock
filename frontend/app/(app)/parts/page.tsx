@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { useCategories, useParts } from "@/lib/queries";
 import { formatCurrency } from "@/lib/format";
+import { formatStockQuantity } from "@/lib/quantity";
 import { isAdminPart, type AdminPart, type Part, type PartQuery, type PartSortField, type PartSearchMode } from "@/lib/types";
 import {
   Alert,
@@ -202,9 +203,10 @@ function PartsPageContent() {
                       <Td className="text-muted">{part.categoryName}</Td>
                       {canViewPrivate && <Td className="text-muted">{isAdminPart(part) ? part.supplierName ?? "—" : "—"}</Td>}
                       <Td className="text-right tabular-nums">
-                        <span className="font-medium">{part.quantityOnHand}</span>
+                        <span className="font-medium">{part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.quantityOnHand, part.stockUnit)}</span>
                         <span className="ml-2 inline-flex gap-1">
                           {part.isLowStock && <Badge tone="warning">Reorder</Badge>}
+                          {part.quarantinedQuantity > 0 && <Badge tone="danger">{formatStockQuantity(part.quarantinedQuantity, part.stockUnit)} held</Badge>}
                           {!part.isActive && <Badge>Inactive</Badge>}
                         </span>
                       </Td>
@@ -212,7 +214,7 @@ function PartsPageContent() {
                         {isAdminPart(part) ? formatCurrency(part.unitPrice) : "—"}
                       </Td>}
                       {canViewPrivate && <Td className="text-right tabular-nums">
-                        {isAdminPart(part) ? formatCurrency(part.stockValue) : "—"}
+                        {isAdminPart(part) && part.stockValue !== null ? formatCurrency(part.stockValue) : "Unknown"}
                       </Td>}
                       <Td className="text-right">
                         <div className="flex justify-end gap-2">

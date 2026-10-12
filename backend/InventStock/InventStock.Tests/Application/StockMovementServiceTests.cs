@@ -179,16 +179,20 @@ public class StockMovementServiceTests
         var notifier = new RecordingNotifier();
         using var harness = new Harness(notifier, lowStockThreshold: 10);
 
+        await harness.Service.CountAsync(harness.PartId, new StockCountRequest
+        {
+            OperationId = Guid.NewGuid(), CountedQuantity = 0, ExpectedBookQuantity = 0
+        });
         await harness.Service.StockInAsync(harness.PartId, new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 12 });
         await harness.Service.StockOutAsync(harness.PartId, new StockOutRequest { OperationId = Guid.NewGuid(), Quantity = 4, Reason = "Workshop issue" });
 
-        Assert.Equal(2, notifier.Notifications.Count);
+        Assert.Equal(3, notifier.Notifications.Count);
 
-        var first = notifier.Notifications[0];
+        var first = notifier.Notifications[1];
         Assert.Equal(12, first.QuantityOnHand);
         Assert.False(first.IsLowStock);
 
-        var second = notifier.Notifications[1];
+        var second = notifier.Notifications[2];
         Assert.Equal(8, second.QuantityOnHand);
         Assert.True(second.IsLowStock);
     }
@@ -247,6 +251,54 @@ public class StockMovementServiceTests
             new StockInRequest { OperationId = operationId, Quantity = 2 }));
         await Assert.ThrowsAsync<ConflictException>(() => harness.Service.GetOperationStatusAsync(operationId));
         Assert.Single(harness.Db.StockMovements);
+    }
+
+    [Fact]
+    public async Task PhysicalCount_EstablishesCountedStockAndPostsDifference()
+    {
+        using var harness = new Harness();
+        await harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 5 });
+
+        var count = await harness.Service.CountAsync(harness.PartId, new StockCountRequest
+        {
+            OperationId = Guid.NewGuid(), CountedQuantity = 3, ExpectedBookQuantity = 5
+        });
+
+        Assert.Equal(MovementType.PhysicalCount, count.MovementType);
+        Assert.Equal(5, count.BookQuantityBeforeCount);
+        Assert.Equal(3, count.CountedQuantity);
+        Assert.Equal(-2, count.QuantityChange);
+        Assert.Equal(3, await new PartRepository(harness.Db).GetQuantityOnHandAsync(harness.PartId));
+        Assert.True(await new PartRepository(harness.Db).HasBeenCountedAsync(harness.PartId));
+    }
+
+    [Fact]
+    public async Task ZeroPhysicalCount_IsRecordedAndRetryIsIdempotent()
+    {
+        using var harness = new Harness();
+        var request = new StockCountRequest
+        {
+            OperationId = Guid.NewGuid(), CountedQuantity = 0, ExpectedBookQuantity = 0
+        };
+
+        var first = await harness.Service.CountAsync(harness.PartId, request);
+        var replay = await harness.Service.CountAsync(harness.PartId, request);
+
+        Assert.Equal(first.Id, replay.Id);
+        Assert.Equal(0, first.QuantityChange);
+        Assert.Single(harness.Db.StockMovements);
+    }
+
+    [Fact]
+    public async Task PhysicalCount_RejectsStaleBookQuantity()
+    {
+        using var harness = new Harness();
+        await harness.Service.StockInAsync(harness.PartId,
+            new StockInRequest { OperationId = Guid.NewGuid(), Quantity = 1 });
+
+        await Assert.ThrowsAsync<ConflictException>(() => harness.Service.CountAsync(harness.PartId,
+            new StockCountRequest { OperationId = Guid.NewGuid(), CountedQuantity = 0, ExpectedBookQuantity = 0 }));
     }
 
     [Fact]

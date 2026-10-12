@@ -1,5 +1,7 @@
 namespace InventStock.Application.DTOs.Catalog;
 
+using InventStock.Domain.Enums;
+
 // Deliberately independent of PartDto: private fields cannot appear through inheritance.
 public sealed record CounterPartDto
 {
@@ -17,6 +19,10 @@ public sealed record CounterPartDto
     public string? Barcode { get; init; }
     public bool IsActive { get; init; }
     public int QuantityOnHand { get; init; }
+    public int PhysicalQuantityOnHand { get; init; }
+    public int QuarantinedQuantity { get; init; }
+    public StockConfidence StockConfidence { get; init; }
+    public StockUnit StockUnit { get; init; }
     public DateTime CreatedAtUtc { get; init; }
-    public bool IsLowStock => QuantityOnHand <= LowStockThreshold;
+    public bool IsLowStock => StockConfidence == StockConfidence.Counted && QuantityOnHand <= LowStockThreshold;
 }

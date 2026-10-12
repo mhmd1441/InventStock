@@ -1,0 +1,108 @@
+using InventStock.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace InventStock.Infrastructure.Data.Configurations;
+
+public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
+{
+    public void Configure(EntityTypeBuilder<Sale> b)
+    {
+        b.ToTable("Sales", t =>
+        {
+            t.HasCheckConstraint("CK_Sales_Settlement", "\"TotalUsd\" > 0 AND \"PaymentsUsd\" >= \"ChangeUsd\" AND \"ChangeUsd\" >= 0 AND \"CustomerCreditUsedUsd\" >= 0 AND \"UnpaidDebtUsd\" >= 0 AND \"TotalUsd\" = \"PaymentsUsd\" - \"ChangeUsd\" + \"CustomerCreditUsedUsd\" + \"UnpaidDebtUsd\"");
+            t.HasCheckConstraint("CK_Sales_Customer", "\"CustomerId\" IS NOT NULL OR (\"CustomerCreditUsedUsd\" = 0 AND \"UnpaidDebtUsd\" = 0)");
+        });
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.OperationId).IsUnique();
+        b.HasIndex(x => x.PostedAtUtc);
+        b.Property(x => x.PayloadFingerprint).HasMaxLength(64).IsRequired();
+        b.Property(x => x.CustomerName).HasMaxLength(200);
+        b.Property(x => x.TotalUsd).HasPrecision(18, 2);
+        b.Property(x => x.PaymentsUsd).HasPrecision(18, 2);
+        b.Property(x => x.ChangeUsd).HasPrecision(18, 2);
+        b.Property(x => x.CustomerCreditUsedUsd).HasPrecision(18, 2);
+        b.Property(x => x.UnpaidDebtUsd).HasPrecision(18, 2);
+        b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasMany(x => x.Tenders).WithOne().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class SaleLineConfiguration : IEntityTypeConfiguration<SaleLine>
+{
+    public void Configure(EntityTypeBuilder<SaleLine> b)
+    {
+        b.ToTable("SaleLines", t => t.HasCheckConstraint("CK_SaleLines_Amounts", "\"Quantity\" > 0 AND \"UnitSellingPriceUsd\" > 0 AND \"LineTotalUsd\" >= 0"));
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.SaleId, x.Position }).IsUnique();
+        b.HasIndex(x => x.StockMovementId).IsUnique();
+        b.Property(x => x.PartNumber).HasMaxLength(64).IsRequired();
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.Brand).HasMaxLength(80).IsRequired();
+        b.Property(x => x.Variant).HasMaxLength(120).IsRequired();
+        b.Property(x => x.StockUnit).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.UnitSellingPriceUsd).HasPrecision(18, 6);
+        b.Property(x => x.LineTotalUsd).HasPrecision(18, 2);
+        b.Property(x => x.EstimatedBaseUnitCost).HasPrecision(20, 6);
+        b.Property(x => x.CostCurrency).HasConversion<string>().HasMaxLength(8);
+        b.Property(x => x.CostTaxTreatment).HasConversion<string>().HasMaxLength(20);
+        b.Property(x => x.StockExceptionReason).HasMaxLength(500);
+        b.HasOne<Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<StockMovement>().WithMany().HasForeignKey(x => x.StockMovementId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<SupplierCostObservation>().WithMany().HasForeignKey(x => x.CostObservationId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class SaleTenderConfiguration : IEntityTypeConfiguration<SaleTender>
+{
+    public void Configure(EntityTypeBuilder<SaleTender> b)
+    {
+        b.ToTable("SaleTenders", t => t.HasCheckConstraint("CK_SaleTenders_Amounts", "\"NativeAmount\" > 0 AND \"ConfirmedUsdAmount\" > 0 AND (\"Currency\" <> 'USD' OR \"NativeAmount\" = \"ConfirmedUsdAmount\")"));
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => new { x.SaleId, x.Position }).IsUnique();
+        b.Property(x => x.AccountName).HasMaxLength(100).IsRequired();
+        b.Property(x => x.Currency).HasConversion<string>().HasMaxLength(8);
+        b.Property(x => x.NativeAmount).HasPrecision(20, 6);
+        b.Property(x => x.ConfirmedUsdAmount).HasPrecision(18, 2);
+        b.HasOne<CashAccount>().WithMany().HasForeignKey(x => x.CashAccountId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
+{
+    public void Configure(EntityTypeBuilder<Customer> b)
+    {
+        b.ToTable("Customers");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Name).HasMaxLength(200).IsRequired();
+        b.Property(x => x.DistinguishingLabel).HasMaxLength(200);
+        b.Property(x => x.Phone).HasMaxLength(50);
+        b.Property(x => x.Address).HasMaxLength(500);
+        b.Property(x => x.Revision).IsConcurrencyToken();
+        b.HasIndex(x => x.Name); // Names are deliberately not unique identifiers.
+    }
+}
+
+public sealed class CustomerAccountEntryConfiguration : IEntityTypeConfiguration<CustomerAccountEntry>
+{
+    public void Configure(EntityTypeBuilder<CustomerAccountEntry> b)
+    {
+        b.ToTable("CustomerAccountEntries", t => t.HasCheckConstraint("CK_CustomerEntries_Kind",
+            "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)"));
+        b.HasKey(x => x.Id);
+        b.Property(x => x.Kind).HasMaxLength(30).IsRequired();
+        b.Property(x => x.AmountUsd).HasPrecision(18, 2);
+        b.Property(x => x.Reason).HasMaxLength(500);
+        b.Property(x => x.PayloadFingerprint).HasMaxLength(64);
+        b.HasIndex(x => x.CustomerId).IsUnique().HasFilter("\"Kind\" = 'Opening'");
+        b.HasIndex(x => new { x.CustomerPaymentId, x.Kind }).IsUnique();
+        b.HasIndex(x => x.CustomerPaymentCorrectionId).IsUnique();
+        b.HasIndex(x => new { x.CustomerId, x.CreatedAtUtc });
+        b.HasIndex(x => new { x.OperationId, x.Kind }).IsUnique();
+        b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<Sale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CustomerPayment>().WithMany().HasForeignKey(x => x.CustomerPaymentId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CustomerPaymentCorrection>().WithMany().HasForeignKey(x => x.CustomerPaymentCorrectionId).OnDelete(DeleteBehavior.Restrict);
+    }
+}

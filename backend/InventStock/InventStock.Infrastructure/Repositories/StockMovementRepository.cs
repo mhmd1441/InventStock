@@ -26,11 +26,7 @@ public sealed class StockMovementRepository : IStockMovementRepository
 
     public async Task LockOperationAsync(Guid userId, Guid operationId, CancellationToken cancellationToken = default)
     {
-        if (!_db.Database.IsNpgsql()) return;
-        // Transaction-scoped advisory lock serializes the same user's operation before any part row is locked.
-        var key = BitConverter.ToInt64(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes($"{userId:N}:{operationId:N}")), 0);
-        await _db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock({key})", cancellationToken);
+        await OperationGuard.LockAsync(_db, operationId, "Stock", cancellationToken);
     }
 
     public async Task<PagedResult<StockMovementDto>> SearchAsync(StockMovementQuery query, CancellationToken cancellationToken = default)
@@ -84,6 +80,8 @@ public sealed class StockMovementRepository : IStockMovementRepository
             PartName = m.Part.Name,
             MovementType = m.MovementType,
             QuantityChange = m.QuantityChange,
+            CountedQuantity = m.CountedQuantity,
+            BookQuantityBeforeCount = m.BookQuantityBeforeCount,
             Reason = m.Reason,
             Reference = m.Reference,
             PerformedByUserId = m.PerformedByUserId,

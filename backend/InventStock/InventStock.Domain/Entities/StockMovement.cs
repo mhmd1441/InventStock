@@ -39,6 +39,21 @@ public class StockMovement : AuditableEntity
 
     public string? PayloadFingerprint { get; private set; }
 
+    /// <summary>Present only for a physical-count checkpoint.</summary>
+    public int? CountedQuantity { get; private set; }
+
+    /// <summary>Ledger balance observed under the part lock immediately before the count adjustment.</summary>
+    public int? BookQuantityBeforeCount { get; private set; }
+
+    /// <summary>Links stock added by receiving to its immutable source line.</summary>
+    public Guid? PurchaseReceiptLineId { get; private set; }
+
+    public void LinkToPurchaseReceiptLine(Guid receiptLineId)
+    {
+        if (receiptLineId == Guid.Empty) throw new DomainException("A receipt line ID is required.");
+        PurchaseReceiptLineId = receiptLineId;
+    }
+
     public void SetOperation(Guid operationId, string payloadFingerprint)
     {
         if (operationId == Guid.Empty) throw new DomainException("A stock operation ID is required.");
@@ -81,6 +96,16 @@ public class StockMovement : AuditableEntity
         }
 
         return Create(partId, MovementType.Adjustment, quantityChange, performedByUserId, reason, reference);
+    }
+
+    public static StockMovement PhysicalCount(Guid partId, int countedQuantity, int bookQuantityBefore, Guid performedByUserId, string? reason)
+    {
+        if (countedQuantity < 0) throw new DomainException("A physical count cannot be negative.");
+        var movement = Create(partId, MovementType.PhysicalCount, countedQuantity - bookQuantityBefore,
+            performedByUserId, string.IsNullOrWhiteSpace(reason) ? "Physical count" : reason, null);
+        movement.CountedQuantity = countedQuantity;
+        movement.BookQuantityBeforeCount = bookQuantityBefore;
+        return movement;
     }
 
     private static StockMovement Create(

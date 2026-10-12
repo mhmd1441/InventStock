@@ -41,11 +41,18 @@ public static class DependencyInjection
         services.AddScoped<ISupplierRepository, SupplierRepository>();
         services.AddScoped<IPartRepository, PartRepository>();
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+        services.AddScoped<ISupplierCostRepository, SupplierCostRepository>();
         services.AddScoped<IStatisticsRepository, StatisticsRepository>();
 
         services.AddSingleton<ITokenService, TokenService>();
         services.AddScoped<IIdentityService, IdentityService>();
         services.AddScoped<IReferenceService, ReferenceService>();
+        services.AddScoped<IStockHoldService, StockHoldService>();
+        services.AddScoped<IReceivingService, ReceivingService>();
+        services.AddScoped<ISupplierImportService, SupplierImportService>();
+        services.AddScoped<ICashService, CashService>();
+        services.AddScoped<ISaleService, SaleService>();
+        services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<DatabaseSeeder>();
 
         return services;

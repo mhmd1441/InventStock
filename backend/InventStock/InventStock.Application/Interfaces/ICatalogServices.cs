@@ -10,6 +10,7 @@ public interface IBrandService
     Task<BrandDto> CreateAsync(SaveBrandRequest request, CancellationToken cancellationToken = default);
     Task<BrandDto> AddAliasAsync(Guid id, SaveBrandAliasRequest request, CancellationToken cancellationToken = default);
     Task SetActiveAsync(Guid id, bool isActive, CancellationToken cancellationToken = default);
+    Task<BrandMergeDto> MergeAsync(Guid sourceId, MergeBrandRequest request, CancellationToken cancellationToken = default);
 }
 
 public interface ICategoryService

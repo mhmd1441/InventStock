@@ -69,7 +69,7 @@ public sealed class PartService : IPartService
     {
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
         var brand = await ResolveBrandAsync(request.BrandId, request.Brand, cancellationToken);
-        await EnsurePartNumberIsFreeAsync(partNumber, null, cancellationToken, brand?.NormalizedName, request.Variant);
+        await EnsurePartNumberIsFreeAsync(partNumber, brand.Id, request.Variant, null, cancellationToken);
         await EnsureBarcodeIsFreeAsync(request.Barcode, null, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
@@ -85,6 +85,7 @@ public sealed class PartService : IPartService
 
         part.SetIdentity(brand?.NormalizedName, request.Variant);
         part.SetBrand(brand);
+        part.SetStockUnit(request.StockUnit, hasStockHistory: false);
         await _parts.AddAsync(part, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -98,12 +99,13 @@ public sealed class PartService : IPartService
 
         var partNumber = Part.NormalizePartNumber(request.PartNumber);
         var brand = await ResolveBrandAsync(request.BrandId, request.Brand, cancellationToken);
-        await EnsurePartNumberIsFreeAsync(partNumber, id, cancellationToken, brand?.NormalizedName, request.Variant);
+        await EnsurePartNumberIsFreeAsync(partNumber, brand.Id, request.Variant, id, cancellationToken);
         await EnsureBarcodeIsFreeAsync(request.Barcode, id, cancellationToken);
         await EnsureRelationsExistAsync(request.CategoryId, request.SupplierId, cancellationToken);
 
         part.SetIdentity(brand?.NormalizedName, request.Variant);
         part.SetBrand(brand);
+        part.SetStockUnit(request.StockUnit, await _parts.HasStockHistoryAsync(id, cancellationToken));
         part.Update(
             partNumber,
             request.Name,
@@ -136,9 +138,9 @@ public sealed class PartService : IPartService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task EnsurePartNumberIsFreeAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken, string? brand, string? variant)
+    private async Task EnsurePartNumberIsFreeAsync(string partNumber, Guid brandId, string? variant, Guid? excludeId, CancellationToken cancellationToken)
     {
-        if (await _parts.PartNumberExistsAsync(partNumber, excludeId, cancellationToken, brand?.Trim().ToUpperInvariant() ?? "", variant?.Trim().ToUpperInvariant() ?? ""))
+        if (await _parts.PartNumberExistsAsync(partNumber, brandId, variant ?? "", excludeId, cancellationToken))
         {
             throw new ConflictException($"Part number '{partNumber}' is already in use.");
         }
@@ -170,7 +172,7 @@ public sealed class PartService : IPartService
         }
     }
 
-    private async Task<ProductBrand?> ResolveBrandAsync(Guid? brandId, string? legacyBrand, CancellationToken cancellationToken)
+    private async Task<ProductBrand> ResolveBrandAsync(Guid? brandId, string? legacyBrand, CancellationToken cancellationToken)
     {
         if (brandId.HasValue)
         {

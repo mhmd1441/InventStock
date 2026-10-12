@@ -5,7 +5,7 @@ export interface PendingStockOperation {
   actorId: string;
   partId: string;
   partNumber: string;
-  kind: "In" | "Out" | "Adjustment";
+  kind: "In" | "Out" | "Adjustment" | "PhysicalCount" | "Hold" | "Release";
   quantity: number;
   createdAtUtc: string;
 }

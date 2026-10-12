@@ -154,7 +154,7 @@ cd backend/InventStock
 dotnet test
 ```
 
-108 tests covering four levels:
+123 tests covering four levels (including the PostgreSQL-only migration and concurrency gate):
 
 - **Domain** — the movement invariants (sign per type, adjustments need a reason, no zero-quantity rows).
 - **Services** — insufficient stock is rejected and leaves no row behind, inactive parts reject
@@ -194,6 +194,28 @@ true retry returns the original movement; changing the payload under the same ID
 Legacy movements remain valid with a null operation ID. This migration is also unapplied outside the
 disposable test database.
 
+`RequiredBrandIdentity` makes the controlled brand ID part of SKU identity and provides an explicit
+Unknown brand instead of nullable identity. `SessionRevocationIdentity` lets a failed browser logout
+later revoke the exact old session without affecting a new employee session. `StockUnitsAndConfidence`
+adds fixed base units (`Piece` or `Centimeter`) and auditable physical-count checkpoints. Catalogue rows
+start as **Not counted**; an unknown quantity is no longer presented as a verified zero. None of these
+migrations has been applied to a normal or shop database.
+
+`SupplierCostHistory` adds private append-only USD/EUR/LBP cost observations per SKU and supplier,
+including TVA treatment, evidence source, pack quantity, supplier code and observation date.
+`AuditedBrandMerges` adds immutable merge records; merging locks both brands, refuses SKU identity
+collisions, reassigns products and usable aliases, and deactivates the old name atomically.
+
+`StockConditionHolds` adds an append-only quarantine ledger. A hold requires confirmation that the
+identified goods were physically separated or tagged, immediately removes them from sellable quantity,
+and cannot be bypassed by raw stock-out. Staff may hold; only admins may release verified goods.
+
+`AtomicPurchaseReceiving` adds immutable multi-line supplier receipts. Posting a receipt adds all base-unit
+stock movements and any known actual-purchase cost observations in one transaction, with an idempotent
+operation ID. Package conversions are preserved, unknown cost remains null, and receiving never implies
+that the supplier was paid. The admin receiving screen searches catalogue SKUs and supports piece and
+centimeter base units.
+
 Optional real PostgreSQL regression tests require `INVENTSTOCK_TEST_POSTGRES` pointing to a
 **disposable database named `inventstock_test`**. Tests create and remove a random isolated schema.
 Never point this at business data. The benchmark seeds 20,000 parts, 20,000 references and 100,000
@@ -221,6 +243,8 @@ The EF tool is pinned in `.config/dotnet-tools.json`; run `dotnet tool restore` 
 | `GET` | `/api/dashboard` | any |
 | `GET` | `/api/admin/dashboard`, `/api/admin/parts` (including detail/by-number/low-stock) | Admin |
 | `GET` | `/api/suppliers`, `/api/suppliers/{id}` | Admin |
+| `POST` | `/api/admin/receipts` | Admin |
+| `GET` | `/api/admin/receipts/{id}`, `/api/admin/receipts/operations/{operationId}` | Admin |
 | `GET` | `/api/parts/{id}/references` | any |
 | `GET` | `/api/brands` | any |
 | `POST`/`PATCH` | `/api/brands`, `/api/brands/{id}/aliases`, `/api/brands/{id}/active` | Admin |
@@ -228,7 +252,8 @@ The EF tool is pinned in `.config/dotnet-tools.json`; run `dotnet tool restore` 
 | `GET` | `/api/parts`, `/api/parts/{id}`, `/api/parts/by-number/{n}`, `/api/parts/low-stock` | any |
 | `GET` | `/api/parts/{id}/movements`, `/api/stock-movements` | any |
 | `POST` | `/api/parts/{id}/stock/in`, `/api/parts/{id}/stock/out` | any |
-| `POST` | `/api/parts/{id}/stock/adjust` | Admin |
+| `POST` | `/api/parts/{id}/stock/adjust`, `/api/parts/{id}/stock/count` | Admin |
+| `GET` | `/api/stock-operations/{operationId}` | original operation user |
 | `POST`/`PUT`/`PATCH` | `/api/parts`, `/api/categories`, `/api/suppliers` | Admin |
 | `DELETE` | `/api/categories/{id}` | Admin |
 | `GET`/`POST`/`PATCH` | `/api/users` | Admin |

@@ -28,6 +28,9 @@ public class PartRepositoryTests
                 : StockMovement.StockOut(part.Id, -quantity, userId, "Workshop issue", null));
         }
 
+        var bookQuantity = movements.Sum();
+        context.Db.StockMovements.Add(StockMovement.PhysicalCount(part.Id, bookQuantity, bookQuantity, userId, "Test count"));
+
         await context.Db.SaveChangesAsync();
 
         return (context, new PartRepository(context.Db), part.Id);
@@ -49,6 +52,22 @@ public class PartRepositoryTests
         using var _ = context;
 
         Assert.Equal(0, await repository.GetQuantityOnHandAsync(partId));
+    }
+
+    [Fact]
+    public async Task NewPartWithoutPhysicalCount_IsExplicitlyNotCounted()
+    {
+        using var context = new SqliteTestContext();
+        var category = Category.Create("Unknown stock", null);
+        var part = Part.Create("UNKNOWN-1", "Unknown", null, category.Id, null, 1, 0, null);
+        context.Db.AddRange(category, part);
+        await context.Db.SaveChangesAsync();
+
+        var dto = await new PartRepository(context.Db).GetCounterAsync(part.Id);
+
+        Assert.NotNull(dto);
+        Assert.Equal(InventStock.Domain.Enums.StockConfidence.NotCounted, dto!.StockConfidence);
+        Assert.False(dto.IsLowStock);
     }
 
     [Fact]
@@ -122,9 +141,9 @@ public class PartRepositoryTests
         var (context, repository, partId) = await SeedAsync();
         using var _unused = context;
 
-        Assert.True(await repository.PartNumberExistsAsync("BRK-1001", null));
-        Assert.False(await repository.PartNumberExistsAsync("BRK-1001", partId));
-        Assert.True(await repository.PartNumberExistsAsync("brk-1001", null));
+        Assert.True(await repository.PartNumberExistsAsync("BRK-1001", ProductBrand.UnknownId, "", null));
+        Assert.False(await repository.PartNumberExistsAsync("BRK-1001", ProductBrand.UnknownId, "", partId));
+        Assert.True(await repository.PartNumberExistsAsync("brk-1001", ProductBrand.UnknownId, "", null));
     }
 
     [Fact]

@@ -11,6 +11,8 @@ public interface IStockMovementService
 
     Task<StockMovementDto> AdjustAsync(Guid partId, StockAdjustmentRequest request, CancellationToken cancellationToken = default);
 
+    Task<StockMovementDto> CountAsync(Guid partId, StockCountRequest request, CancellationToken cancellationToken = default);
+
     Task<PagedResult<StockMovementDto>> SearchAsync(StockMovementQuery query, CancellationToken cancellationToken = default);
 
     Task<StockOperationStatusDto> GetOperationStatusAsync(Guid operationId, CancellationToken cancellationToken = default);

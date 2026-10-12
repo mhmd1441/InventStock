@@ -4,11 +4,12 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { clearPendingStockOperation, rememberPendingStockOperation } from "@/lib/pending-stock-operation";
-import { useStockAdjust, useStockIn, useStockOut } from "@/lib/queries";
+import { useStockAdjust, useStockCount, useStockHold, useStockIn, useStockOut, useStockRelease } from "@/lib/queries";
+import { formatStockQuantity, stockUnitLabel } from "@/lib/quantity";
 import type { Part } from "@/lib/types";
 import { Alert, Badge, Button, Field, Input, Modal } from "./ui";
 
-type Mode = "In" | "Out" | "Adjustment";
+type Mode = "In" | "Out" | "Adjustment" | "PhysicalCount" | "Hold" | "Release";
 
 export function StockMovementModal({
   part,
@@ -21,6 +22,9 @@ export function StockMovementModal({
   const stockIn = useStockIn();
   const stockOut = useStockOut();
   const adjust = useStockAdjust();
+  const count = useStockCount();
+  const hold = useStockHold();
+  const release = useStockRelease();
 
   const [mode, setMode] = useState<Mode>("In");
   const [quantity, setQuantity] = useState("1");
@@ -30,17 +34,18 @@ export function StockMovementModal({
   // Kept stable after an uncertain response so pressing Record again replays rather than duplicates.
   const [operationId] = useState(() => crypto.randomUUID());
 
-  const modes: Mode[] = isAdmin ? ["In", "Out", "Adjustment"] : ["In", "Out"];
-  const pending = stockIn.isPending || stockOut.isPending || adjust.isPending;
+  const modes: Mode[] = isAdmin ? ["In", "Out", "Hold", "Release", "Adjustment", "PhysicalCount"] : ["In", "Out", "Hold"];
+  const pending = stockIn.isPending || stockOut.isPending || adjust.isPending || count.isPending || hold.isPending || release.isPending;
 
   const parsedQuantity = Number(quantity);
   const projected =
     Number.isFinite(parsedQuantity) && quantity !== ""
-      ? part.quantityOnHand +
+      ? mode === "PhysicalCount" ? parsedQuantity - part.quarantinedQuantity : part.quantityOnHand +
         (mode === "In"
           ? Math.abs(parsedQuantity)
-          : mode === "Out"
+          : mode === "Out" || mode === "Hold"
             ? -Math.abs(parsedQuantity)
+            : mode === "Release" ? Math.abs(parsedQuantity)
             : parsedQuantity)
       : part.quantityOnHand;
 
@@ -48,12 +53,12 @@ export function StockMovementModal({
     event.preventDefault();
     setFormError(null);
 
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity === 0) {
-      setFormError("Enter a quantity other than zero.");
+    if (!Number.isFinite(parsedQuantity) || (mode === "PhysicalCount" ? parsedQuantity < 0 : parsedQuantity === 0)) {
+      setFormError(mode === "PhysicalCount" ? "A physical count cannot be negative." : "Enter a quantity other than zero.");
       return;
     }
 
-    if (mode !== "In" && reason.trim() === "") {
+    if (mode !== "In" && mode !== "PhysicalCount" && reason.trim() === "") {
       setFormError("Stock-out and adjustments require a reason for the audit trail.");
       return;
     }
@@ -80,7 +85,7 @@ export function StockMovementModal({
           reason: reason || undefined,
           reference: reference || undefined,
         });
-      } else {
+      } else if (mode === "Adjustment") {
         await adjust.mutateAsync({
           partId: part.id,
           operationId,
@@ -88,6 +93,18 @@ export function StockMovementModal({
           reason,
           reference: reference || undefined,
         });
+      } else if (mode === "PhysicalCount") {
+        await count.mutateAsync({
+          partId: part.id,
+          operationId,
+          countedQuantity: parsedQuantity,
+          expectedBookQuantity: part.quantityOnHand,
+          reason: reason || undefined,
+        });
+      } else if (mode === "Hold") {
+        await hold.mutateAsync({ partId: part.id, operationId, quantity: Math.abs(parsedQuantity), reason, physicalSeparationConfirmed: true });
+      } else {
+        await release.mutateAsync({ partId: part.id, operationId, quantity: Math.abs(parsedQuantity), reason });
       }
 
       clearPendingStockOperation(operationId);
@@ -111,7 +128,7 @@ export function StockMovementModal({
         <div className="flex items-center justify-between rounded-lg bg-surface-muted px-3 py-2 text-sm">
           <span className="text-muted">Currently on hand</span>
           <span className="flex items-center gap-2 font-medium tabular-nums">
-            {part.quantityOnHand}
+            {part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.quantityOnHand, part.stockUnit)}
             {part.isLowStock && <Badge tone="warning">Reorder</Badge>}
           </span>
         </div>
@@ -119,7 +136,7 @@ export function StockMovementModal({
         <div
           role="radiogroup"
           aria-label="Movement type"
-          className="grid grid-cols-3 gap-2"
+          className="grid grid-cols-2 gap-2 sm:grid-cols-3"
         >
           {modes.map((option) => (
             <Button
@@ -136,11 +153,11 @@ export function StockMovementModal({
         </div>
 
         <Field
-          label={mode === "Adjustment" ? "Quantity change" : "Quantity"}
+          label={mode === "Adjustment" ? "Quantity change" : mode === "PhysicalCount" ? "Physically counted quantity" : "Quantity"}
           hint={
             mode === "Adjustment"
               ? "Use a negative number to write stock off"
-              : undefined
+              : `Enter whole ${stockUnitLabel(part.stockUnit)}${part.stockUnit === "Centimeter" ? " (150 = 1.5 metres)" : ""}`
           }
         >
           <Input
@@ -154,7 +171,7 @@ export function StockMovementModal({
 
         <Field
           label="Reason"
-          hint={mode !== "In" ? "Required — public to shop users; do not enter supplier costs" : "Optional"}
+          hint={mode !== "In" && mode !== "PhysicalCount" ? "Required — public to shop users; do not enter supplier costs" : "Optional"}
         >
           <Input
             value={reason}
@@ -184,7 +201,7 @@ export function StockMovementModal({
                   : ""
             }`}
           >
-            {projected}
+            {mode === "PhysicalCount" || part.stockConfidence === "Counted" ? formatStockQuantity(projected, part.stockUnit) : "Still not counted"}
           </span>
         </div>
 
@@ -194,6 +211,9 @@ export function StockMovementModal({
           </Alert>
         )}
         {mode === "Out" && <Alert tone="warning">Raw stock-out records inventory only, not a sale or payment.</Alert>}
+        {mode === "PhysicalCount" && <Alert tone="warning">Count the physical stock now. If another stock action commits first, the server will reject this and require a recount.</Alert>}
+        {mode === "Hold" && <Alert tone="warning">Before recording, physically separate or clearly tag these goods. They become unavailable for sale immediately.</Alert>}
+        {mode === "Release" && <Alert tone="warning">Release only goods physically verified as sellable. This action is admin-only.</Alert>}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>

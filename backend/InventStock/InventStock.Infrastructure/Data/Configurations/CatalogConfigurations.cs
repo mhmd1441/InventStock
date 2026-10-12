@@ -42,6 +42,20 @@ public sealed class BrandAliasConfiguration : IEntityTypeConfiguration<BrandAlia
     }
 }
 
+public sealed class BrandMergeEventConfiguration : IEntityTypeConfiguration<BrandMergeEvent>
+{
+    public void Configure(EntityTypeBuilder<BrandMergeEvent> builder)
+    {
+        builder.ToTable("BrandMergeEvents");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.SourceName).HasMaxLength(ProductBrand.NameMaxLength).IsRequired();
+        builder.Property(x => x.TargetName).HasMaxLength(ProductBrand.NameMaxLength).IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(BrandMergeEvent.ReasonMaxLength).IsRequired();
+        builder.HasIndex(x => x.SourceBrandId);
+        builder.HasIndex(x => x.TargetBrandId);
+    }
+}
+
 public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 {
     public void Configure(EntityTypeBuilder<Category> builder)
@@ -113,6 +127,7 @@ public sealed class PartConfiguration : IEntityTypeConfiguration<Part>
         builder.Property(x => x.UnitPrice).HasPrecision(18, 2);
         builder.Property(x => x.LowStockThreshold).IsRequired();
         builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.StockUnit).HasConversion<string>().HasMaxLength(20).IsRequired();
 
         builder.HasIndex(x => new { x.PartNumber, x.BrandId, x.Variant }).IsUnique();
         builder.HasIndex(x => x.Barcode).IsUnique().HasFilter(null);

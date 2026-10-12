@@ -65,6 +65,19 @@ public sealed class StockController : ControllerBase
         return Created($"/api/parts/{partId}/movements", movement);
     }
 
+    [HttpPost("api/parts/{partId:guid}/stock/count")]
+    [Authorize(Roles = RoleNames.Admin)]
+    [ProducesResponseType(typeof(StockMovementDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<StockMovementDto>> Count(
+        Guid partId,
+        StockCountRequest request,
+        CancellationToken cancellationToken)
+    {
+        var movement = await _movements.CountAsync(partId, request, cancellationToken);
+        return Created($"/api/parts/{partId}/movements", movement);
+    }
+
     [HttpGet("api/stock-movements")]
     [ProducesResponseType(typeof(PagedResult<StockMovementDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<StockMovementDto>>> Search(

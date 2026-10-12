@@ -83,6 +83,37 @@ public class CounterPrivacyTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task SupplierCostHistory_IsAppendOnlyAndAdminOnly()
+    {
+        using var admin = await _factory.CreateAdminClientAsync();
+        using var staff = await _factory.CreateStaffClientAsync();
+        var parts = await staff.GetFromJsonAsync<PagedResult<CounterPartDto>>("/api/parts");
+        var suppliers = await admin.GetFromJsonAsync<List<SupplierDto>>("/api/suppliers");
+        var path = $"/api/admin/parts/{parts!.Items[0].Id}/supplier-costs";
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await staff.GetAsync(path)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsJsonAsync(path, new { })).StatusCode);
+
+        var first = await admin.PostAsJsonAsync(path, new {
+            supplierId = suppliers![0].Id, unitCost = 15.25m, currency = "USD",
+            taxTreatment = "Excluded", source = "SupplierQuote", packQuantity = 1,
+            supplierCode = "PRIVATE-204", observedAtUtc = DateTime.UtcNow
+        });
+        first.EnsureSuccessStatusCode();
+        var second = await admin.PostAsJsonAsync(path, new {
+            supplierId = suppliers[0].Id, unitCost = 13m, currency = "USD",
+            taxTreatment = "Included", source = "ActualPurchase", packQuantity = 1,
+            observedAtUtc = DateTime.UtcNow.AddMinutes(1)
+        });
+        second.EnsureSuccessStatusCode();
+
+        var history = await admin.GetFromJsonAsync<List<SupplierCostObservationDto>>(path);
+        Assert.Equal(2, history!.Count);
+        Assert.Equal(13m, history[0].UnitCost);
+        Assert.Equal(15.25m, history[1].UnitCost);
+    }
+
+    [Fact]
     public async Task ReferenceWrites_RequireAdmin_AndAreSearchableByStaff()
     {
         using var admin = await _factory.CreateAdminClientAsync();

@@ -33,8 +33,10 @@ public class LowStockQueryTests
             {
                 context.Db.StockMovements.Add(
                     StockMovement.StockIn(part.Id, opening, userId, "Opening", null));
-                await context.Db.SaveChangesAsync();
             }
+            context.Db.StockMovements.Add(
+                StockMovement.PhysicalCount(part.Id, opening, opening, userId, "Opening count"));
+            await context.Db.SaveChangesAsync();
         }
 
         return (context, new PartRepository(context.Db));

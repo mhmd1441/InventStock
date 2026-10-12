@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { usePart, usePartMovements, useSetPartActive } from "@/lib/queries";
 import { formatCurrency, formatDateTime } from "@/lib/format";
+import { formatStockQuantity } from "@/lib/quantity";
 import { isAdminPart } from "@/lib/types";
 import {
   Alert,
@@ -47,9 +48,11 @@ export default function PartDetailPage({
     ...(canViewPrivate && isAdminPart(part) ? [
       { label: "Supplier", value: part.supplierName ?? "—" },
       { label: "Purchase cost", value: formatCurrency(part.unitPrice) },
-      { label: "Stock value", value: formatCurrency(part.stockValue) },
+      { label: "Stock value", value: part.stockValue === null ? "Unknown until counted" : formatCurrency(part.stockValue) },
     ] : []),
     { label: "Reorder threshold", value: String(part.lowStockThreshold) },
+    { label: "Quarantined", value: formatStockQuantity(part.quarantinedQuantity, part.stockUnit) },
+    { label: "Physical total", value: part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.physicalQuantityOnHand, part.stockUnit) },
     { label: "Barcode", value: part.barcode ?? "—" },
     { label: "Added", value: formatDateTime(part.createdAtUtc) },
   ];
@@ -102,10 +105,10 @@ export default function PartDetailPage({
               part.isLowStock ? "text-warning" : ""
             }`}
           >
-            {part.quantityOnHand}
+            {part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.quantityOnHand, part.stockUnit)}
           </p>
           <p className="mt-1 text-xs text-muted">
-            Derived from the movement ledger
+            {part.stockConfidence === "NotCounted" ? "No verified physical count yet" : "Derived from the last count and later movements"}
           </p>
         </div>
 

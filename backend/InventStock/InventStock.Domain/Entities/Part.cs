@@ -1,4 +1,6 @@
 using InventStock.Domain.Common;
+using InventStock.Domain.Enums;
+using InventStock.Domain.Exceptions;
 
 namespace InventStock.Domain.Entities;
 
@@ -65,6 +67,9 @@ public class Part : AuditableEntity
 
     public bool IsActive { get; private set; } = true;
 
+    /// <summary>The indivisible base unit written to the stock ledger.</summary>
+    public StockUnit StockUnit { get; private set; } = StockUnit.Piece;
+
     public IReadOnlyCollection<StockMovement> Movements => _movements.AsReadOnly();
 
     public static Part Create(
@@ -113,6 +118,14 @@ public class Part : AuditableEntity
     public void Deactivate() => IsActive = false;
 
     public void Reactivate() => IsActive = true;
+
+    public void SetStockUnit(StockUnit unit, bool hasStockHistory)
+    {
+        if (!Enum.IsDefined(unit)) throw new DomainException("A valid stock unit is required.");
+        if (hasStockHistory && StockUnit != unit)
+            throw new DomainException("The stock unit cannot change after stock history exists. Create an audited conversion instead.");
+        StockUnit = unit;
+    }
 
     public static string NormalizePartNumber(string partNumber) =>
         Guard.AgainstNullOrWhiteSpace(partNumber, nameof(PartNumber), PartNumberMaxLength).ToUpperInvariant();

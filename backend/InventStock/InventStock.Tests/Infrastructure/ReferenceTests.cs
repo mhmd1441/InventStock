@@ -71,10 +71,15 @@ public class ReferenceTests
         using var context = new SqliteTestContext();
         var category = Category.Create("Hoses", null);
         context.Db.Add(category);
+        var brands = new Dictionary<string, Guid>();
         foreach (var brand in new[] { "FEBI", "MATRIX" })
         {
+            var brandRecord = ProductBrand.Create(brand);
+            brands[brand] = brandRecord.Id;
+            context.Db.Add(brandRecord);
             var part = Part.Create("2045012782", "Hose", null, category.Id, null, 15, 0, null);
-            part.SetIdentity(brand, null);
+            part.SetIdentity(brandRecord.NormalizedName, null);
+            part.SetBrand(brandRecord);
             context.Db.Add(part);
         }
         await context.Db.SaveChangesAsync();
@@ -84,8 +89,8 @@ public class ReferenceTests
         Assert.Equal(2, result.Items.Select(p => p.Brand).Distinct().Count());
         await Assert.ThrowsAsync<ConflictException>(() => repository.GetCounterByNumberAsync("2045012782"));
         await Assert.ThrowsAsync<ConflictException>(() => repository.GetDtoByPartNumberAsync("2045012782"));
-        Assert.True(await repository.PartNumberExistsAsync("2045012782", null, brand: "FEBI"));
-        Assert.False(await repository.PartNumberExistsAsync("2045012782", null, brand: "BOSCH"));
+        Assert.True(await repository.PartNumberExistsAsync("2045012782", brands["FEBI"], "", null));
+        Assert.False(await repository.PartNumberExistsAsync("2045012782", Guid.NewGuid(), "", null));
     }
 
     [Fact]

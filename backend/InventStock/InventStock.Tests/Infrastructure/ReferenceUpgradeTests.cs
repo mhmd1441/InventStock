@@ -54,7 +54,7 @@ public class ReferenceUpgradeTests
             Assert.Equal(part.Id, (await db.Parts.SingleAsync()).Id);
             Assert.Equal(movement.Id, (await db.StockMovements.SingleAsync()).Id);
             Assert.Equal(7, await new PartRepository(db).GetQuantityOnHandAsync(part.Id));
-            var migratedBrand = await db.ProductBrands.SingleAsync();
+            var migratedBrand = await db.ProductBrands.SingleAsync(x => x.Id != ProductBrand.UnknownId);
             Assert.Equal("FEBI", migratedBrand.NormalizedName);
             Assert.Equal(migratedBrand.Id, (await db.Parts.SingleAsync()).BrandId);
             Assert.Equal("AB-12", (await db.Set<CatalogueReference>().SingleAsync(r => r.Id == referenceId)).IdentityKey);

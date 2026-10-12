@@ -337,6 +337,40 @@ concurrent duplicate submissions produce one movement and the same result. Legac
 valid with null operation IDs. The complete isolated suite now passes 108 backend tests; the seven client
 tests, TypeScript, ESLint and Webpack production build also pass.
 
+Safety and stock-confidence checkpoint (11 October 2026): operation IDs are globally unique and their
+status is visible only to the original actor. The browser stores only a minimal actor-scoped unresolved
+operation record, checks the committed status after reload, and never silently replays it. Failed logout
+revocation is queued against the exact old session. Product identity now requires a canonical brand ID,
+with a seeded Unknown brand; duplicate checking uses that same ID rather than a stale brand label.
+
+SKUs now declare an integer base stock unit: pieces for packaged parts and centimetres for hose sold by
+length. The unit cannot change after stock history exists. New/imported catalogue rows remain explicitly
+Not counted even if their ledger balance is zero. An admin physical count records the observed book value,
+the counted value, actor, time, reason and idempotency ID as an append-only ledger checkpoint; a zero count
+is still recorded. The server locks the SKU and rejects a count if its expected book quantity became stale,
+forcing a physical recount instead of silently overwriting a concurrent movement. Low-stock warnings and
+stock valuation exclude Not-counted items. Piece and centimetre totals are never added together in the UI.
+The isolated PostgreSQL 16 suite passes 115 tests, and ten client tests cover session and pending-operation
+isolation. TypeScript, ESLint and an offline-font production build pass. The new migration remains unapplied
+to every normal database.
+
+Supplier/brand checkpoint (11 October 2026): supplier prices are private append-only observations rather
+than mutable fields. Each preserves supplier, original USD/EUR/LBP amount, TVA included/excluded/unknown,
+source classification, pack quantity, supplier code, notes and observation time. Employee routes cannot
+read or create them. Audited brand merge locks source/target brands, rejects any number+variant collision,
+reassigns products and non-conflicting aliases in one transaction, deactivates the source, and writes an
+immutable event with actor/reason/count. The PostgreSQL 16 suite now passes 118 tests. These migrations
+remain unapplied to normal databases.
+
+Stock-condition checkpoint (11 October 2026): physical quantity remains derived from the original stock
+ledger; a separate append-only hold ledger derives quarantined and sellable quantities without counting
+the same item twice. Staff must confirm physical separation/tagging to place a hold, which immediately
+blocks those units from stock-out. Release is admin-only and cannot exceed the held balance. Physical
+counts cannot be confirmed below the quarantined quantity. Operation IDs make hold/release retries safe
+and actor-scoped recovery checks prevent ambiguous network responses from duplicating them. Catalogue UI
+shows sellable, physical and held quantities. PostgreSQL 16 passes 119 backend tests; ten client tests,
+TypeScript and ESLint pass. The migration remains unapplied to normal databases.
+
 The configured normal database connection appears remote (likely an old Supabase project). An authorized
 read-only connection attempt failed before inspection, so its migrations and data remain unknown. It was
 not migrated, seeded or modified. Local PostgreSQL is the intended shop primary, but changing connection

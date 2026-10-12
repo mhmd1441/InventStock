@@ -1,6 +1,7 @@
 using FluentValidation;
 using InventStock.Application.DTOs.Catalog;
 using InventStock.Domain.Entities;
+using InventStock.Domain.Enums;
 
 namespace InventStock.Application.Validators;
 
@@ -14,6 +15,22 @@ public sealed class SaveCategoryRequestValidator : AbstractValidator<SaveCategor
 
         RuleFor(x => x.Description)
             .MaximumLength(Category.DescriptionMaxLength);
+    }
+}
+
+public sealed class AddSupplierCostObservationRequestValidator : AbstractValidator<AddSupplierCostObservationRequest>
+{
+    public AddSupplierCostObservationRequestValidator()
+    {
+        RuleFor(x => x.SupplierId).NotEmpty();
+        RuleFor(x => x.UnitCost).GreaterThanOrEqualTo(0).LessThanOrEqualTo(999_999_999m);
+        RuleFor(x => x.Currency).IsInEnum();
+        RuleFor(x => x.TaxTreatment).IsInEnum();
+        RuleFor(x => x.Source).IsInEnum();
+        RuleFor(x => x.PackQuantity).InclusiveBetween(1, 1_000_000);
+        RuleFor(x => x.SupplierCode).MaximumLength(SupplierCostObservation.SupplierCodeMaxLength);
+        RuleFor(x => x.Notes).MaximumLength(SupplierCostObservation.NotesMaxLength);
+        RuleFor(x => x.ObservedAtUtc).LessThanOrEqualTo(DateTime.UtcNow.AddMinutes(5)).When(x => x.ObservedAtUtc != default);
     }
 }
 
@@ -49,6 +66,15 @@ public sealed class SaveBrandRequestValidator : AbstractValidator<SaveBrandReque
 public sealed class SaveBrandAliasRequestValidator : AbstractValidator<SaveBrandAliasRequest>
 {
     public SaveBrandAliasRequestValidator() => RuleFor(x => x.Value).NotEmpty().MaximumLength(ProductBrand.AliasMaxLength);
+}
+
+public sealed class MergeBrandRequestValidator : AbstractValidator<MergeBrandRequest>
+{
+    public MergeBrandRequestValidator()
+    {
+        RuleFor(x => x.TargetBrandId).NotEmpty();
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(BrandMergeEvent.ReasonMaxLength);
+    }
 }
 
 public sealed class SavePartRequestValidator : AbstractValidator<SavePartRequest>

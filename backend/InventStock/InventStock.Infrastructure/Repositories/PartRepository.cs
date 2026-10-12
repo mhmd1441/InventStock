@@ -121,8 +121,12 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
             (PartSortField.Name, true) => source.OrderByDescending(p => p.Name),
             (PartSortField.UnitPrice, false) => source.OrderBy(p => p.UnitPrice),
             (PartSortField.UnitPrice, true) => source.OrderByDescending(p => p.UnitPrice),
-            (PartSortField.QuantityOnHand, false) => source.OrderBy(p => db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0),
-            (PartSortField.QuantityOnHand, true) => source.OrderByDescending(p => db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0),
+            (PartSortField.QuantityOnHand, false) => source.OrderBy(p =>
+                (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+                (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)),
+            (PartSortField.QuantityOnHand, true) => source.OrderByDescending(p =>
+                (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+                (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)),
             (PartSortField.CreatedAtUtc, false) => source.OrderBy(p => p.CreatedAtUtc),
             (PartSortField.CreatedAtUtc, true) => source.OrderByDescending(p => p.CreatedAtUtc),
             (_, true) => source.OrderByDescending(p => p.PartNumber),
@@ -132,10 +136,13 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
     }
 
     private IQueryable<Part> LowStock(IQueryable<Part> source) => source.Where(p =>
-        (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) <= p.LowStockThreshold);
+        db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) &&
+        ((db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+         (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)) <= p.LowStockThreshold);
 
     private IQueryable<Part> LowStockPreview(int limit) => LowStock(db.Parts.AsNoTracking().Where(p => p.IsActive))
-        .OrderBy(p => (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) - p.LowStockThreshold)
+        .OrderBy(p => ((db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+                       (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)) - p.LowStockThreshold)
         .ThenBy(p => p.PartNumber).ThenBy(p => p.Id).Take(Math.Clamp(limit, 1, 100));
 
     public async Task<IReadOnlyList<PartDto>> GetLowStockAsync(int limit, CancellationToken cancellationToken = default) =>
@@ -144,10 +151,11 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
     public async Task<IReadOnlyList<CounterPartDto>> GetCounterLowStockAsync(int limit, CancellationToken cancellationToken = default) =>
         await ProjectCounter(LowStockPreview(limit)).ToListAsync(cancellationToken);
 
-    public Task<bool> PartNumberExistsAsync(string partNumber, Guid? excludeId, CancellationToken cancellationToken = default, string brand = "", string variant = "")
+    public Task<bool> PartNumberExistsAsync(string partNumber, Guid brandId, string variant, Guid? excludeId, CancellationToken cancellationToken = default)
     {
         var normalized = partNumber.Trim().ToUpperInvariant();
-        return db.Parts.AnyAsync(x => x.PartNumber == normalized && x.Brand == brand && x.Variant == variant && (excludeId == null || x.Id != excludeId), cancellationToken);
+        var normalizedVariant = variant.Trim().ToUpperInvariant();
+        return db.Parts.AnyAsync(x => x.PartNumber == normalized && x.BrandId == brandId && x.Variant == normalizedVariant && (excludeId == null || x.Id != excludeId), cancellationToken);
     }
 
     public Task<bool> BarcodeExistsAsync(string barcode, Guid? excludeId, CancellationToken cancellationToken = default)
@@ -158,6 +166,18 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
 
     public async Task<int> GetQuantityOnHandAsync(Guid partId, CancellationToken cancellationToken = default) =>
         await db.StockMovements.Where(m => m.PartId == partId).SumAsync(m => (int?)m.QuantityChange, cancellationToken) ?? 0;
+
+    public async Task<int> GetQuarantinedQuantityAsync(Guid partId, CancellationToken cancellationToken = default) =>
+        await db.StockHoldMovements.Where(m => m.PartId == partId).SumAsync(m => (int?)m.QuantityChange, cancellationToken) ?? 0;
+
+    public async Task<int> GetAvailableQuantityAsync(Guid partId, CancellationToken cancellationToken = default) =>
+        await GetQuantityOnHandAsync(partId, cancellationToken) - await GetQuarantinedQuantityAsync(partId, cancellationToken);
+
+    public Task<bool> HasStockHistoryAsync(Guid partId, CancellationToken cancellationToken = default) =>
+        db.StockMovements.AnyAsync(m => m.PartId == partId, cancellationToken);
+
+    public Task<bool> HasBeenCountedAsync(Guid partId, CancellationToken cancellationToken = default) =>
+        db.StockMovements.AnyAsync(m => m.PartId == partId && m.CountedQuantity != null, cancellationToken);
 
     public async Task LockForStockChangeAsync(Guid partId, CancellationToken cancellationToken = default)
     {
@@ -172,16 +192,24 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
     {
         Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, BrandId = p.BrandId, Variant = p.Variant, Name = p.Name, Description = p.Description,
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
-        Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc,
-        QuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0
+        Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc, StockUnit = p.StockUnit,
+        StockConfidence = db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
+        PhysicalQuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
+        QuarantinedQuantity = db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
+        QuantityOnHand = (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+            (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)
     });
 
     private IQueryable<PartDto> ProjectAdmin(IQueryable<Part> source) => source.Select(p => new PartDto
     {
         Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, BrandId = p.BrandId, Variant = p.Variant, Name = p.Name, Description = p.Description,
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
-        Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc,
+        Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc, StockUnit = p.StockUnit,
         SupplierId = p.SupplierId, SupplierName = p.Supplier != null ? p.Supplier.Name : null, UnitPrice = p.UnitPrice,
-        QuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0
+        StockConfidence = db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
+        PhysicalQuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
+        QuarantinedQuantity = db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
+        QuantityOnHand = (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
+            (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)
     });
 }

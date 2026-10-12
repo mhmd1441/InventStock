@@ -15,14 +15,25 @@ import type {
   Part,
   PartQuery,
   ProductBrand,
+  PostPurchaseReceiptRequest,
+  PurchaseReceipt,
   RegisterUserRequest,
   SaveCategoryRequest,
   SavePartRequest,
   SaveBrandRequest,
   SaveSupplierRequest,
+  StageSupplierImportRequest,
+  SupplierImportBatch,
+  ReviewSupplierImportRowRequest,
+  CommitSupplierImportResult,
   StockMovement,
   Supplier,
   User,
+  CashAccount,
+  ExpenseCategory,
+  PostOutgoingPaymentRequest,
+  OutgoingPayment,
+  OutgoingPaymentList,
 } from "./types";
 
 export const queryKeys = {
@@ -37,7 +48,91 @@ export const queryKeys = {
   suppliers: (includeInactive: boolean) =>
     ["suppliers", includeInactive] as const,
   users: ["users"] as const,
+  supplierImport: (id: string) => ["supplier-import", id] as const,
+  cashAccounts: ["cash-accounts"] as const,
+  expenseCategories: ["expense-categories"] as const,
+  outgoings: (year: number, month: number) => ["outgoings", year, month] as const,
 };
+
+export function useCashAccounts() {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate,
+    queryKey: queryKeys.cashAccounts,
+    queryFn: ({ signal }) => api.get<CashAccount[]>("/api/admin/cash/accounts", undefined, signal),
+  });
+}
+
+export function useSetCashOpeningBalance() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ accountId, countedAmount }: { accountId: string; countedAmount: number }) =>
+      api.post(`/api/admin/cash/accounts/${accountId}/opening-balance`, {
+        operationId: crypto.randomUUID(), countedAmount, countedAtUtc: new Date().toISOString(),
+      }),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.cashAccounts }),
+  });
+}
+
+export function useExpenseCategories(includeInactive = false) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate,
+    queryKey: [...queryKeys.expenseCategories, includeInactive],
+    queryFn: ({ signal }) => api.get<ExpenseCategory[]>("/api/admin/cash/categories", { includeInactive }, signal),
+  });
+}
+
+export function useCreateExpenseCategory() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => api.post<ExpenseCategory>("/api/admin/cash/categories", { name }),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.expenseCategories }),
+  });
+}
+
+export function useRenameExpenseCategory() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.put<ExpenseCategory>(`/api/admin/cash/categories/${id}`, { name }),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.expenseCategories }),
+  });
+}
+
+export function useSetExpenseCategoryActive() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => api.patch<void>(`/api/admin/cash/categories/${id}/active`, { isActive }),
+    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.expenseCategories }),
+  });
+}
+
+export function useOutgoings(year: number, month: number) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate,
+    queryKey: queryKeys.outgoings(year, month),
+    queryFn: ({ signal }) => api.get<OutgoingPaymentList>("/api/admin/cash/outgoings", { year, month }, signal),
+  });
+}
+
+export function usePostOutgoing() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: PostOutgoingPaymentRequest) => api.post<OutgoingPayment>("/api/admin/cash/outgoings", request),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["outgoings"] }),
+  });
+}
+
+export function useReverseOutgoing() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post<OutgoingPayment>(`/api/admin/cash/outgoings/${id}/reverse`, {
+      operationId: crypto.randomUUID(), reason, reversedAtUtc: new Date().toISOString(),
+    }),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["outgoings"] }),
+  });
+}
 
 /** Everything that can change when stock moves. */
 export function invalidateStockViews(client: QueryClient) {
@@ -172,6 +267,54 @@ export function useUsers() {
   });
 }
 
+export function usePostPurchaseReceipt() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: PostPurchaseReceiptRequest) =>
+      api.post<PurchaseReceipt>("/api/admin/receipts", request),
+    onSuccess: () => invalidateStockViews(client),
+  });
+}
+
+export function useSupplierImport(id: string | null) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate && Boolean(id),
+    queryKey: queryKeys.supplierImport(id ?? ""),
+    queryFn: ({ signal }) => api.get<SupplierImportBatch>(`/api/admin/supplier-imports/${id}`, undefined, signal),
+  });
+}
+
+export function useStageSupplierImport() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: StageSupplierImportRequest) =>
+      api.post<SupplierImportBatch>("/api/admin/supplier-imports", request),
+    onSuccess: (batch) => client.setQueryData(queryKeys.supplierImport(batch.id), batch),
+  });
+}
+
+export function useReviewSupplierImportRow() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ batchId, rowId, request }: { batchId: string; rowId: string; request: ReviewSupplierImportRowRequest }) =>
+      api.put<SupplierImportBatch>(`/api/admin/supplier-imports/${batchId}/rows/${rowId}/review`, request),
+    onSuccess: (batch) => client.setQueryData(queryKeys.supplierImport(batch.id), batch),
+  });
+}
+
+export function useCommitSupplierImport() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (batchId: string) => api.post<CommitSupplierImportResult>(`/api/admin/supplier-imports/${batchId}/commit`),
+    onSuccess: async (_, batchId) => {
+      await client.invalidateQueries({ queryKey: queryKeys.supplierImport(batchId) });
+      await client.invalidateQueries({ queryKey: ["parts"] });
+      await client.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
 export function useSavePart(id?: string) {
   const client = useQueryClient();
 
@@ -252,6 +395,50 @@ export function useStockAdjust() {
         reason,
         reference,
       }),
+    onSuccess: () => invalidateStockViews(client),
+  });
+}
+
+export function useStockCount() {
+  const client = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      partId,
+      operationId,
+      countedQuantity,
+      expectedBookQuantity,
+      reason,
+    }: {
+      partId: string;
+      operationId: string;
+      countedQuantity: number;
+      expectedBookQuantity: number;
+      reason?: string;
+    }) => api.post<StockMovement>(`/api/parts/${partId}/stock/count`, {
+      operationId,
+      countedQuantity,
+      expectedBookQuantity,
+      reason,
+    }),
+    onSuccess: () => invalidateStockViews(client),
+  });
+}
+
+export function useStockHold() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ partId, ...body }: { partId: string; operationId: string; quantity: number; reason: string; physicalSeparationConfirmed: boolean }) =>
+      api.post(`/api/parts/${partId}/stock/hold`, body),
+    onSuccess: () => invalidateStockViews(client),
+  });
+}
+
+export function useStockRelease() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ partId, ...body }: { partId: string; operationId: string; quantity: number; reason: string }) =>
+      api.post(`/api/parts/${partId}/stock/release`, body),
     onSuccess: () => invalidateStockViews(client),
   });
 }

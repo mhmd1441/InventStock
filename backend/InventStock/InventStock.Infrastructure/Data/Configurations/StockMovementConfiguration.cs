@@ -9,7 +9,8 @@ public sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockM
     public void Configure(EntityTypeBuilder<StockMovement> builder)
     {
         builder.ToTable("StockMovements", t =>
-            t.HasCheckConstraint("CK_StockMovements_QuantityChange_NotZero", "\"QuantityChange\" <> 0"));
+            t.HasCheckConstraint("CK_StockMovements_QuantityChange_NotZero",
+                "\"QuantityChange\" <> 0 OR \"MovementType\" = 'PhysicalCount'"));
 
         builder.HasKey(x => x.Id);
 
@@ -25,12 +26,17 @@ public sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockM
         builder.Property(x => x.PerformedByUserId).IsRequired();
         builder.Property(x => x.OccurredAtUtc).IsRequired();
         builder.Property(x => x.PayloadFingerprint).HasMaxLength(StockMovement.PayloadFingerprintMaxLength);
+        builder.Property(x => x.CountedQuantity);
+        builder.Property(x => x.BookQuantityBeforeCount);
+        builder.Property(x => x.PurchaseReceiptLineId);
 
         builder.HasIndex(x => new { x.PartId, x.OccurredAtUtc });
         builder.HasIndex(x => x.OccurredAtUtc);
         builder.HasIndex(x => x.PerformedByUserId);
         builder.HasIndex(x => x.OperationId)
             .IsUnique().HasFilter("\"OperationId\" IS NOT NULL");
+        builder.HasIndex(x => x.PurchaseReceiptLineId)
+            .IsUnique().HasFilter("\"PurchaseReceiptLineId\" IS NOT NULL");
 
         builder.HasOne(x => x.Part)
             .WithMany(p => p.Movements)

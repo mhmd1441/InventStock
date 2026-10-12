@@ -9,6 +9,7 @@ const movementTone: Record<MovementType, "success" | "danger" | "warning"> = {
   In: "success",
   Out: "danger",
   Adjustment: "warning",
+  PhysicalCount: "warning",
 };
 
 export function MovementTable({
@@ -56,7 +57,9 @@ export function MovementTable({
                 movement.quantityChange >= 0 ? "text-success" : "text-danger"
               }`}
             >
-              {formatSignedQuantity(movement.quantityChange)}
+              {movement.movementType === "PhysicalCount"
+                ? `${movement.bookQuantityBeforeCount} → ${movement.countedQuantity}`
+                : formatSignedQuantity(movement.quantityChange)}
             </Td>
             <Td className="text-muted">
               {movement.reason ?? "—"}

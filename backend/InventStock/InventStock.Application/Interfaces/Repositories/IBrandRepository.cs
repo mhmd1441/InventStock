@@ -11,4 +11,5 @@ public interface IBrandRepository
     Task<IReadOnlyList<BrandDto>> FindCandidatesAsync(string name, CancellationToken cancellationToken = default);
     Task AddAsync(ProductBrand brand, CancellationToken cancellationToken = default);
     Task AddAliasAsync(BrandAlias alias, CancellationToken cancellationToken = default);
+    Task<BrandMergeDto> MergeAsync(Guid sourceId, Guid targetId, string reason, CancellationToken cancellationToken = default);
 }

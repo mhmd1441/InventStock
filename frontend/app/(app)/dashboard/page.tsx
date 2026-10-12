@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDashboard } from "@/lib/queries";
 import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatStockQuantity } from "@/lib/quantity";
 import { Alert, Badge, Card, EmptyState, Spinner } from "@/components/ui";
 import { MovementTable } from "@/components/movement-table";
 
@@ -15,8 +16,9 @@ export default function DashboardPage() {
 
   const stats = [
     { label: "Active parts", value: formatNumber(data.activeParts) },
-    { label: "Units in stock", value: formatNumber(data.totalStockUnits) },
-    ...("totalStockValue" in data ? [{ label: "Stock value", value: formatCurrency(data.totalStockValue) }] : []),
+    { label: "Counted parts", value: formatNumber(data.countedParts) },
+    { label: "Not counted", value: formatNumber(data.notCountedParts), tone: data.notCountedParts > 0 ? ("warning" as const) : undefined },
+    ...("totalStockValue" in data ? [{ label: "Counted stock value", value: formatCurrency(data.totalStockValue) }] : []),
     {
       label: "Needs reorder",
       value: formatNumber(data.lowStockCount),
@@ -87,7 +89,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="text-sm font-medium">
-                      {part.quantityOnHand}
+                      {formatStockQuantity(part.quantityOnHand, part.stockUnit)}
                     </span>
                     <span className="text-xs text-muted">
                       / {part.lowStockThreshold}

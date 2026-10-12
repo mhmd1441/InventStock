@@ -33,6 +33,8 @@ public sealed class DashboardService : IDashboardService
             LowStockCount = totals.LowStockCount,
             TotalCategories = totals.TotalCategories,
             TotalStockUnits = totals.TotalStockUnits,
+            CountedParts = totals.CountedParts,
+            NotCountedParts = totals.NotCountedParts,
             RecentMovements = await _movements.GetRecentAsync(RecentMovementCount, cancellationToken),
             LowStockParts = await _parts.GetCounterLowStockAsync(LowStockPreviewCount, cancellationToken)
         };
@@ -52,6 +54,8 @@ public sealed class DashboardService : IDashboardService
             TotalCategories = totals.TotalCategories,
             TotalSuppliers = totals.TotalSuppliers,
             TotalStockUnits = totals.TotalStockUnits,
+            CountedParts = totals.CountedParts,
+            NotCountedParts = totals.NotCountedParts,
             TotalStockValue = totals.TotalStockValue,
             RecentMovements = recentMovements,
             LowStockParts = lowStockParts

@@ -49,4 +49,12 @@ public sealed class BrandService(IBrandRepository brands, IUnitOfWork unitOfWork
         if (isActive) brand.Reactivate(); else brand.Deactivate();
         await unitOfWork.SaveChangesAsync(cancellationToken);
     }
+
+    public Task<BrandMergeDto> MergeAsync(Guid sourceId, MergeBrandRequest request, CancellationToken cancellationToken = default)
+    {
+        if (sourceId == ProductBrand.UnknownId || request.TargetBrandId == ProductBrand.UnknownId)
+            throw new ConflictException("The system Unknown brand cannot be merged.");
+        if (sourceId == request.TargetBrandId) throw new ConflictException("Choose two different brands.");
+        return brands.MergeAsync(sourceId, request.TargetBrandId, request.Reason, cancellationToken);
+    }
 }

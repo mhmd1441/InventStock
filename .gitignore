@@ -53,4 +53,5 @@ Thumbs.db
 # Local docs (not part of the repo), except the shared development design
 Docs/*
 !Docs/Production-Design.md
+!Docs/STATE.md
 
