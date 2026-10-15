@@ -55,6 +55,7 @@ Docs/*
 !Docs/Production-Design.md
 !Docs/STATE.md
 !Docs/CHANGELOG.md
+!Docs/Backup-Restore.md
 !Docs/Release-Checklist.md
 !Docs/Return-Posting.md
 !Docs/Sale-Posting.md

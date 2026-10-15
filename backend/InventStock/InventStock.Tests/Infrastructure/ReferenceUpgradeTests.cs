@@ -13,6 +13,87 @@ namespace InventStock.Tests.Infrastructure;
 public class ReferenceUpgradeTests
 {
     [PostgresFact]
+    public async Task PopulatedReviewedSupplierImports_UpgradesAllPendingMigrationsWithoutChangingCatalogueOrStock()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
+        Assert.Equal("inventstock_test", builder.Database);
+        await TestPostgresExtensions.EnsurePublicAsync(builder.ConnectionString);
+        var schema = "reviewed_upgrade_" + Guid.NewGuid().ToString("N");
+        builder.SearchPath = schema + ",public";
+        var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(builder.ConnectionString,
+            npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", schema)).Options;
+        var actor = new TestCurrentUser(Guid.NewGuid());
+        await using var db = new AppDbContext(options, actor);
+#pragma warning disable EF1002 // Schema identifier is exclusively a generated GUID with a fixed prefix.
+        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
+        try
+        {
+            const string reviewedImports = "20261012143056_ReviewedSupplierImports";
+            await db.GetService<IMigrator>().MigrateAsync(reviewedImports);
+
+            var categoryId = Guid.NewGuid();
+            var supplierId = Guid.NewGuid();
+            var brandId = Guid.NewGuid();
+            var piecePartId = Guid.NewGuid();
+            var hosePartId = Guid.NewGuid();
+            var pieceInId = Guid.NewGuid();
+            var pieceOutId = Guid.NewGuid();
+            var hoseInId = Guid.NewGuid();
+            var now = DateTime.UtcNow;
+            var categoryName = "Legacy inventory";
+            var supplierName = "Legacy Supplier";
+            var brandName = "FEBI";
+            var pieceNumber = "2045012782";
+            var pieceName = "Coolant hose";
+            var pieceVariant = "Includes seal";
+            var hoseNumber = "R8-HOSE";
+            var hoseName = "Oil hose per metre";
+            var empty = string.Empty;
+            await db.Database.ExecuteSqlInterpolatedAsync($"""
+                INSERT INTO "Categories" ("Id", "Name", "Description", "CreatedAtUtc")
+                VALUES ({categoryId}, {categoryName}, 'Populated upgrade rehearsal', {now});
+                INSERT INTO "Suppliers" ("Id", "Name", "IsActive", "CreatedAtUtc")
+                VALUES ({supplierId}, {supplierName}, TRUE, {now});
+                INSERT INTO "ProductBrands" ("Id", "Name", "NormalizedName", "IsActive", "CreatedAtUtc")
+                VALUES ({brandId}, {brandName}, {brandName}, TRUE, {now});
+                INSERT INTO "Parts" ("Id", "PartNumber", "Name", "Brand", "BrandId", "Variant", "CategoryId",
+                    "SupplierId", "UnitPrice", "LowStockThreshold", "StockUnit", "IsActive", "CreatedAtUtc")
+                VALUES ({piecePartId}, {pieceNumber}, {pieceName}, {brandName}, {brandId}, {pieceVariant},
+                        {categoryId}, {supplierId}, {15.00m}, 1, 'Piece', TRUE, {now}),
+                       ({hosePartId}, {hoseNumber}, {hoseName}, {brandName}, {brandId}, {empty},
+                        {categoryId}, {supplierId}, {6.00m}, 100, 'Centimeter', TRUE, {now});
+                INSERT INTO "StockMovements" ("Id", "PartId", "MovementType", "QuantityChange", "Reason",
+                    "PerformedByUserId", "OccurredAtUtc", "CreatedAtUtc")
+                VALUES ({pieceInId}, {piecePartId}, 'In', 7, 'Legacy receipt', {actor.UserId!.Value}, {now}, {now}),
+                       ({pieceOutId}, {piecePartId}, 'Out', -2, 'Legacy sale', {actor.UserId.Value}, {now}, {now}),
+                       ({hoseInId}, {hosePartId}, 'In', 300, 'Legacy opening length', {actor.UserId.Value}, {now}, {now});
+                """);
+
+            var beforeIds = new[] { piecePartId, hosePartId };
+            var beforeMovementIds = new[] { pieceInId, pieceOutId, hoseInId };
+            await db.Database.MigrateAsync();
+            db.ChangeTracker.Clear();
+
+            Assert.Equal(beforeIds.Order(), (await db.Parts.Select(x => x.Id).ToListAsync()).Order());
+            Assert.Equal(beforeMovementIds.Order(), (await db.StockMovements.Select(x => x.Id).ToListAsync()).Order());
+            Assert.Equal(categoryId, (await db.Parts.SingleAsync(x => x.Id == piecePartId)).CategoryId);
+            Assert.Equal(supplierId, (await db.Parts.SingleAsync(x => x.Id == piecePartId)).SupplierId);
+            Assert.Equal(brandId, (await db.Parts.SingleAsync(x => x.Id == piecePartId)).BrandId);
+            var repository = new PartRepository(db);
+            Assert.Equal(5, await repository.GetQuantityOnHandAsync(piecePartId));
+            Assert.Equal(300, await repository.GetQuantityOnHandAsync(hosePartId));
+            Assert.False((await db.Parts.SingleAsync(x => x.Id == piecePartId)).NeedsRecount);
+
+            var applied = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
+            Assert.Equal(reviewedImports, applied[^10]);
+            Assert.Equal("20261014082611_DirectCutHoseSellingRate", applied[^1]);
+            Assert.Equal(9, applied.SkipWhile(x => x != reviewedImports).Skip(1).Count());
+        }
+        finally { await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE"); }
+#pragma warning restore EF1002
+    }
+
+    [PostgresFact]
     public async Task PopulatedPreviousSchema_PreservesIdsStockAndReferenceLinks()
     {
         var builder = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
