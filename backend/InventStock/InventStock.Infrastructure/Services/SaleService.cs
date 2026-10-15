@@ -8,6 +8,7 @@ using InventStock.Application.Common.Exceptions;
 using InventStock.Application.DTOs.Sales;
 using InventStock.Application.DTOs.Stock;
 using InventStock.Application.Interfaces;
+using InventStock.Application.Common.Models;
 using InventStock.Application.Validators;
 using InventStock.Domain.Entities;
 using InventStock.Domain.Enums;
@@ -211,6 +212,61 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 x.TotalUsd, x.Lines.Count)).ToListAsync(cancellationToken);
     }
 
+    public async Task<PagedResult<SaleLookupDto>> SearchAsync(SaleSearchQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        await AuthorizedActor(cancellationToken);
+        if (query.FromUtc.HasValue && query.ToUtc.HasValue && query.FromUtc >= query.ToUtc)
+            throw new ValidationException("The sale search end must be after its start.");
+        if (query.AmountUsd is < 0)
+            throw new ValidationException("The sale amount cannot be negative.");
+
+        IQueryable<Sale> source = db.Sales.AsNoTracking();
+        if (query.FromUtc.HasValue)
+        {
+            var from = query.FromUtc.Value.UtcDateTime;
+            source = source.Where(x => x.PostedAtUtc >= from);
+        }
+        if (query.ToUtc.HasValue)
+        {
+            var to = query.ToUtc.Value.UtcDateTime;
+            source = source.Where(x => x.PostedAtUtc < to);
+        }
+        if (query.AmountUsd.HasValue)
+        {
+            var amount = decimal.Round(query.AmountUsd.Value, 2, MidpointRounding.AwayFromZero);
+            source = source.Where(x => x.TotalUsd == amount);
+        }
+        if (!string.IsNullOrWhiteSpace(query.Customer))
+        {
+            var pattern = LiteralContains(query.Customer);
+            var customerIds = db.Customers.Where(x => EF.Functions.ILike(x.Name, pattern, "\\") ||
+                (x.DistinguishingLabel != null && EF.Functions.ILike(x.DistinguishingLabel, pattern, "\\")) ||
+                (x.Phone != null && EF.Functions.ILike(x.Phone, pattern, "\\"))).Select(x => x.Id);
+            source = source.Where(x => (x.CustomerName != null && EF.Functions.ILike(x.CustomerName, pattern, "\\")) ||
+                (x.CustomerId.HasValue && customerIds.Contains(x.CustomerId.Value)));
+        }
+        if (!string.IsNullOrWhiteSpace(query.Part))
+        {
+            var rawPattern = LiteralContains(query.Part);
+            var partText = query.Part.Trim().ToUpperInvariant();
+            var number = partText.Replace(" ", "").Replace("-", "");
+            var partIds = db.Parts.Where(x => x.SearchNumber.Contains(number) || x.SearchName.Contains(partText))
+                .Select(x => x.Id);
+            source = source.Where(x => x.Lines.Any(line => partIds.Contains(line.PartId) ||
+                EF.Functions.ILike(line.PartNumber, rawPattern, "\\") || EF.Functions.ILike(line.Name, rawPattern, "\\")));
+        }
+
+        var count = await source.CountAsync(cancellationToken);
+        var items = await source.OrderByDescending(x => x.PostedAtUtc).ThenByDescending(x => x.Id)
+            .Skip(query.Skip).Take(query.PageSize)
+            .Select(x => new SaleLookupDto(x.Id, x.PostedAtUtc, x.CustomerId, x.CustomerName, x.TotalUsd,
+                x.Lines.OrderBy(line => line.Position).Select(line => new SaleLookupLineDto(line.PartId,
+                    line.PartNumber, line.Name, line.Brand, line.Variant, line.StockUnit, line.Quantity)).ToArray()))
+            .ToListAsync(cancellationToken);
+        return new(items, count, query.Page, query.PageSize);
+    }
+
     private Task<Guid> AuthorizedActor(CancellationToken ct) => CounterAuthorization.RequireAsync(db, currentUser, ct);
     private IQueryable<Sale> Query() => db.Sales.AsNoTracking().Include(x => x.Lines).Include(x => x.Tenders).AsSplitQuery();
     private static SaleDto Map(Sale s) => new(s.Id, s.OperationId, s.ActorId, s.PostedAtUtc, s.CustomerId, s.CustomerName,
@@ -221,6 +277,8 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
         s.Tenders.OrderBy(x => x.Position).Select(x => new SaleTenderDto(x.Id, x.CashAccountId, x.AccountName,
             x.Currency, x.IsChange, Normalize(x.NativeAmount), Normalize(x.ConfirmedUsdAmount))).ToArray());
     private static decimal Normalize(decimal x) => decimal.Parse(Number(x), CultureInfo.InvariantCulture);
+    private static string LiteralContains(string value) => "%" + value.Trim().Replace("\\", "\\\\")
+        .Replace("%", "\\%").Replace("_", "\\_") + "%";
     private static string Number(decimal x) => x.ToString("G29", CultureInfo.InvariantCulture);
     private static string Fingerprint(PostSaleRequest r)
     {

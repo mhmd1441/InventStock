@@ -1,3 +1,4 @@
+using InventStock.Application.Common.Models;
 using InventStock.Domain.Enums;
 
 namespace InventStock.Application.DTOs.Sales;
@@ -34,3 +35,18 @@ public sealed record SaleOperationDto(string Status, SaleDto Sale);
 public sealed record SalePaymentAccountDto(Guid Id, string Name, MoneyCurrency Currency, CashAccountKind Kind);
 public sealed record SaleSummaryDto(Guid Id, DateTime PostedAtUtc, string? CustomerName, decimal TotalUsd,
     int LineCount);
+
+public sealed class SaleSearchQuery : PagedQuery
+{
+    public DateTimeOffset? FromUtc { get; set; }
+    public DateTimeOffset? ToUtc { get; set; }
+    public string? Customer { get; set; }
+    public string? Part { get; set; }
+    public decimal? AmountUsd { get; set; }
+}
+
+// Counter-safe lookup result used to identify an older sale before opening its return details.
+public sealed record SaleLookupDto(Guid Id, DateTime PostedAtUtc, Guid? CustomerId, string? CustomerName,
+    decimal TotalUsd, IReadOnlyList<SaleLookupLineDto> Lines);
+public sealed record SaleLookupLineDto(Guid PartId, string PartNumber, string Name, string Brand, string Variant,
+    StockUnit StockUnit, int Quantity);

@@ -64,3 +64,10 @@ Historical evidence only. For the next action, decisions and safety rules, read 
 
 - Added private cash accounts, opening counts, categorized actual outgoings and linked corrections, plus admin-only UI. Migration `20261012152847_CashFoundation` generated but not applied to normal DB.
 - Frontend production build, ESLint, TypeScript and 13/13 client tests passed at that state.
+## 2026-10-15 — Older-sale lookup
+
+- Added paged, staff-safe sale lookup by UTC date range, customer name/label/phone, normalized part number/item name, and exact USD total.
+- Replaced the fixed recent-only return picker with searchable, paged sale snapshots.
+- Added a general `SaleLines.PartId` lookup index while preserving the filtered shortage index; generated `SaleLookupIndexes` without applying it to a normal database.
+- Added PostgreSQL coverage for combined filters, older sales, pagination and cost/supplier privacy. Updated the populated migration rehearsal to assert the exact named chain from `ReviewedSupplierImports`.
+

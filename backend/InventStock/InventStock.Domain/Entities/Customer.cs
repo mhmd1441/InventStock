@@ -52,6 +52,7 @@ public sealed class CustomerAccountEntry : AuditableEntity
     public Guid CustomerId { get; private set; }
     public Guid? SaleId { get; private set; }
     public Guid? SaleReturnId { get; private set; }
+    public Guid? LegacySaleReturnId { get; private set; }
     public Guid OperationId { get; private set; }
     public Guid ActorId { get; private set; }
     public string Kind { get; private set; } = null!;
@@ -73,6 +74,13 @@ public sealed class CustomerAccountEntry : AuditableEntity
     {
         var entry = Create(customerId, null, operationId, actorId, "ReturnReduction", -amount);
         entry.SaleReturnId = saleReturnId;
+        return entry;
+    }
+    public static CustomerAccountEntry LegacyReturnReduction(Guid customerId, Guid legacySaleReturnId,
+        Guid operationId, Guid actorId, decimal amount)
+    {
+        var entry = Create(customerId, null, operationId, actorId, "LegacyReturnReduction", -amount);
+        entry.LegacySaleReturnId = legacySaleReturnId;
         return entry;
     }
     public static CustomerAccountEntry Opening(Guid customerId, Guid operationId, Guid actorId, decimal balance) =>

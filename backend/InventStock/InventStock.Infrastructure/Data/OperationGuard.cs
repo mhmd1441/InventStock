@@ -24,6 +24,7 @@ public static class OperationGuard
             (kind != "CustomerCorrection" && await db.CustomerPaymentCorrections.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Sale" && await db.Sales.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "SaleReturn" && await db.SaleReturns.AnyAsync(x => x.OperationId == id, ct)) ||
+            (kind != "LegacySaleReturn" && await db.LegacySaleReturns.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Stock" && await db.StockMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Hold" && await db.StockHoldMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Receipt" && await db.PurchaseReceipts.AnyAsync(x => x.OperationId == id, ct)) ||

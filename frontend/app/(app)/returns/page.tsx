@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { usePostSaleReturn, useRecentSales, useReturnableSale, useSalePaymentAccounts } from "@/lib/queries";
+import { usePostSaleReturn, useReturnableSale, useSalePaymentAccounts, useSaleSearch } from "@/lib/queries";
 import { additionalReturnCents } from "@/lib/return-math";
 import { centsNumber, formatCents, usdCents } from "@/lib/sale-math";
 import { parseTenderDrafts, preferredTenderAccount, type TenderDraft } from "@/lib/tender-math";
@@ -11,10 +11,17 @@ import { clearPendingReturn, readPendingReturn, rememberPendingReturn, type Pend
 import { formatStockQuantity, saleQuantityInBaseUnits } from "@/lib/quantity";
 import { TenderEditor, newTender } from "@/components/tender-editor";
 import { Alert, Button, Card, Field, Input, Select, Spinner } from "@/components/ui";
-import type { PostSaleReturnRequest, ReturnCondition, SaleReturn } from "@/lib/types";
+import type { PostSaleReturnRequest, ReturnCondition, SaleReturn, SaleSearchQuery } from "@/lib/types";
 
 type LineDraft = { quantity: string; condition: ReturnCondition; separated: boolean; issueReason: string };
+type SearchDraft = { from: string; to: string; customer: string; part: string; amount: string };
 const emptyLine = (): LineDraft => ({ quantity: "0", condition: "Sellable", separated: false, issueReason: "" });
+const emptySearch = (): SearchDraft => ({ from: "", to: "", customer: "", part: "", amount: "" });
+const startUtc = (day: string) => day ? new Date(`${day}T00:00:00`).toISOString() : undefined;
+const endUtc = (day: string) => {
+  if (!day) return undefined;
+  const end = new Date(`${day}T00:00:00`); end.setDate(end.getDate() + 1); return end.toISOString();
+};
 const dollars = (value: number) => formatCents(BigInt(Math.round(value * 100)));
 const describeError = (error: unknown) => error instanceof ApiError
   ? [error.message, ...error.fieldMessages].join(" ")
@@ -34,7 +41,9 @@ export default function ReturnsPage() {
   const [pending, setPending] = useState<PendingReturnOperation | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const recent = useRecentSales();
+  const [searchDraft, setSearchDraft] = useState<SearchDraft>(emptySearch);
+  const [searchQuery, setSearchQuery] = useState<SaleSearchQuery>({ page: 1, pageSize: 30 });
+  const search = useSaleSearch(searchQuery);
   const availability = useReturnableSale(saleId);
   const accounts = useSalePaymentAccounts();
   const post = usePostSaleReturn();
@@ -151,7 +160,21 @@ export default function ReturnsPage() {
     {pending && <Alert tone="warning"><div className="space-y-2"><p>A return may already have posted. Do not create another one until you check its operation status.</p><p className="text-xs">Operation {pending.operationId}</p><div className="flex gap-2"><Button variant="secondary" onClick={() => void checkPending(pending)}>Check result</Button><Button variant="ghost" onClick={() => { if (user && window.confirm("Clear only after confirming the return did not commit. A late commit may still appear.")) { clearPendingReturn(user.id, pending.operationId); setPending(null); setReview(null); setOperationId(crypto.randomUUID()); } }}>Clear attempt</Button></div>{recoveryMessage && <p>{recoveryMessage}</p>}</div></Alert>}
     {error && <Alert>{error}</Alert>}
     {posted && <Alert tone="success">Return recorded: {dollars(posted.totalUsd)}. Operation {posted.operationId}. Refresh the original sale before another return.</Alert>}
-    <Card title="1 · Find original sale"><div className="space-y-3 p-5"><div className="flex gap-2"><Input aria-label="Sale ID" placeholder="Paste sale ID" value={saleInput} onChange={(event) => setSaleInput(event.target.value)} /><Button variant="secondary" disabled={!/^[0-9a-f-]{36}$/i.test(saleInput)} onClick={() => selectSale(saleInput.trim())}>Find</Button></div><p className="text-xs text-muted">Recent sales are below. A customer receipt or sale confirmation can also provide the sale ID.</p>{recent.isLoading && <Spinner label="Loading recent sales…" />}{recent.isError && <Alert>Recent sales could not be loaded; check whether the pending migrations are installed on this database.</Alert>}<div className="max-h-56 divide-y divide-border overflow-auto rounded-lg border border-border">{recent.data?.map((sale) => <button key={sale.id} type="button" className="flex w-full justify-between gap-2 p-3 text-left text-sm hover:bg-surface-muted" onClick={() => selectSale(sale.id)}><span>{new Date(sale.postedAtUtc).toLocaleString()} · {sale.customerName ?? "Anonymous"}<span className="block text-xs text-muted">{sale.lineCount} line(s) · {sale.id.slice(0, 8)}</span></span><strong>{dollars(sale.totalUsd)}</strong></button>)}</div></div></Card>
+    <Card title="1 · Find original sale"><div className="space-y-4 p-5">
+      <div className="flex gap-2"><Input aria-label="Sale ID" placeholder="Paste exact sale ID" value={saleInput} onChange={(event) => setSaleInput(event.target.value)} /><Button variant="secondary" disabled={!/^[0-9a-f-]{36}$/i.test(saleInput)} onClick={() => selectSale(saleInput.trim())}>Find ID</Button></div>
+      <div className="grid gap-3 md:grid-cols-5">
+        <Field label="From date"><Input type="date" value={searchDraft.from} onChange={(event) => setSearchDraft((x) => ({ ...x, from: event.target.value }))} /></Field>
+        <Field label="To date"><Input type="date" value={searchDraft.to} onChange={(event) => setSearchDraft((x) => ({ ...x, to: event.target.value }))} /></Field>
+        <Field label="Customer"><Input placeholder="Name, label or phone" value={searchDraft.customer} onChange={(event) => setSearchDraft((x) => ({ ...x, customer: event.target.value }))} /></Field>
+        <Field label="Part"><Input placeholder="Number or name" value={searchDraft.part} onChange={(event) => setSearchDraft((x) => ({ ...x, part: event.target.value }))} /></Field>
+        <Field label="Sale total · USD"><Input inputMode="decimal" placeholder="Exact amount" value={searchDraft.amount} onChange={(event) => setSearchDraft((x) => ({ ...x, amount: event.target.value }))} /></Field>
+      </div>
+      <div className="flex gap-2"><Button variant="secondary" onClick={() => setSearchQuery({ fromUtc: startUtc(searchDraft.from), toUtc: endUtc(searchDraft.to), customer: searchDraft.customer.trim() || undefined, part: searchDraft.part.trim() || undefined, amountUsd: searchDraft.amount.trim() || undefined, page: 1, pageSize: 30 })}>Search sales</Button><Button variant="ghost" onClick={() => { setSearchDraft(emptySearch()); setSearchQuery({ page: 1, pageSize: 30 }); }}>Clear</Button></div>
+      <p className="text-xs text-muted">Searches are paged and newest-first. Choose a result to inspect its remaining returnable quantities.</p>
+      {search.isLoading && <Spinner label="Searching sales…" />}{search.isError && <Alert>Sales could not be searched. Check the filters and pending database migrations.</Alert>}
+      <div className="max-h-72 divide-y divide-border overflow-auto rounded-lg border border-border">{search.data?.items.map((sale) => <button key={sale.id} type="button" className="flex w-full justify-between gap-3 p-3 text-left text-sm hover:bg-surface-muted" onClick={() => selectSale(sale.id)}><span>{new Date(sale.postedAtUtc).toLocaleString()} · {sale.customerName ?? "Anonymous"}<span className="block text-xs text-muted">{sale.lines.map((line) => `${line.partNumber} · ${line.name}`).join(" | ")} · {sale.id.slice(0, 8)}</span></span><strong className="shrink-0">{dollars(sale.totalUsd)}</strong></button>)}</div>
+      {search.data && <div className="flex items-center justify-between text-xs text-muted"><span>{search.data.totalCount} sale(s) · page {search.data.page} of {Math.max(1, search.data.totalPages)}</span><div className="flex gap-2"><Button variant="ghost" disabled={!search.data.hasPreviousPage} onClick={() => setSearchQuery((x) => ({ ...x, page: x.page - 1 }))}>Previous</Button><Button variant="ghost" disabled={!search.data.hasNextPage} onClick={() => setSearchQuery((x) => ({ ...x, page: x.page + 1 }))}>Next</Button></div></div>}
+    </div></Card>
     {availability.isLoading && <Spinner label="Loading returnable sale…" />}
     {availability.isError && <Alert>Sale not found or returnable details unavailable. Check the sale ID and database migration state.</Alert>}
     {availability.data && <><Card title={`2 · Items from ${availability.data.sale.customerName ?? "anonymous sale"}`}><div className="space-y-4 p-5">{availability.data.lines.map((remaining) => { const original = availability.data.sale.lines.find((line) => line.id === remaining.saleLineId)!; const draft = lines[remaining.saleLineId] ?? emptyLine(); return <div key={remaining.saleLineId} className="space-y-3 rounded-lg border border-border p-4"><div><strong>{original.partNumber}</strong> · {original.brand || "Unknown brand"}<p className="text-xs text-muted">{original.name} {original.variant && `· ${original.variant}`}</p><p className="text-xs text-muted">Sold {formatStockQuantity(original.quantity, original.stockUnit)}, already returned {formatStockQuantity(remaining.returnedQuantity, original.stockUnit)}, remaining {formatStockQuantity(remaining.remainingQuantity, original.stockUnit)} · max refund {dollars(remaining.remainingRefundUsd)}</p></div>{remaining.remainingQuantity > 0 ? <><div className="grid gap-3 sm:grid-cols-2"><Field label={original.stockUnit === "Centimeter" ? "Return length · metres" : "Return quantity · pieces"}><Input type="number" min={original.stockUnit === "Centimeter" ? "0.01" : "0"} step={original.stockUnit === "Centimeter" ? "0.01" : "1"} max={original.stockUnit === "Centimeter" ? remaining.remainingQuantity / 100 : remaining.remainingQuantity} value={draft.quantity} onChange={(event) => patchLine(remaining.saleLineId, { quantity: event.target.value })} /></Field><Field label="Returned stock condition"><Select value={draft.condition} onChange={(event) => patchLine(remaining.saleLineId, { condition: event.target.value as ReturnCondition, separated: false })}><option value="Sellable">Sellable</option><option value="Quarantined">Faulty · quarantine</option></Select></Field></div>{original.stockUnit === "Centimeter" && <p className="text-xs text-muted">Enter metres to two decimals; the stock ledger records whole centimeters.</p>}{draft.condition === "Quarantined" && <div className="space-y-2 rounded-lg bg-warning-surface p-3 text-sm"><Field label="Issue with returned goods"><Input maxLength={500} value={draft.issueReason} onChange={(event) => patchLine(remaining.saleLineId, { issueReason: event.target.value })} /></Field><label className="flex items-center gap-2"><input type="checkbox" checked={draft.separated} onChange={(event) => patchLine(remaining.saleLineId, { separated: event.target.checked })} /> Physically separated or tagged</label></div>}</> : <p className="text-sm text-muted">Fully returned</p>}</div>; })}<p className="text-right font-semibold">Return value: {total === null ? "Check quantities" : formatCents(total)}</p></div></Card>

@@ -13,6 +13,82 @@ namespace InventStock.Tests.Api;
 public sealed class SaleApiTests(PostgresSaleApiFactory factory) : IClassFixture<PostgresSaleApiFactory>
 {
     [Fact]
+    public async Task Staff_can_find_older_sales_by_date_customer_part_and_amount_without_private_fields()
+    {
+        Guid currentPartId;
+        Guid oldPartId;
+        Guid customerId;
+        Guid accountId;
+        var suffix = Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var currentNumber = $"LOOK-{suffix}-17";
+        var oldNumber = $"OLD-{suffix}-23";
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var category = await db.Categories.FirstAsync();
+            var actor = await db.Users.Where(x => x.Email == ApiFactory.StaffEmail).Select(x => x.Id).SingleAsync();
+            var currentPart = Part.Create(currentNumber, "Lookup coolant hose", null, category.Id, null, 654.32m, 0, null);
+            var oldPart = Part.Create(oldNumber, "Archived brake pad", null, category.Id, null, 876.54m, 0, null);
+            currentPartId = currentPart.Id;
+            oldPartId = oldPart.Id;
+            var customer = Customer.Create("Ahmad Lookup " + suffix, "Bourj Hammoud garage");
+            customer.UpdateProfile(customer.Name, customer.DistinguishingLabel, "+961-70-" + suffix, null);
+            customerId = customer.Id;
+            db.AddRange(currentPart, oldPart, customer);
+            db.StockMovements.AddRange(
+                StockMovement.PhysicalCount(currentPartId, 3, 0, actor, "Lookup test count"),
+                StockMovement.PhysicalCount(oldPartId, 3, 0, actor, "Lookup test count"));
+            await db.SaveChangesAsync();
+            accountId = await db.CashAccounts.Where(x => x.Code == "SAFE_USD").Select(x => x.Id).SingleAsync();
+        }
+
+        using var staff = await factory.CreateStaffClientAsync();
+        var currentRequest = new PostSaleRequest { OperationId = Guid.NewGuid(), CustomerId = customerId,
+            ConfirmedTotalUsd = 17, Lines = [new(currentPartId, 1, 17)],
+            Payments = [new(accountId, MoneyCurrency.USD, 17, 17)] };
+        var oldRequest = new PostSaleRequest { OperationId = Guid.NewGuid(), ConfirmedTotalUsd = 23,
+            Lines = [new(oldPartId, 1, 23)], Payments = [new(accountId, MoneyCurrency.USD, 23, 23)] };
+        using var currentResponse = await staff.PostAsJsonAsync("/api/sales", currentRequest);
+        using var oldResponse = await staff.PostAsJsonAsync("/api/sales", oldRequest);
+        Assert.Equal(HttpStatusCode.Created, currentResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, oldResponse.StatusCode);
+        var currentSale = await currentResponse.Content.ReadFromJsonAsync<SaleDto>();
+        var oldSale = await oldResponse.Content.ReadFromJsonAsync<SaleDto>();
+        var oldPostedAt = DateTime.UtcNow.AddDays(-60);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Sales\" SET \"PostedAtUtc\" = {oldPostedAt} WHERE \"Id\" = {oldSale!.Id}");
+        }
+
+        var from = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(-2).ToString("O"));
+        var to = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(1).ToString("O"));
+        var partWithoutSeparators = currentNumber.Replace("-", "");
+        using var filtered = await staff.GetAsync($"/api/sales/search?fromUtc={from}&toUtc={to}&customer=Bourj%20Hammoud&part={partWithoutSeparators}&amountUsd=17&page=1&pageSize=10");
+        Assert.Equal(HttpStatusCode.OK, filtered.StatusCode);
+        var result = await filtered.Content.ReadFromJsonAsync<InventStock.Application.Common.Models.PagedResult<SaleLookupDto>>();
+        Assert.NotNull(result);
+        Assert.Equal(1, result.TotalCount);
+        Assert.Equal(currentSale!.Id, result.Items.Single().Id);
+        Assert.Equal(currentNumber, result.Items.Single().Lines.Single().PartNumber);
+        var json = await filtered.Content.ReadAsStringAsync();
+        foreach (var secret in new[] { "supplier", "cost", "654.32", "876.54" })
+            Assert.DoesNotContain(secret, json, StringComparison.OrdinalIgnoreCase);
+
+        var oldFrom = Uri.EscapeDataString(new DateTimeOffset(oldPostedAt.AddDays(-1), TimeSpan.Zero).ToString("O"));
+        var oldTo = Uri.EscapeDataString(new DateTimeOffset(oldPostedAt.AddDays(1), TimeSpan.Zero).ToString("O"));
+        using var older = await staff.GetAsync($"/api/sales/search?fromUtc={oldFrom}&toUtc={oldTo}&part={oldNumber}&amountUsd=23&page=1&pageSize=10");
+        var olderResult = await older.Content.ReadFromJsonAsync<InventStock.Application.Common.Models.PagedResult<SaleLookupDto>>();
+        Assert.Equal(oldSale.Id, olderResult!.Items.Single().Id);
+
+        using var page = await staff.GetAsync("/api/sales/search?page=1&pageSize=1");
+        var paged = await page.Content.ReadFromJsonAsync<InventStock.Application.Common.Models.PagedResult<SaleLookupDto>>();
+        Assert.Single(paged!.Items);
+        Assert.True(paged.TotalCount >= 2);
+        Assert.True(paged.HasNextPage);
+    }
+
+    [Fact]
     public async Task Staff_linked_refund_is_public_safe_and_actor_scoped()
     {
         Guid partId;

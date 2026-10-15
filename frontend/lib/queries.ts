@@ -44,6 +44,8 @@ import type {
   Sale,
   SalePaymentAccount,
   SaleSummary,
+  SaleLookup,
+  SaleSearchQuery,
   ReturnableSale,
   PostSaleReturnRequest,
   SaleReturn,
@@ -123,6 +125,7 @@ export const queryKeys = {
   customerOpening: (id: string) => ["customer-opening", id] as const,
   salePaymentAccounts: ["sale-payment-accounts"] as const,
   recentSales: ["recent-sales"] as const,
+  saleSearch: (query: SaleSearchQuery) => ["sale-search", query] as const,
   returnableSale: (id: string) => ["returnable-sale", id] as const,
 };
 
@@ -180,13 +183,19 @@ export function usePostSale() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (request: PostSaleRequest) => api.post<Sale>("/api/sales", request),
-    onSuccess: async () => { await invalidateStockViews(client); await client.invalidateQueries({ queryKey: ["customer-statement"] }); },
+    onSuccess: async () => { await invalidateStockViews(client); await client.invalidateQueries({ queryKey: ["customer-statement"] });
+      await client.invalidateQueries({ queryKey: ["sale-search"] }); await client.invalidateQueries({ queryKey: queryKeys.recentSales }); },
   });
 }
 
 export function useRecentSales() {
   return useQuery({ queryKey: queryKeys.recentSales,
     queryFn: ({ signal }) => api.get<SaleSummary[]>("/api/sales/recent", undefined, signal) });
+}
+
+export function useSaleSearch(query: SaleSearchQuery) {
+  return useQuery({ queryKey: queryKeys.saleSearch(query),
+    queryFn: ({ signal }) => api.get<PagedResult<SaleLookup>>("/api/sales/search", query, signal) });
 }
 
 export function useReturnableSale(id: string | null) {

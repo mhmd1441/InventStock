@@ -85,9 +85,21 @@ public class ReferenceUpgradeTests
             Assert.False((await db.Parts.SingleAsync(x => x.Id == piecePartId)).NeedsRecount);
 
             var applied = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-            Assert.Equal(reviewedImports, applied[^10]);
-            Assert.Equal("20261014082611_DirectCutHoseSellingRate", applied[^1]);
-            Assert.Equal(9, applied.SkipWhile(x => x != reviewedImports).Skip(1).Count());
+            var reviewedIndex = Array.IndexOf(applied, reviewedImports);
+            Assert.True(reviewedIndex >= 0, "The populated upgrade baseline must remain in the applied migration chain.");
+            Assert.Equal(new[]
+            {
+                "20261012152847_CashFoundation",
+                "20261012203135_AtomicCounterSales",
+                "20261013074603_CustomerAccountsAndPayments",
+                "20261013080730_SaleStockDiscrepancy",
+                "20261013142722_CustomerOpeningCorrections",
+                "20261013151728_LinkedSaleReturns",
+                "20261014075323_SuggestedSellingPrice",
+                "20261014081617_SalePriceGuidanceSnapshot",
+                "20261014082611_DirectCutHoseSellingRate",
+                "20261015174820_SaleLookupIndexes"
+            }, applied[(reviewedIndex + 1)..]);
         }
         finally { await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE"); }
 #pragma warning restore EF1002

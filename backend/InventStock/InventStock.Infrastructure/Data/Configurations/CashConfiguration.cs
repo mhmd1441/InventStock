@@ -50,6 +50,8 @@ public sealed class CashMovementConfiguration : IEntityTypeConfiguration<CashMov
         builder.HasOne<CustomerPaymentCorrection>().WithMany().HasForeignKey(x => x.CustomerPaymentCorrectionId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => x.SaleRefundTenderId).IsUnique().HasFilter("\"SaleRefundTenderId\" IS NOT NULL");
         builder.HasOne<SaleRefundTender>().WithMany().HasForeignKey(x => x.SaleRefundTenderId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => x.LegacySaleRefundTenderId).IsUnique().HasFilter("\"LegacySaleRefundTenderId\" IS NOT NULL");
+        builder.HasOne<LegacySaleRefundTender>().WithMany().HasForeignKey(x => x.LegacySaleRefundTenderId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.CashAccount).WithMany().HasForeignKey(x => x.CashAccountId).OnDelete(DeleteBehavior.Restrict);
     }
 }

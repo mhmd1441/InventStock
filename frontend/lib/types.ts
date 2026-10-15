@@ -519,6 +519,12 @@ export interface Sale {
 
 export interface SaleOperation { status: "Committed"; sale: Sale }
 export interface SaleSummary { id: string; postedAtUtc: string; customerName: string | null; totalUsd: number; lineCount: number }
+export interface SaleLookupLine { partId: string; partNumber: string; name: string; brand: string; variant: string;
+  stockUnit: StockUnit; quantity: number }
+export interface SaleLookup { id: string; postedAtUtc: string; customerId: string | null; customerName: string | null;
+  totalUsd: number; lines: SaleLookupLine[] }
+export interface SaleSearchQuery { fromUtc?: string; toUtc?: string; customer?: string; part?: string;
+  amountUsd?: string; page: number; pageSize: number; [key: string]: string | number | undefined }
 export interface ReturnableSaleLine { saleLineId: string; returnedQuantity: number; remainingQuantity: number; refundedUsd: number; remainingRefundUsd: number }
 export interface ReturnableSale { sale: Sale; lines: ReturnableSaleLine[] }
 export type ReturnCondition = "Sellable" | "Quarantined";

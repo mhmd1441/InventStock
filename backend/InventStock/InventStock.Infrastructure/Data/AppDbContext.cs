@@ -50,6 +50,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
     public DbSet<SaleReturnLine> SaleReturnLines => Set<SaleReturnLine>();
     public DbSet<SaleRefundTender> SaleRefundTenders => Set<SaleRefundTender>();
+    public DbSet<LegacySaleReturn> LegacySaleReturns => Set<LegacySaleReturn>();
+    public DbSet<LegacySaleReturnLine> LegacySaleReturnLines => Set<LegacySaleReturnLine>();
+    public DbSet<LegacySaleRefundTender> LegacySaleRefundTenders => Set<LegacySaleRefundTender>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAccountEntry> CustomerAccountEntries => Set<CustomerAccountEntry>();
     public DbSet<CustomerProfileEvent> CustomerProfileEvents => Set<CustomerProfileEvent>();
@@ -81,7 +84,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     private void ApplyAuditInformation()
     {
         if (ChangeTracker.Entries().Any(e => e.State is EntityState.Modified or EntityState.Deleted &&
-            e.Entity is Sale or SaleLine or SaleTender or SaleReturn or SaleReturnLine or SaleRefundTender or CustomerAccountEntry or StockMovement or CustomerProfileEvent
+            e.Entity is Sale or SaleLine or SaleTender or SaleReturn or SaleReturnLine or SaleRefundTender
+                or LegacySaleReturn or LegacySaleReturnLine or LegacySaleRefundTender
+                or CustomerAccountEntry or StockMovement or CustomerProfileEvent
                 or CustomerPayment or CustomerPaymentTender or CustomerPaymentCorrection))
             throw new InvalidOperationException("Posted sale and ledger records cannot be edited or deleted.");
         if (ChangeTracker.Entries<ReferenceLinkEvent>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))

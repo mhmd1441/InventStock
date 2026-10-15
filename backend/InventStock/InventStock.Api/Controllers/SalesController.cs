@@ -1,4 +1,5 @@
 using InventStock.Application.Common;
+using InventStock.Application.Common.Models;
 using InventStock.Application.DTOs.Sales;
 using InventStock.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -29,6 +30,10 @@ public sealed class SalesController(ISaleService sales) : ControllerBase
     [HttpGet("recent")]
     public async Task<ActionResult<IReadOnlyList<SaleSummaryDto>>> Recent(CancellationToken cancellationToken) =>
         Ok(await sales.GetRecentAsync(cancellationToken));
+
+    [HttpGet("search")]
+    public async Task<ActionResult<PagedResult<SaleLookupDto>>> Search([FromQuery] SaleSearchQuery query,
+        CancellationToken cancellationToken) => Ok(await sales.SearchAsync(query, cancellationToken));
 
     [HttpGet("{saleId:guid}")]
     public async Task<ActionResult<SaleDto>> Get(Guid saleId, CancellationToken cancellationToken) =>

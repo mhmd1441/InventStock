@@ -22,6 +22,15 @@ public sealed class CashMovement : AuditableEntity
     public Guid? CustomerPaymentTenderId { get; private set; }
     public Guid? CustomerPaymentCorrectionId { get; private set; }
     public Guid? SaleRefundTenderId { get; private set; }
+    public Guid? LegacySaleRefundTenderId { get; private set; }
+
+    public static CashMovement LegacySaleRefund(LegacySaleRefundTender tender, Guid actor, DateTime time)
+    {
+        var movement = Create(tender.CashAccountId, CashMovementType.LegacySaleRefund,
+            -tender.NativeAmount, actor, time, null, null, null);
+        movement.LegacySaleRefundTenderId = tender.Id;
+        return movement;
+    }
 
     public static CashMovement SaleRefund(SaleRefundTender tender, Guid actor, DateTime time)
     {
