@@ -51,12 +51,16 @@ public sealed class CustomerAccountEntry : AuditableEntity
 {
     public Guid CustomerId { get; private set; }
     public Guid? SaleId { get; private set; }
+    public Guid? SaleReturnId { get; private set; }
     public Guid OperationId { get; private set; }
     public Guid ActorId { get; private set; }
     public string Kind { get; private set; } = null!;
     public decimal AmountUsd { get; private set; }
     public Guid? CustomerPaymentId { get; private set; }
     public Guid? CustomerPaymentCorrectionId { get; private set; }
+    public Guid? OriginalOpeningEntryId { get; private set; }
+    public decimal? CorrectedOpeningBalanceUsd { get; private set; }
+    public decimal? BalanceAfterUsd { get; private set; }
     public string? Reason { get; private set; }
     public string? PayloadFingerprint { get; private set; }
     public DateTime? EffectiveAtUtc { get; private set; }
@@ -64,6 +68,13 @@ public sealed class CustomerAccountEntry : AuditableEntity
         Create(customerId, saleId, operationId, actorId, "SaleCharge", total);
     public static CustomerAccountEntry SalePayment(Guid customerId, Guid saleId, Guid operationId, Guid actorId, decimal netPayment) =>
         Create(customerId, saleId, operationId, actorId, "SalePayment", -netPayment);
+    public static CustomerAccountEntry ReturnReduction(Guid customerId, Guid saleReturnId, Guid operationId,
+        Guid actorId, decimal amount)
+    {
+        var entry = Create(customerId, null, operationId, actorId, "ReturnReduction", -amount);
+        entry.SaleReturnId = saleReturnId;
+        return entry;
+    }
     public static CustomerAccountEntry Opening(Guid customerId, Guid operationId, Guid actorId, decimal balance) =>
         Create(customerId, null, operationId, actorId, "Opening", balance);
     public void DescribeOpening(string reason, DateTime effectiveAtUtc, string fingerprint)
@@ -71,6 +82,18 @@ public sealed class CustomerAccountEntry : AuditableEntity
         Reason = Guard.AgainstNullOrWhiteSpace(reason, nameof(Reason), 500);
         EffectiveAtUtc = effectiveAtUtc;
         PayloadFingerprint = fingerprint;
+    }
+    public static CustomerAccountEntry OpeningCorrection(CustomerAccountEntry opening, Guid operationId, Guid actorId,
+        decimal correctedOpeningBalance, decimal delta, decimal balanceAfter, string reason, string fingerprint)
+    {
+        var entry = Create(opening.CustomerId, null, operationId, actorId, "OpeningCorrection", delta);
+        entry.OriginalOpeningEntryId = opening.Id;
+        entry.CorrectedOpeningBalanceUsd = correctedOpeningBalance;
+        entry.BalanceAfterUsd = balanceAfter;
+        entry.Reason = Guard.AgainstNullOrWhiteSpace(reason, nameof(Reason), 500);
+        entry.PayloadFingerprint = fingerprint;
+        entry.EffectiveAtUtc = opening.EffectiveAtUtc;
+        return entry;
     }
     public static CustomerAccountEntry Payment(Guid customer, Guid payment, Guid operation, Guid actor, decimal usd)
     {

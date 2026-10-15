@@ -2,11 +2,21 @@ export type Role = "Admin" | "Staff";
 
 export type MovementType = "In" | "Out" | "Adjustment" | "PhysicalCount";
 export type StockUnit = "Piece" | "Centimeter";
-export type StockConfidence = "NotCounted" | "Counted";
+export type StockConfidence = "NotCounted" | "Counted" | "NeedsRecount";
 export type MoneyCurrency = "USD" | "EUR" | "LBP";
 export type TaxTreatment = "Unknown" | "Included" | "Excluded";
 export type CashAccountKind = "PhysicalSafe" | "Whish";
 export type PaymentFundingSource = "ShopAccount" | "PersonalPocket";
+
+export interface SellingPriceSuggestion { partId: string; suggestedUsd: number | null }
+export interface PricingPolicy { markupPercent: number; tvaPercent: number; eurUsdRate: number | null;
+  lbpPerUsdRate: number | null; revision: number; updatedById: string | null; updatedAtUtc: string | null }
+export interface AdminPriceCalculation extends SellingPriceSuggestion { latestActualPackageCost: number | null;
+  costCurrency: MoneyCurrency | null; taxTreatment: TaxTreatment | null; baseUnitsPerPackage: number | null;
+  purchasedAtUtc: string | null; baseUnitCostUsd: number | null; unavailableReason: string | null;
+  directSellingRateUsdPerMeter: number | null }
+export interface CutHoseSellingRate { partId: string; currentRateId: string | null; revision: number;
+  usdPerMeter: number | null; updatedAtUtc: string | null; updatedById: string | null }
 
 export interface User {
   id: string;
@@ -384,6 +394,168 @@ export interface OutgoingPayment {
   reversalId: string | null;
   reversalReason: string | null;
   reversedAtUtc: string | null;
+}
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  distinguishingLabel: string | null;
+  phone: string | null;
+  address: string | null;
+  revision: number;
+}
+
+export interface CustomerSummary {
+  customer: CustomerProfile;
+  balanceUsd: number;
+}
+
+export interface CustomerStatementEntry {
+  id: string;
+  kind: string;
+  amountUsd: number;
+  saleId: string | null;
+  customerPaymentId: string | null;
+  customerPaymentCorrectionId: string | null;
+  operationId: string;
+  actorId: string;
+  recordedAtUtc: string;
+  effectiveAtUtc: string | null;
+  reason: string | null;
+  originalOpeningEntryId: string | null;
+  correctedOpeningBalanceUsd: number | null;
+  saleReturnId: string | null;
+}
+
+export interface CustomerOpeningStatus {
+  originalOpeningEntryId: string;
+  originalBalanceUsd: number;
+  currentOpeningBalanceUsd: number;
+  asOfUtc: string;
+}
+
+export interface CustomerStatement {
+  summary: CustomerSummary;
+  entries: PagedResult<CustomerStatementEntry>;
+}
+
+export interface SalePaymentAccount {
+  id: string;
+  name: string;
+  currency: MoneyCurrency;
+  kind: CashAccountKind;
+}
+
+export interface SaleLineRequest {
+  partId: string;
+  quantity: number;
+  unitSellingPriceUsd: number;
+  physicalGoodsConfirmed: boolean;
+  stockExceptionReason: string | null;
+}
+
+export interface SaleTenderRequest {
+  cashAccountId: string;
+  currency: MoneyCurrency;
+  nativeAmount: number;
+  confirmedUsdAmount: number;
+}
+
+export interface PostSaleRequest {
+  operationId: string;
+  customerId: string | null;
+  confirmedTotalUsd: number;
+  customerCreditUsedUsd: number;
+  unpaidDebtUsd: number;
+  lines: SaleLineRequest[];
+  payments: SaleTenderRequest[];
+  change: SaleTenderRequest[];
+}
+
+export interface SaleLine {
+  id: string;
+  partId: string;
+  position: number;
+  partNumber: string;
+  name: string;
+  brand: string;
+  variant: string;
+  stockUnit: StockUnit;
+  quantity: number;
+  unitSellingPriceUsd: number;
+  lineTotalUsd: number;
+  stockException: boolean;
+  stockShortage: boolean;
+  stockExceptionReason: string | null;
+  suggestedUnitPriceUsd: number | null;
+  priceOverridden: boolean;
+}
+
+export interface SaleTender {
+  id: string;
+  cashAccountId: string;
+  accountName: string;
+  currency: MoneyCurrency;
+  isChange: boolean;
+  nativeAmount: number;
+  confirmedUsdAmount: number;
+}
+
+export interface Sale {
+  id: string;
+  operationId: string;
+  actorId: string;
+  postedAtUtc: string;
+  customerId: string | null;
+  customerName: string | null;
+  totalUsd: number;
+  paymentsUsd: number;
+  changeUsd: number;
+  customerCreditUsedUsd: number;
+  unpaidDebtUsd: number;
+  lines: SaleLine[];
+  tenders: SaleTender[];
+}
+
+export interface SaleOperation { status: "Committed"; sale: Sale }
+export interface SaleSummary { id: string; postedAtUtc: string; customerName: string | null; totalUsd: number; lineCount: number }
+export interface ReturnableSaleLine { saleLineId: string; returnedQuantity: number; remainingQuantity: number; refundedUsd: number; remainingRefundUsd: number }
+export interface ReturnableSale { sale: Sale; lines: ReturnableSaleLine[] }
+export type ReturnCondition = "Sellable" | "Quarantined";
+export interface PostSaleReturnRequest {
+  operationId: string; saleId: string; reason: string; confirmedTotalUsd: number; accountReductionUsd: number;
+  lines: { saleLineId: string; quantity: number; condition: ReturnCondition; physicalSeparationConfirmed: boolean; issueReason: string | null }[];
+  refunds: SaleTenderRequest[];
+}
+export interface SaleReturn {
+  id: string; operationId: string; actorId: string; saleId: string; customerId: string | null;
+  postedAtUtc: string; reason: string; totalUsd: number; accountReductionUsd: number;
+  lines: { id: string; saleLineId: string; partId: string; quantity: number; refundUsd: number; condition: ReturnCondition; issueReason: string | null }[];
+  refunds: { id: string; cashAccountId: string; accountName: string; currency: MoneyCurrency; nativeAmount: number; confirmedUsdAmount: number }[];
+}
+
+export interface CustomerPaymentRequest {
+  operationId: string;
+  confirmedUsdCredit: number;
+  confirmedExcessCreditUsd: number;
+  payments: SaleTenderRequest[];
+  change: SaleTenderRequest[];
+  note: string | null;
+}
+
+export interface CustomerPayment {
+  id: string;
+  operationId: string;
+  customerId: string;
+  customerName: string;
+  actorId: string;
+  postedAtUtc: string;
+  usdCredit: number;
+  excessCreditUsd: number;
+  balanceBeforeUsd: number;
+  balanceAfterUsd: number;
+  note: string | null;
+  tenders: SaleTender[];
 }
 
 export interface MonthlyOutgoingTotal {

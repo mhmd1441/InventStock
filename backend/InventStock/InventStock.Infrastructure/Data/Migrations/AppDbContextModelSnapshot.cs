@@ -183,6 +183,12 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CustomerPaymentCorrectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CustomerPaymentTenderId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MovementType")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -203,6 +209,9 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid>("PerformedByUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SaleRefundTenderId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SaleTenderId")
                         .HasColumnType("uuid");
 
@@ -213,6 +222,10 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CustomerPaymentTenderId")
+                        .IsUnique()
+                        .HasFilter("\"CustomerPaymentTenderId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL");
 
                     b.HasIndex("OpeningBalanceId")
                         .IsUnique()
@@ -226,11 +239,18 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .IsUnique()
                         .HasFilter("\"OutgoingPaymentReversalId\" IS NOT NULL");
 
+                    b.HasIndex("SaleRefundTenderId")
+                        .IsUnique()
+                        .HasFilter("\"SaleRefundTenderId\" IS NOT NULL");
+
                     b.HasIndex("SaleTenderId")
                         .IsUnique()
                         .HasFilter("\"SaleTenderId\" IS NOT NULL");
 
                     b.HasIndex("CashAccountId", "OccurredAtUtc");
+
+                    b.HasIndex("CustomerPaymentCorrectionId", "CustomerPaymentTenderId")
+                        .IsUnique();
 
                     b.ToTable("CashMovements", null, t =>
                         {
@@ -407,6 +427,10 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -424,6 +448,14 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -451,6 +483,14 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
 
+                    b.Property<decimal?>("BalanceAfterUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal?>("CorrectedOpeningBalanceUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -460,6 +500,15 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid>("CustomerId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("CustomerPaymentCorrectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CustomerPaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("EffectiveAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -468,7 +517,21 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid>("OperationId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("OriginalOpeningEntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid?>("SaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SaleReturnId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
@@ -479,16 +542,338 @@ namespace InventStock.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasFilter("\"Kind\" = 'Opening'");
+
+                    b.HasIndex("CustomerPaymentCorrectionId")
+                        .IsUnique();
+
+                    b.HasIndex("OriginalOpeningEntryId");
+
                     b.HasIndex("SaleId");
 
+                    b.HasIndex("SaleReturnId")
+                        .IsUnique()
+                        .HasFilter("\"SaleReturnId\" IS NOT NULL");
+
                     b.HasIndex("CustomerId", "CreatedAtUtc");
+
+                    b.HasIndex("CustomerPaymentId", "Kind")
+                        .IsUnique();
 
                     b.HasIndex("OperationId", "Kind")
                         .IsUnique();
 
                     b.ToTable("CustomerAccountEntries", null, t =>
                         {
-                            t.HasCheckConstraint("CK_CustomerEntries_Kind", "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0)");
+                            t.HasCheckConstraint("CK_CustomerEntries_Kind", "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'OpeningCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"OriginalOpeningEntryId\" IS NOT NULL AND \"CorrectedOpeningBalanceUsd\" IS NOT NULL AND \"BalanceAfterUsd\" IS NOT NULL AND \"AmountUsd\" <> 0) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'ReturnReduction' AND \"SaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPayment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BalanceAfterUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("BalanceBeforeUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("ExcessCreditUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("PostedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("UsdCredit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId", "PostedAtUtc");
+
+                    b.ToTable("CustomerPayments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CustomerPayments_Balance", "\"UsdCredit\" > 0 AND \"ExcessCreditUsd\" >= 0 AND \"ExcessCreditUsd\" <= \"UsdCredit\" AND \"BalanceAfterUsd\" = \"BalanceBeforeUsd\" - \"UsdCredit\"");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPaymentCorrection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BalanceAfterUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CorrectedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OriginalPaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal>("RestoredDebtUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("OriginalPaymentId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerPaymentCorrections", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CustomerPaymentCorrections_Positive", "\"RestoredDebtUsd\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPaymentTender", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CashAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ConfirmedUsdAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<Guid>("CustomerPaymentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsChange")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("NativeAmount")
+                        .HasPrecision(20, 6)
+                        .HasColumnType("numeric(20,6)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashAccountId");
+
+                    b.HasIndex("CustomerPaymentId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("CustomerPaymentTenders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CustomerPaymentTenders_Amounts", "\"NativeAmount\" > 0 AND \"ConfirmedUsdAmount\" > 0 AND (\"Currency\" <> 'USD' OR \"NativeAmount\" = \"ConfirmedUsdAmount\")");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerProfileEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DistinguishingLabel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("CustomerId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("CustomerProfileEvents", (string)null);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CutHoseSellingRate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("UsdPerMeter")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("CutHoseSellingRates", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CutHoseSellingRates_Rate", "\"Revision\" > 0 AND (\"UsdPerMeter\" IS NULL OR \"UsdPerMeter\" > 0)");
                         });
                 });
 
@@ -733,6 +1118,9 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<bool>("NeedsRecount")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PartNumber")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -803,6 +1191,56 @@ namespace InventStock.Infrastructure.Data.Migrations
                     NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "SearchNumber" }, "IX_Parts_SearchNumber_Trigram"), new[] { "gin_trgm_ops" });
 
                     b.ToTable("Parts", (string)null);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.PricingPolicy", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("EurUsdRate")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal?>("LbpPerUsdRate")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("MarkupPercent")
+                        .HasPrecision(8, 3)
+                        .HasColumnType("numeric(8,3)");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TvaPercent")
+                        .HasPrecision(8, 3)
+                        .HasColumnType("numeric(8,3)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PricingPolicies", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_PricingPolicies_Singleton", "\"Id\" = 1");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MarkupPercent = 15m,
+                            Revision = 0,
+                            TvaPercent = 11m
+                        });
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.ProductBrand", b =>
@@ -1157,6 +1595,9 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<int>("Position")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("PriceOverridden")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
@@ -1173,10 +1614,17 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Property<Guid>("StockMovementId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("StockShortage")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("StockUnit")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
+
+                    b.Property<decimal?>("SuggestedUnitPriceUsd")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
 
                     b.Property<decimal>("UnitSellingPriceUsd")
                         .HasPrecision(18, 6)
@@ -1197,7 +1645,8 @@ namespace InventStock.Infrastructure.Data.Migrations
 
                     b.HasIndex("CostObservationId");
 
-                    b.HasIndex("PartId");
+                    b.HasIndex("PartId")
+                        .HasFilter("\"StockShortage\" = TRUE");
 
                     b.HasIndex("StockMovementId")
                         .IsUnique();
@@ -1208,6 +1657,206 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.ToTable("SaleLines", null, t =>
                         {
                             t.HasCheckConstraint("CK_SaleLines_Amounts", "\"Quantity\" > 0 AND \"UnitSellingPriceUsd\" > 0 AND \"LineTotalUsd\" >= 0");
+
+                            t.HasCheckConstraint("CK_SaleLines_PriceOverride", "(\"SuggestedUnitPriceUsd\" IS NULL AND \"PriceOverridden\" = FALSE) OR (\"SuggestedUnitPriceUsd\" > 0 AND \"PriceOverridden\" = (\"UnitSellingPriceUsd\" <> \"SuggestedUnitPriceUsd\"))");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleRefundTender", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("CashAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("ConfirmedUsdAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<decimal>("NativeAmount")
+                        .HasPrecision(20, 6)
+                        .HasColumnType("numeric(20,6)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SaleReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashAccountId");
+
+                    b.HasIndex("SaleReturnId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("SaleRefundTenders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SaleRefundTenders_Amount", "\"NativeAmount\" > 0 AND \"ConfirmedUsdAmount\" > 0 AND (\"Currency\" <> 'USD' OR \"NativeAmount\" = \"ConfirmedUsdAmount\")");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleReturn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AccountReductionUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("PostedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SaleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("TotalUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("OperationId")
+                        .IsUnique();
+
+                    b.HasIndex("SaleId", "PostedAtUtc");
+
+                    b.ToTable("SaleReturns", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SaleReturns_Settlement", "\"TotalUsd\" > 0 AND \"AccountReductionUsd\" >= 0 AND \"AccountReductionUsd\" <= \"TotalUsd\"");
+                        });
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleReturnLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IssueReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("RefundUsd")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("SaleLineId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SaleReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("StockHoldMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("StockMovementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("SaleLineId");
+
+                    b.HasIndex("StockHoldMovementId")
+                        .IsUnique()
+                        .HasFilter("\"StockHoldMovementId\" IS NOT NULL");
+
+                    b.HasIndex("StockMovementId")
+                        .IsUnique();
+
+                    b.HasIndex("SaleReturnId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("SaleReturnLines", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_SaleReturnLines_Quantity", "\"Quantity\" > 0 AND \"RefundUsd\" >= 0 AND ((\"Condition\" = 'Quarantined' AND \"StockHoldMovementId\" IS NOT NULL AND \"IssueReason\" IS NOT NULL) OR (\"Condition\" = 'Sellable' AND \"StockHoldMovementId\" IS NULL))");
                         });
                 });
 
@@ -1998,6 +2647,21 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("InventStock.Domain.Entities.CustomerPaymentCorrection", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerPaymentCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.CustomerPaymentTender", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerPaymentTenderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.SaleRefundTender", null)
+                        .WithMany()
+                        .HasForeignKey("SaleRefundTenderId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("InventStock.Domain.Entities.SaleTender", null)
                         .WithMany()
                         .HasForeignKey("SaleTenderId")
@@ -2025,10 +2689,87 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("InventStock.Domain.Entities.CustomerPaymentCorrection", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerPaymentCorrectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.CustomerPayment", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.CustomerAccountEntry", null)
+                        .WithMany()
+                        .HasForeignKey("OriginalOpeningEntryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("InventStock.Domain.Entities.Sale", null)
                         .WithMany()
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.SaleReturn", null)
+                        .WithMany()
+                        .HasForeignKey("SaleReturnId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPayment", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPaymentCorrection", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.CustomerPayment", null)
+                        .WithMany()
+                        .HasForeignKey("OriginalPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPaymentTender", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.CashAccount", null)
+                        .WithMany()
+                        .HasForeignKey("CashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.CustomerPayment", null)
+                        .WithMany("Tenders")
+                        .HasForeignKey("CustomerPaymentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerProfileEvent", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.CutHoseSellingRate", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.OutgoingPayment", b =>
@@ -2151,6 +2892,67 @@ namespace InventStock.Infrastructure.Data.Migrations
                         .HasForeignKey("SaleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.StockMovement", null)
+                        .WithMany()
+                        .HasForeignKey("StockMovementId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleRefundTender", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.CashAccount", null)
+                        .WithMany()
+                        .HasForeignKey("CashAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.SaleReturn", null)
+                        .WithMany("Refunds")
+                        .HasForeignKey("SaleReturnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleReturn", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("InventStock.Domain.Entities.Sale", null)
+                        .WithMany()
+                        .HasForeignKey("SaleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleReturnLine", b =>
+                {
+                    b.HasOne("InventStock.Domain.Entities.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.SaleLine", null)
+                        .WithMany()
+                        .HasForeignKey("SaleLineId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.SaleReturn", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("SaleReturnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventStock.Domain.Entities.StockHoldMovement", null)
+                        .WithMany()
+                        .HasForeignKey("StockHoldMovementId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("InventStock.Domain.Entities.StockMovement", null)
                         .WithMany()
@@ -2338,6 +3140,11 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Navigation("Parts");
                 });
 
+            modelBuilder.Entity("InventStock.Domain.Entities.CustomerPayment", b =>
+                {
+                    b.Navigation("Tenders");
+                });
+
             modelBuilder.Entity("InventStock.Domain.Entities.Part", b =>
                 {
                     b.Navigation("Movements");
@@ -2362,6 +3169,13 @@ namespace InventStock.Infrastructure.Data.Migrations
                     b.Navigation("Lines");
 
                     b.Navigation("Tenders");
+                });
+
+            modelBuilder.Entity("InventStock.Domain.Entities.SaleReturn", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("Refunds");
                 });
 
             modelBuilder.Entity("InventStock.Domain.Entities.Supplier", b =>

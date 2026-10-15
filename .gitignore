@@ -54,4 +54,8 @@ Thumbs.db
 Docs/*
 !Docs/Production-Design.md
 !Docs/STATE.md
+!Docs/CHANGELOG.md
+!Docs/Release-Checklist.md
+!Docs/Return-Posting.md
+!Docs/Sale-Posting.md
 

@@ -11,11 +11,21 @@ public sealed record CustomerSummaryDto(CustomerProfileDto Customer, decimal Bal
 public sealed class CustomerQuery : PagedQuery { public string? Search { get; set; } }
 public sealed class CustomerStatementQuery : PagedQuery { }
 public sealed record CustomerStatementEntryDto(Guid Id, string Kind, decimal AmountUsd, Guid? SaleId,
-    Guid? CustomerPaymentId, Guid OperationId, Guid ActorId, DateTime RecordedAtUtc, DateTime? EffectiveAtUtc, string? Reason);
+    Guid? CustomerPaymentId, Guid? CustomerPaymentCorrectionId, Guid OperationId, Guid ActorId,
+    DateTime RecordedAtUtc, DateTime? EffectiveAtUtc, string? Reason, Guid? OriginalOpeningEntryId,
+    decimal? CorrectedOpeningBalanceUsd, Guid? SaleReturnId);
 public sealed record CustomerStatementDto(CustomerSummaryDto Summary, PagedResult<CustomerStatementEntryDto> Entries);
 public sealed record PostCustomerOpeningRequest(Guid OperationId, decimal BalanceUsd, DateTime AsOfUtc, string Reason);
 public sealed record CustomerOpeningDto(Guid Id, Guid CustomerId, Guid OperationId, Guid ActorId,
     decimal BalanceUsd, DateTime AsOfUtc, string Reason);
+public sealed record CustomerOpeningStatusDto(Guid OriginalOpeningEntryId, decimal OriginalBalanceUsd,
+    decimal CurrentOpeningBalanceUsd, DateTime AsOfUtc);
+public sealed record CorrectCustomerOpeningRequest(Guid OperationId, decimal ExpectedCurrentOpeningBalanceUsd,
+    decimal CorrectedOpeningBalanceUsd,
+    decimal ConfirmedBalanceAfterUsd, string Reason);
+public sealed record CustomerOpeningCorrectionDto(Guid Id, Guid OriginalOpeningEntryId, Guid CustomerId,
+    Guid OperationId, Guid ActorId, decimal DeltaUsd, decimal CorrectedOpeningBalanceUsd,
+    decimal BalanceAfterUsd, DateTime RecordedAtUtc, string Reason);
 public sealed record PostCustomerPaymentRequest
 {
     public Guid OperationId { get; init; }

@@ -49,3 +49,15 @@ public sealed class CorrectCustomerPaymentRequestValidator : AbstractValidator<C
         RuleFor(x => x.ConfirmedBalanceAfterUsd).InclusiveBetween(-999999999m, 999999999m).PrecisionScale(18, 2, true);
     }
 }
+
+public sealed class CorrectCustomerOpeningRequestValidator : AbstractValidator<CorrectCustomerOpeningRequest>
+{
+    public CorrectCustomerOpeningRequestValidator()
+    {
+        RuleFor(x => x.OperationId).NotEmpty();
+        RuleFor(x => x.ExpectedCurrentOpeningBalanceUsd).InclusiveBetween(-999999999m, 999999999m).PrecisionScale(18, 2, true);
+        RuleFor(x => x.CorrectedOpeningBalanceUsd).InclusiveBetween(-999999999m, 999999999m).PrecisionScale(18, 2, true);
+        RuleFor(x => x.ConfirmedBalanceAfterUsd).InclusiveBetween(-999999999m, 999999999m).PrecisionScale(18, 2, true);
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
+    }
+}

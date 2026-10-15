@@ -67,6 +67,12 @@ public class Part : AuditableEntity
 
     public bool IsActive { get; private set; } = true;
 
+    /// <summary>A confirmed sale exceeded book stock; only a physical count clears this warning.</summary>
+    public bool NeedsRecount { get; private set; }
+
+    public void RequireRecount() => NeedsRecount = true;
+    public void ClearRecountAfterPhysicalCount() => NeedsRecount = false;
+
     /// <summary>The indivisible base unit written to the stock ledger.</summary>
     public StockUnit StockUnit { get; private set; } = StockUnit.Piece;
 

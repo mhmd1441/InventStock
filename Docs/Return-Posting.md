@@ -1,0 +1,10 @@
+# Linked return posting contract
+
+This backend slice handles returns against a posted sale; it is not yet a complete shop return workflow. There is no return UI, paper-era return path, or atomic exchange checkout.
+
+- The employee selects an original sale line and base-unit quantity. The refundable USD amount is allocated cumulatively from that line's immutable posted total; all returns combined cannot exceed its quantity or amount.
+- The employee explicitly divides the return value between native-currency cash/Whish refunds and reduction of the named customer's USD balance. Neither debt-first nor cash-first is forced. An anonymous sale must be refunded in full because it has no customer account.
+- Native refund amounts and confirmed USD settlements are both preserved. A cash/Whish refund is an outflow from the selected account. Account reduction is a negative customer-ledger entry; if it exceeds debt, the remainder becomes customer credit. This does not reverse an unrelated payment.
+- Each returned line enters physical stock. Sellable goods become available; faulty goods require confirmed physical separation/tagging and a reason and enter quarantine in the same transaction. Supplier follow-up is separate. A return against a shortage sale never clears `NeedsRecount`; only a physical count does.
+- Posting uses one transaction: operation lock, customer lock (if named), original sale-line locks sorted by ID, then distinct part locks sorted by ID. Header, line allocation, stock in, quarantine hold, refund cash movements and customer-account reduction commit or roll back together. The permanent operation ID allows the same actor and payload to recover a committed outcome; another actor or changed payload conflicts.
+- Employees may perform linked returns without an admin PIN. The owner also permits staff to handle paper-era returns, but that distinct, unlinked and higher-risk workflow is not implemented yet. Exchanges still need a linked return plus a new sale as one checkout, rather than two independent counter actions.

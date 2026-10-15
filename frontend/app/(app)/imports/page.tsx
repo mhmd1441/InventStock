@@ -42,7 +42,7 @@ function ExistingPartPicker({ initialSearch, onSelect, onClose }: {
         <button key={part.id} type="button" onClick={() => onSelect(part)}
           className="flex w-full justify-between rounded-lg border border-border bg-surface p-2 text-left text-sm hover:bg-surface-muted">
           <span><strong>{part.partNumber}</strong> · {part.brand} {part.name}</span>
-          <span className="text-muted">{part.stockConfidence === "Counted" ? part.quantityOnHand : "Not counted"}</span>
+          <span className="text-muted">{part.stockConfidence === "NotCounted" ? "Not counted" : part.stockConfidence === "NeedsRecount" ? `${part.quantityOnHand} (recount needed)` : part.quantityOnHand}</span>
         </button>
       ))}
     </div>

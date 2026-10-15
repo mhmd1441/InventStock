@@ -25,4 +25,12 @@ public sealed class SalesController(ISaleService sales) : ControllerBase
     [HttpGet("payment-accounts")]
     public async Task<ActionResult<IReadOnlyList<SalePaymentAccountDto>>> PaymentAccounts(CancellationToken cancellationToken) =>
         Ok(await sales.GetPaymentAccountsAsync(cancellationToken));
+
+    [HttpGet("recent")]
+    public async Task<ActionResult<IReadOnlyList<SaleSummaryDto>>> Recent(CancellationToken cancellationToken) =>
+        Ok(await sales.GetRecentAsync(cancellationToken));
+
+    [HttpGet("{saleId:guid}")]
+    public async Task<ActionResult<SaleDto>> Get(Guid saleId, CancellationToken cancellationToken) =>
+        Ok(await sales.GetAsync(saleId, cancellationToken));
 }

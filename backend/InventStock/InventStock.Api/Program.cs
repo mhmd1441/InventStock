@@ -131,6 +131,7 @@ app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<TransactionReleaseMiddleware>();
 
 app.MapControllers();
 app.MapHub<StockHub>(StockHub.HubPath);

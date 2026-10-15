@@ -41,6 +41,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             ["Jwt__AccessTokenMinutes"] = "15",
             ["Jwt__RefreshTokenDays"] = "1",
             ["Database__MigrateOnStartup"] = "false",
+            ["INVENTSTOCK_TransactionRelease__Enabled"] = "true",
             ["Cors__AllowedOrigins__0"] = "http://localhost:3000"
         };
 

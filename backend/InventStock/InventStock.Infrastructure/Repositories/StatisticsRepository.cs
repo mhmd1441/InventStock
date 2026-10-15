@@ -20,19 +20,19 @@ public sealed class StatisticsRepository : IStatisticsRepository
         var totalCategories = await _db.Categories.CountAsync(cancellationToken);
         var totalSuppliers = includePrivate ? await _db.Suppliers.CountAsync(cancellationToken) : 0;
 
-        var countedParts = await _db.Parts.CountAsync(p =>
+        var countedParts = await _db.Parts.CountAsync(p => !p.NeedsRecount &&
             _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null), cancellationToken);
         var notCountedParts = totalParts - countedParts;
 
         // Centimetres and pieces cannot be meaningfully added together. Keep this legacy field to
         // counted piece SKUs only; the UI emphasizes counted/not-counted product totals instead.
         var totalStockUnits = await _db.Parts
-            .Where(p => p.StockUnit == Domain.Enums.StockUnit.Piece &&
+            .Where(p => !p.NeedsRecount && p.StockUnit == Domain.Enums.StockUnit.Piece &&
                         _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null))
             .SumAsync(p => _db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0, cancellationToken);
 
         var totalStockValue = includePrivate ? await _db.Parts
-            .Where(p => p.IsActive && _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null))
+            .Where(p => p.IsActive && !p.NeedsRecount && _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null))
             .SumAsync(
                 p => (decimal?)((_db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)
                                 * p.UnitPrice),
@@ -41,7 +41,7 @@ public sealed class StatisticsRepository : IStatisticsRepository
         var lowStockCount = await _db.Parts
             .CountAsync(
                 p => p.IsActive &&
-                     _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) &&
+                     (p.NeedsRecount || _db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null)) &&
                      ((_db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
                       (_db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0))
                      <= p.LowStockThreshold,

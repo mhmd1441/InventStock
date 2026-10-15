@@ -6,11 +6,13 @@ using InventStock.Application.Common.Exceptions;
 using InventStock.Application.DTOs.Sales;
 using InventStock.Application.DTOs.Stock;
 using InventStock.Application.Interfaces;
+using InventStock.Application.Services;
 using InventStock.Domain.Entities;
 using InventStock.Domain.Enums;
 using InventStock.Domain.Exceptions;
 using InventStock.Infrastructure.Data;
 using InventStock.Infrastructure.Identity;
+using InventStock.Infrastructure.Repositories;
 using InventStock.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +30,7 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
     private bool created;
     public Guid Actor { get; } = Guid.NewGuid();
     public Guid OtherActor { get; } = Guid.NewGuid();
+    public Guid AdminActor { get; } = Guid.NewGuid();
     public Guid CategoryId { get; private set; }
     public Dictionary<string, CashAccount> Accounts { get; private set; } = [];
     public AppDbContext Open(params IInterceptor[] interceptors) => new(new DbContextOptionsBuilder<AppDbContext>()
@@ -40,6 +43,7 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
         if (string.IsNullOrWhiteSpace(configured)) throw new InvalidOperationException("Real PostgreSQL is required: set INVENTSTOCK_TEST_POSTGRES to disposable inventstock_test.");
         var builder = new NpgsqlConnectionStringBuilder(configured);
         if (builder.Database != "inventstock_test") throw new InvalidOperationException("Only disposable inventstock_test is allowed.");
+        await TestPostgresExtensions.EnsurePublicAsync(configured);
         builder.SearchPath = schema + ",public";
         builder.CommandTimeout = 15;
         builder.Timeout = 10;
@@ -52,11 +56,15 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
         await db.Database.MigrateAsync();
         var role = new ApplicationRole(RoleNames.Staff) { Id = Guid.NewGuid() };
         db.Roles.Add(role);
+        var adminRole = new ApplicationRole(RoleNames.Admin) { Id = Guid.NewGuid() };
+        db.Roles.Add(adminRole);
         foreach (var id in new[] { Actor, OtherActor })
         {
             db.Users.Add(new ApplicationUser { Id = id, UserName = id.ToString(), NormalizedUserName = id.ToString(), FullName = "Counter staff", IsActive = true });
             db.UserRoles.Add(new IdentityUserRole<Guid> { UserId = id, RoleId = role.Id });
         }
+        db.Users.Add(new ApplicationUser { Id = AdminActor, UserName = AdminActor.ToString(), NormalizedUserName = AdminActor.ToString(), FullName = "Admin", IsActive = true });
+        db.UserRoles.Add(new IdentityUserRole<Guid> { UserId = AdminActor, RoleId = adminRole.Id });
         var category = Category.Create("Sale tests", null);
         db.Categories.Add(category);
         CategoryId = category.Id;
@@ -85,6 +93,20 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
         user.UserId.Returns(actor ?? Actor);
         user.FullName.Returns("Counter staff");
         return new(db, user, notifier ?? Substitute.For<IStockNotifier>(), NullLogger<SaleService>.Instance);
+    }
+    public SaleReturnService ReturnService(AppDbContext db, Guid? actor = null)
+    {
+        var current = Substitute.For<ICurrentUserService>();
+        current.UserId.Returns(actor ?? Actor);
+        current.FullName.Returns("Counter staff");
+        return new(db, current);
+    }
+    public CustomerService CustomerService(AppDbContext db, Guid? actor = null)
+    {
+        var user = Substitute.For<ICurrentUserService>();
+        user.UserId.Returns(actor ?? Actor);
+        user.FullName.Returns("Counter staff");
+        return new(db, user);
     }
     public async Task<Part> Part(int quantity, bool counted = true, int held = 0)
     {
@@ -264,6 +286,73 @@ public sealed class PostgresSaleTests(PostgresSaleFixture fixture) : IClassFixtu
         var sale = await Post(fixture.CashSale(uncounted) with { Lines = [new(uncounted.Id, 1, 10, true, "Good item physically in hand")] }, notifier: notifier);
         Assert.True(sale.Lines[0].StockException);
         await notifier.Received().StockChangedAsync(Arg.Is<StockChangedNotification>(x => x.StockConfidence == StockConfidence.NotCounted), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Physical_shortage_sale_leaves_negative_book_balance_and_requires_recount()
+    {
+        var part = await fixture.Part(0);
+        var ordinary = fixture.CashSale(part);
+        await Assert.ThrowsAsync<InsufficientStockException>(() => Post(ordinary));
+        var request = ordinary with { OperationId = Guid.NewGuid(), Lines = [new(part.Id, 1, 10, true, "Found one sellable hose on shelf; full count pending")] };
+        var posted = await Post(request);
+        Assert.True(posted.Lines.Single().StockException);
+        Assert.True(posted.Lines.Single().StockShortage);
+        Assert.Equal(JsonSerializer.Serialize(posted), JsonSerializer.Serialize(await Post(request)));
+        await using (var db = fixture.Open())
+        {
+            Assert.Equal(-1, await db.StockMovements.Where(x => x.PartId == part.Id).SumAsync(x => x.QuantityChange));
+            Assert.False(await db.StockMovements.Where(x => x.PartId == part.Id && x.Reference == posted.Id.ToString()).AnyAsync(x => x.QuantityChange > 0));
+            Assert.True((await db.Parts.SingleAsync(x => x.Id == part.Id)).NeedsRecount);
+            Assert.Equal(StockConfidence.NeedsRecount, (await new PartRepository(db).GetCounterAsync(part.Id))!.StockConfidence);
+        }
+        await Assert.ThrowsAsync<InsufficientStockException>(() => Post(request with { OperationId = Guid.NewGuid() }));
+        await using (var countDb = fixture.Open())
+        {
+            var user = Substitute.For<ICurrentUserService>();
+            user.UserId.Returns(fixture.Actor);
+            user.FullName.Returns("Counter staff");
+            var counter = new StockMovementService(new PartRepository(countDb), new StockMovementRepository(countDb),
+                new UnitOfWork(countDb), user, Substitute.For<IStockNotifier>(), NullLogger<StockMovementService>.Instance);
+            await counter.CountAsync(part.Id, new StockCountRequest { OperationId = Guid.NewGuid(), ExpectedBookQuantity = -1,
+                CountedQuantity = 0, Reason = "Recount after sale exception" });
+        }
+        await using var checkedDb = fixture.Open();
+        Assert.False((await checkedDb.Parts.SingleAsync(x => x.Id == part.Id)).NeedsRecount);
+        Assert.Equal(StockConfidence.Counted, (await new PartRepository(checkedDb).GetCounterAsync(part.Id))!.StockConfidence);
+        Assert.Equal(0, await checkedDb.StockMovements.Where(x => x.PartId == part.Id).SumAsync(x => x.QuantityChange));
+    }
+
+    [Fact]
+    public async Task Simultaneous_shortage_claims_have_one_winner_and_hold_is_never_sold()
+    {
+        var part = await fixture.Part(0);
+        var claims = await Task.WhenAll(Enumerable.Range(0, 6).Select(async _ =>
+        {
+            var request = fixture.CashSale(part) with { Lines = [new(part.Id, 1, 10, true, "Physically found sellable item")] };
+            try { await Post(request); return true; }
+            catch (InsufficientStockException) { return false; }
+        }));
+        Assert.Equal(1, claims.Count(x => x));
+        var held = await fixture.Part(3, held: 3);
+        await Assert.ThrowsAsync<InsufficientStockException>(() => Post(fixture.CashSale(held) with
+            { Lines = [new(held.Id, 1, 10, true, "Claimed good item, but held stock exists")] }));
+        await using var db = fixture.Open();
+        Assert.Equal(-1, await db.StockMovements.Where(x => x.PartId == part.Id).SumAsync(x => x.QuantityChange));
+        Assert.Equal(3, await db.StockHoldMovements.Where(x => x.PartId == held.Id).SumAsync(x => x.QuantityChange));
+        Assert.Equal(3, await db.StockMovements.Where(x => x.PartId == held.Id).SumAsync(x => x.QuantityChange));
+    }
+
+    [Fact]
+    public async Task Failed_shortage_sale_does_not_leave_a_recount_marker()
+    {
+        var part = await fixture.Part(0);
+        var request = fixture.CashSale(part) with { Lines = [new(part.Id, 1, 10, true, "Physically found sellable item")] };
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Post(request, interceptors: [new FailAfterSave(request.OperationId)]));
+        await using var db = fixture.Open();
+        Assert.False((await db.Parts.SingleAsync(x => x.Id == part.Id)).NeedsRecount);
+        Assert.Equal(0, await db.StockMovements.Where(x => x.PartId == part.Id).SumAsync(x => x.QuantityChange));
+        Assert.False(await db.Sales.AnyAsync(x => x.OperationId == request.OperationId));
     }
 
     [Fact]

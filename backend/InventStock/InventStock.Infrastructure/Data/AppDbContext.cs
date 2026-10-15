@@ -31,6 +31,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<SupplierCostObservation> SupplierCostObservations => Set<SupplierCostObservation>();
+    public DbSet<PricingPolicy> PricingPolicies => Set<PricingPolicy>();
+    public DbSet<CutHoseSellingRate> CutHoseSellingRates => Set<CutHoseSellingRate>();
     public DbSet<StockHoldMovement> StockHoldMovements => Set<StockHoldMovement>();
     public DbSet<PurchaseReceipt> PurchaseReceipts => Set<PurchaseReceipt>();
     public DbSet<PurchaseReceiptLine> PurchaseReceiptLines => Set<PurchaseReceiptLine>();
@@ -45,6 +47,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleLine> SaleLines => Set<SaleLine>();
     public DbSet<SaleTender> SaleTenders => Set<SaleTender>();
+    public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
+    public DbSet<SaleReturnLine> SaleReturnLines => Set<SaleReturnLine>();
+    public DbSet<SaleRefundTender> SaleRefundTenders => Set<SaleRefundTender>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAccountEntry> CustomerAccountEntries => Set<CustomerAccountEntry>();
     public DbSet<CustomerProfileEvent> CustomerProfileEvents => Set<CustomerProfileEvent>();
@@ -76,13 +81,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     private void ApplyAuditInformation()
     {
         if (ChangeTracker.Entries().Any(e => e.State is EntityState.Modified or EntityState.Deleted &&
-            e.Entity is Sale or SaleLine or SaleTender or CustomerAccountEntry or StockMovement or CustomerProfileEvent
+            e.Entity is Sale or SaleLine or SaleTender or SaleReturn or SaleReturnLine or SaleRefundTender or CustomerAccountEntry or StockMovement or CustomerProfileEvent
                 or CustomerPayment or CustomerPaymentTender or CustomerPaymentCorrection))
             throw new InvalidOperationException("Posted sale and ledger records cannot be edited or deleted.");
         if (ChangeTracker.Entries<ReferenceLinkEvent>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Reference audit events cannot be edited or deleted.");
         if (ChangeTracker.Entries<SupplierCostObservation>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Supplier cost history cannot be edited or deleted; add a newer observation.");
+        if (ChangeTracker.Entries<CutHoseSellingRate>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Cut-hose selling-rate history cannot be edited or deleted; add a newer rate.");
         if (ChangeTracker.Entries<BrandMergeEvent>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Brand merge history cannot be edited or deleted.");
         if (ChangeTracker.Entries<StockHoldMovement>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))

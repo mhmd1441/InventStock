@@ -61,7 +61,7 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
             foreach (var id in partIds)
                 if (db.Database.IsNpgsql())
                     await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"Parts\" WHERE \"Id\" = {id} FOR UPDATE", cancellationToken);
-            var parts = await db.Parts.AsNoTracking().Where(x => partIds.Contains(x.Id) && x.IsActive)
+            var parts = await db.Parts.Where(x => partIds.Contains(x.Id) && x.IsActive)
                 .ToDictionaryAsync(x => x.Id, cancellationToken);
             // Load balances in bounded aggregate queries after taking every lock, not four reads per cart line.
             var stock = await db.StockMovements.Where(x => partIds.Contains(x.PartId)).GroupBy(x => x.PartId)
@@ -72,6 +72,7 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 .ToDictionaryAsync(x => x.PartId, cancellationToken);
             var availableAfter = new Dictionary<Guid, int>();
             var counted = new Dictionary<Guid, bool>();
+            var shortages = new HashSet<Guid>();
             foreach (var id in partIds)
             {
                 if (!parts.TryGetValue(id, out var part)) throw new NotFoundException("Active part", id);
@@ -79,10 +80,18 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 var held = holds.GetValueOrDefault(id)?.Quantity ?? 0;
                 counted[id] = stock.GetValueOrDefault(id)?.Counted ?? false;
                 availableAfter[id] = physical - held - quantities[id];
-                // Insufficient/negative-stock exception posting is deliberately deferred. A promise
-                // from a supplier cannot produce stock, and physical confirmation cannot release holds.
                 if (availableAfter[id] < 0)
-                    throw new InsufficientStockException(part.PartNumber, physical - held, quantities[id]);
+                {
+                    // This exception records a real item in the employee's hands, not a supplier promise.
+                    // Never create stock from that claim: the negative book balance remains visible for a recount.
+                    // When anything is on quality hold, require a separate physical count/receipt before selling.
+                    // A counter exception must never be mistaken for permission to pick held goods.
+                    var lines = request.Lines.Where(x => x.PartId == id).ToArray();
+                    if (held > 0 || part.NeedsRecount || lines.Any(x => !x.PhysicalGoodsConfirmed || string.IsNullOrWhiteSpace(x.StockExceptionReason)))
+                        throw new InsufficientStockException(part.PartNumber, physical - held, quantities[id]);
+                    shortages.Add(id);
+                    part.RequireRecount();
+                }
                 if (!counted[id] && request.Lines.Where(x => x.PartId == id).Any(x => !x.PhysicalGoodsConfirmed))
                     throw new ConflictException("Uncounted stock requires physical confirmation and a reason on every affected line.");
             }
@@ -102,13 +111,28 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 .Where(x => partIds.Contains(x.PartId) && x.Source == CostSource.ActualPurchase && x.ObservedAtUtc <= sale.PostedAtUtc)
                 .GroupBy(x => x.PartId).Select(g => g.OrderByDescending(x => x.ObservedAtUtc).ThenByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.Id).First())
                 .ToDictionaryAsync(x => x.PartId, cancellationToken);
+            var cutHoseIds = partIds.Where(x => parts[x].StockUnit == StockUnit.Centimeter).ToArray();
+            var cutHoseRates = await db.CutHoseSellingRates.AsNoTracking()
+                .Where(x => cutHoseIds.Contains(x.PartId))
+                .GroupBy(x => x.PartId).Select(g => g.OrderByDescending(x => x.Revision).First())
+                .ToDictionaryAsync(x => x.PartId, cancellationToken);
+            // Capture the server's current suggestion with the posted price. Never trust a browser-supplied suggestion.
+            var pricingPolicy = await db.PricingPolicies.AsNoTracking().SingleAsync(x => x.Id == 1, cancellationToken);
             for (var i = 0; i < request.Lines.Count; i++)
             {
                 var line = request.Lines[i];
-                var movement = StockMovement.StockOut(line.PartId, line.Quantity, actor, "Counter sale", sale.Id.ToString());
+                var suggestion = parts[line.PartId].StockUnit == StockUnit.Centimeter
+                    ? PricingService.CalculateCutHose(line.PartId, cutHoseRates.GetValueOrDefault(line.PartId)).SuggestedUsd
+                    : PricingService.Calculate(line.PartId, parts[line.PartId].StockUnit,
+                        costs.GetValueOrDefault(line.PartId), pricingPolicy).SuggestedUsd;
+                var exception = !counted[line.PartId] || shortages.Contains(line.PartId);
+                var movement = StockMovement.StockOut(line.PartId, line.Quantity, actor,
+                    shortages.Contains(line.PartId) ? "Counter sale: physical stock discrepancy; recount required" : "Counter sale",
+                    sale.Id.ToString());
                 db.StockMovements.Add(movement);
                 sale.Lines.Add(SaleLine.Create(sale.Id, parts[line.PartId], i, line.Quantity, line.UnitSellingPriceUsd,
-                    lineTotals[i], movement.Id, !counted[line.PartId], line.StockExceptionReason, costs.GetValueOrDefault(line.PartId)));
+                    lineTotals[i], movement.Id, exception, shortages.Contains(line.PartId), line.StockExceptionReason,
+                    costs.GetValueOrDefault(line.PartId), suggestion));
             }
 
             var tenders = request.Payments.Select(x => (Request: x, Change: false))
@@ -142,7 +166,7 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                     PartId = part.Id, PartNumber = part.PartNumber, PartName = part.Name,
                     QuantityOnHand = availableAfter[part.Id], LowStockThreshold = part.LowStockThreshold,
                     IsLowStock = counted[part.Id] && availableAfter[part.Id] <= part.LowStockThreshold,
-                    StockConfidence = counted[part.Id] ? StockConfidence.Counted : StockConfidence.NotCounted,
+                    StockConfidence = part.NeedsRecount ? StockConfidence.NeedsRecount : counted[part.Id] ? StockConfidence.Counted : StockConfidence.NotCounted,
                     MovementType = MovementType.Out, QuantityChange = -quantities[part.Id],
                     PerformedByUserName = currentUser.FullName ?? "Unknown", OccurredAtUtc = sale.PostedAtUtc
                 });
@@ -171,12 +195,29 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
             .Select(x => new SalePaymentAccountDto(x.Id, x.Name, x.Currency, x.Kind)).ToListAsync(cancellationToken);
     }
 
+    public async Task<SaleDto> GetAsync(Guid saleId, CancellationToken cancellationToken = default)
+    {
+        await AuthorizedActor(cancellationToken);
+        var sale = await Query().SingleOrDefaultAsync(x => x.Id == saleId, cancellationToken)
+            ?? throw new NotFoundException("Posted sale", saleId);
+        return Map(sale);
+    }
+
+    public async Task<IReadOnlyList<SaleSummaryDto>> GetRecentAsync(CancellationToken cancellationToken = default)
+    {
+        await AuthorizedActor(cancellationToken);
+        return await db.Sales.AsNoTracking().OrderByDescending(x => x.PostedAtUtc).ThenByDescending(x => x.Id)
+            .Take(30).Select(x => new SaleSummaryDto(x.Id, x.PostedAtUtc, x.CustomerName,
+                x.TotalUsd, x.Lines.Count)).ToListAsync(cancellationToken);
+    }
+
     private Task<Guid> AuthorizedActor(CancellationToken ct) => CounterAuthorization.RequireAsync(db, currentUser, ct);
     private IQueryable<Sale> Query() => db.Sales.AsNoTracking().Include(x => x.Lines).Include(x => x.Tenders).AsSplitQuery();
     private static SaleDto Map(Sale s) => new(s.Id, s.OperationId, s.ActorId, s.PostedAtUtc, s.CustomerId, s.CustomerName,
         Normalize(s.TotalUsd), Normalize(s.PaymentsUsd), Normalize(s.ChangeUsd), Normalize(s.CustomerCreditUsedUsd), Normalize(s.UnpaidDebtUsd),
         s.Lines.OrderBy(x => x.Position).Select(x => new SaleLineDto(x.Id, x.PartId, x.Position, x.PartNumber, x.Name,
-            x.Brand, x.Variant, x.StockUnit, x.Quantity, Normalize(x.UnitSellingPriceUsd), Normalize(x.LineTotalUsd), x.StockException, x.StockExceptionReason)).ToArray(),
+            x.Brand, x.Variant, x.StockUnit, x.Quantity, Normalize(x.UnitSellingPriceUsd), Normalize(x.LineTotalUsd), x.StockException, x.StockShortage, x.StockExceptionReason,
+            x.SuggestedUnitPriceUsd is null ? null : Normalize(x.SuggestedUnitPriceUsd.Value), x.PriceOverridden)).ToArray(),
         s.Tenders.OrderBy(x => x.Position).Select(x => new SaleTenderDto(x.Id, x.CashAccountId, x.AccountName,
             x.Currency, x.IsChange, Normalize(x.NativeAmount), Normalize(x.ConfirmedUsdAmount))).ToArray());
     private static decimal Normalize(decimal x) => decimal.Parse(Number(x), CultureInfo.InvariantCulture);

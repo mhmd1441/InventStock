@@ -52,6 +52,8 @@ public static class DependencyInjection
         services.AddScoped<ISupplierImportService, SupplierImportService>();
         services.AddScoped<ICashService, CashService>();
         services.AddScoped<ISaleService, SaleService>();
+        services.AddScoped<IPricingService, PricingService>();
+        services.AddScoped<ISaleReturnService, SaleReturnService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<DatabaseSeeder>();
 

@@ -102,6 +102,7 @@ public sealed class StockMovementService : IStockMovementService
 
                 movement = StockMovement.PhysicalCount(partId, request.CountedQuantity, bookQuantity, userId, request.Reason);
                 movement.SetOperation(request.OperationId, fingerprint);
+                part.ClearRecountAfterPhysicalCount();
                 await _movements.AddAsync(movement, cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);

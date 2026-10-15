@@ -12,6 +12,9 @@ public interface ICustomerService
     Task<CustomerProfileDto> GetProfileOperationAsync(Guid operationId, CancellationToken ct = default);
     Task<CustomerOpeningDto> OpenAccountAsync(Guid id, PostCustomerOpeningRequest request, CancellationToken ct = default);
     Task<CustomerOpeningDto> GetOpeningOperationAsync(Guid operationId, CancellationToken ct = default);
+    Task<CustomerOpeningStatusDto?> OpeningStatusAsync(Guid customerId, CancellationToken ct = default);
+    Task<CustomerOpeningCorrectionDto> CorrectOpeningAsync(Guid openingEntryId, CorrectCustomerOpeningRequest request, CancellationToken ct = default);
+    Task<CustomerOpeningCorrectionDto> GetOpeningCorrectionOperationAsync(Guid operationId, CancellationToken ct = default);
     Task<CustomerPaymentDto> PayAsync(Guid id, PostCustomerPaymentRequest request, CancellationToken ct = default);
     Task<CustomerPaymentDto> GetPaymentOperationAsync(Guid operationId, CancellationToken ct = default);
     Task<CustomerPaymentCorrectionDto> CorrectPaymentAsync(Guid paymentId, CorrectCustomerPaymentRequest request, CancellationToken ct = default);

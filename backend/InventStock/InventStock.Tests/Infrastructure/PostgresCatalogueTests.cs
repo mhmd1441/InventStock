@@ -48,6 +48,7 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
         var builder = new NpgsqlConnectionStringBuilder(configured);
         if (builder.Database != "inventstock_test")
             throw new InvalidOperationException("Tests require a disposable database named inventstock_test. Never use a shop database.");
+        await TestPostgresExtensions.EnsurePublicAsync(configured);
         builder.SearchPath = _schema + ",public";
         builder.Timeout = 10;
         builder.CommandTimeout = 30;

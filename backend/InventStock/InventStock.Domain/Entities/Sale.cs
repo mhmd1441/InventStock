@@ -48,9 +48,13 @@ public sealed class SaleLine : AuditableEntity
     public StockUnit StockUnit { get; private set; }
     public int Quantity { get; private set; }
     public decimal UnitSellingPriceUsd { get; private set; }
+    // Public counter-safe suggestion captured at posting; no supplier cost or rate is exposed.
+    public decimal? SuggestedUnitPriceUsd { get; private set; }
+    public bool PriceOverridden { get; private set; }
     public decimal LineTotalUsd { get; private set; }
     public Guid StockMovementId { get; private set; }
     public bool StockException { get; private set; }
+    public bool StockShortage { get; private set; }
     public string? StockExceptionReason { get; private set; }
     // Private, nullable last actual purchase evidence; not a valuation or guaranteed margin.
     public Guid? CostObservationId { get; private set; }
@@ -58,12 +62,15 @@ public sealed class SaleLine : AuditableEntity
     public MoneyCurrency? CostCurrency { get; private set; }
     public TaxTreatment? CostTaxTreatment { get; private set; }
     public static SaleLine Create(Guid saleId, Part part, int position, int quantity, decimal price,
-        decimal total, Guid movementId, bool exception, string? reason, SupplierCostObservation? cost) => new()
+        decimal total, Guid movementId, bool exception, bool shortage, string? reason, SupplierCostObservation? cost,
+        decimal? suggestedUnitPriceUsd) => new()
     {
         SaleId = saleId, PartId = part.Id, Position = position, PartNumber = part.PartNumber, Name = part.Name,
         Brand = part.Brand, Variant = part.Variant, StockUnit = part.StockUnit, Quantity = quantity,
-        UnitSellingPriceUsd = price, LineTotalUsd = total, StockMovementId = movementId,
-        StockException = exception, StockExceptionReason = exception ? reason?.Trim() : null,
+        UnitSellingPriceUsd = price, SuggestedUnitPriceUsd = suggestedUnitPriceUsd,
+        PriceOverridden = suggestedUnitPriceUsd.HasValue && price != suggestedUnitPriceUsd.Value,
+        LineTotalUsd = total, StockMovementId = movementId,
+        StockException = exception, StockShortage = shortage, StockExceptionReason = exception ? reason?.Trim() : null,
         CostObservationId = cost?.Id,
         EstimatedBaseUnitCost = cost is null ? null : decimal.Round(cost.UnitCost / cost.PackQuantity, 6, MidpointRounding.AwayFromZero),
         CostCurrency = cost?.Currency, CostTaxTreatment = cost?.TaxTreatment

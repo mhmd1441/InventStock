@@ -95,7 +95,9 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
         var count = await entries.CountAsync(ct);
         var rows = await entries.OrderByDescending(x => x.CreatedAtUtc).ThenByDescending(x => x.Id)
             .Skip(query.Skip).Take(query.PageSize).Select(x => new CustomerStatementEntryDto(x.Id, x.Kind, x.AmountUsd,
-                x.SaleId, x.CustomerPaymentId, x.OperationId, x.ActorId, x.CreatedAtUtc, x.EffectiveAtUtc, x.Reason)).ToListAsync(ct);
+                x.SaleId, x.CustomerPaymentId, x.CustomerPaymentCorrectionId, x.OperationId, x.ActorId,
+                x.CreatedAtUtc, x.EffectiveAtUtc, x.Reason, x.OriginalOpeningEntryId,
+                x.CorrectedOpeningBalanceUsd, x.SaleReturnId)).ToListAsync(ct);
         await tx.CommitAsync(ct);
         return new(new(Map(customer), Normalize(balance)), new(rows, count, query.Page, query.PageSize));
     }
@@ -131,6 +133,69 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
         return MapOpening(await db.CustomerAccountEntries.AsNoTracking()
             .SingleOrDefaultAsync(x => x.OperationId == operationId && x.Kind == "Opening" && x.ActorId == actor, ct)
             ?? throw new NotFoundException("Customer opening operation", operationId));
+    }
+
+    public async Task<CustomerOpeningStatusDto?> OpeningStatusAsync(Guid customerId, CancellationToken ct = default)
+    {
+        await Authorize(ct, true);
+        if (!await db.Customers.AsNoTracking().AnyAsync(x => x.Id == customerId && x.IsActive, ct))
+            throw new NotFoundException("Active customer", customerId);
+        var opening = await db.CustomerAccountEntries.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.CustomerId == customerId && x.Kind == "Opening", ct);
+        if (opening is null) return null;
+        var adjustment = await db.CustomerAccountEntries.AsNoTracking()
+            .Where(x => x.OriginalOpeningEntryId == opening.Id && x.Kind == "OpeningCorrection")
+            .SumAsync(x => (decimal?)x.AmountUsd, ct) ?? 0;
+        return new(opening.Id, Normalize(opening.AmountUsd), Normalize(opening.AmountUsd + adjustment),
+            opening.EffectiveAtUtc ?? opening.CreatedAtUtc);
+    }
+
+    public async Task<CustomerOpeningCorrectionDto> CorrectOpeningAsync(Guid openingEntryId,
+        CorrectCustomerOpeningRequest request, CancellationToken ct = default)
+    {
+        await new CorrectCustomerOpeningRequestValidator().ValidateAndThrowAsync(request, ct);
+        var fingerprint = Hash(new { openingEntryId, Expected = Number(request.ExpectedCurrentOpeningBalanceUsd),
+            Corrected = Number(request.CorrectedOpeningBalanceUsd),
+            BalanceAfter = Number(request.ConfirmedBalanceAfterUsd), Reason = request.Reason.Trim() });
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await OperationGuard.LockAsync(db, request.OperationId, "CustomerOpeningCorrection", ct);
+        var actor = await Authorize(ct, true);
+        var replay = await db.CustomerAccountEntries.AsNoTracking().SingleOrDefaultAsync(
+            x => x.OperationId == request.OperationId && x.Kind == "OpeningCorrection", ct);
+        if (replay is not null)
+        {
+            CheckReplay(replay.ActorId, actor, replay.PayloadFingerprint, fingerprint);
+            return MapOpeningCorrection(replay);
+        }
+        var opening = await db.CustomerAccountEntries.AsNoTracking().SingleOrDefaultAsync(
+            x => x.Id == openingEntryId && x.Kind == "Opening", ct)
+            ?? throw new NotFoundException("Customer opening", openingEntryId);
+        await LockCustomer(opening.CustomerId, ct);
+        var previousCorrections = await db.CustomerAccountEntries
+            .Where(x => x.OriginalOpeningEntryId == opening.Id && x.Kind == "OpeningCorrection")
+            .SumAsync(x => (decimal?)x.AmountUsd, ct) ?? 0;
+        if (opening.AmountUsd + previousCorrections != request.ExpectedCurrentOpeningBalanceUsd)
+            throw new ConflictException("The opening balance changed. Reload before correcting it.");
+        var delta = request.CorrectedOpeningBalanceUsd - opening.AmountUsd - previousCorrections;
+        if (delta == 0) throw new ConflictException("The opening balance already has this value.");
+        var balanceAfter = await Balance(opening.CustomerId, ct) + delta;
+        if (balanceAfter != request.ConfirmedBalanceAfterUsd)
+            throw new ConflictException("The customer's balance changed. Review the resulting balance before confirming the correction.");
+        var correction = CustomerAccountEntry.OpeningCorrection(opening, request.OperationId, actor,
+            request.CorrectedOpeningBalanceUsd, delta, balanceAfter, request.Reason, fingerprint);
+        db.CustomerAccountEntries.Add(correction);
+        await db.SaveChangesAsync(ct);
+        var result = MapOpeningCorrection(correction);
+        await tx.CommitAsync(ct);
+        return result;
+    }
+
+    public async Task<CustomerOpeningCorrectionDto> GetOpeningCorrectionOperationAsync(Guid operationId, CancellationToken ct = default)
+    {
+        var actor = await Authorize(ct, true);
+        return MapOpeningCorrection(await db.CustomerAccountEntries.AsNoTracking().SingleOrDefaultAsync(
+            x => x.OperationId == operationId && x.Kind == "OpeningCorrection" && x.ActorId == actor, ct)
+            ?? throw new NotFoundException("Customer opening correction", operationId));
     }
 
     public async Task<CustomerPaymentDto> PayAsync(Guid id, PostCustomerPaymentRequest request, CancellationToken ct = default)
@@ -250,6 +315,10 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
     private static CustomerProfileDto Map(CustomerProfileEvent c) => new(c.CustomerId, c.Name, c.DistinguishingLabel, c.Phone, c.Address, c.Revision);
     private static CustomerOpeningDto MapOpening(CustomerAccountEntry e) => new(e.Id, e.CustomerId, e.OperationId, e.ActorId,
         Normalize(e.AmountUsd), e.EffectiveAtUtc ?? e.CreatedAtUtc, e.Reason ?? "Legacy opening balance");
+    private static CustomerOpeningCorrectionDto MapOpeningCorrection(CustomerAccountEntry e) => new(e.Id,
+        e.OriginalOpeningEntryId!.Value, e.CustomerId, e.OperationId, e.ActorId, Normalize(e.AmountUsd),
+        Normalize(e.CorrectedOpeningBalanceUsd!.Value), Normalize(e.BalanceAfterUsd!.Value), Microseconds(e.CreatedAtUtc),
+        e.Reason ?? "Opening balance correction");
     private static CustomerPaymentDto Map(CustomerPayment p) => new(p.Id, p.OperationId, p.CustomerId, p.CustomerName, p.ActorId,
         p.PostedAtUtc, Normalize(p.UsdCredit), Normalize(p.ExcessCreditUsd), Normalize(p.BalanceBeforeUsd), Normalize(p.BalanceAfterUsd), p.Note,
         p.Tenders.OrderBy(x => x.Position).Select(x => new SaleTenderDto(x.Id, x.CashAccountId, x.AccountName, x.Currency,

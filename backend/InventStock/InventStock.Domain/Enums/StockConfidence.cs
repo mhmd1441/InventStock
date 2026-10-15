@@ -6,5 +6,6 @@ namespace InventStock.Domain.Enums;
 public enum StockConfidence
 {
     NotCounted = 1,
-    Counted = 2
+    Counted = 2,
+    NeedsRecount = 3
 }

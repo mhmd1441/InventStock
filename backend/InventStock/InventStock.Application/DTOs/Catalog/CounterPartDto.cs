@@ -24,5 +24,5 @@ public sealed record CounterPartDto
     public StockConfidence StockConfidence { get; init; }
     public StockUnit StockUnit { get; init; }
     public DateTime CreatedAtUtc { get; init; }
-    public bool IsLowStock => StockConfidence == StockConfidence.Counted && QuantityOnHand <= LowStockThreshold;
+    public bool IsLowStock => StockConfidence != StockConfidence.NotCounted && QuantityOnHand <= LowStockThreshold;
 }

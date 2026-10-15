@@ -58,7 +58,8 @@ public sealed class StockCountRequestValidator : AbstractValidator<StockCountReq
     {
         RuleFor(x => x.OperationId).NotEmpty();
         RuleFor(x => x.CountedQuantity).InclusiveBetween(0, 1_000_000);
-        RuleFor(x => x.ExpectedBookQuantity).InclusiveBetween(0, 1_000_000);
+        // A physically confirmed shortage can leave the book balance negative until this count.
+        RuleFor(x => x.ExpectedBookQuantity).InclusiveBetween(-1_000_000, 1_000_000);
         RuleFor(x => x.Reason).MaximumLength(StockMovement.ReasonMaxLength);
     }
 }

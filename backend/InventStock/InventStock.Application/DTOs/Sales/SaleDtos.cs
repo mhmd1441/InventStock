@@ -26,8 +26,11 @@ public sealed record SaleDto(Guid Id, Guid OperationId, Guid ActorId, DateTime P
     IReadOnlyList<SaleLineDto> Lines, IReadOnlyList<SaleTenderDto> Tenders);
 public sealed record SaleLineDto(Guid Id, Guid PartId, int Position, string PartNumber, string Name,
     string Brand, string Variant, StockUnit StockUnit, int Quantity, decimal UnitSellingPriceUsd, decimal LineTotalUsd,
-    bool StockException, string? StockExceptionReason);
+    bool StockException, bool StockShortage, string? StockExceptionReason,
+    decimal? SuggestedUnitPriceUsd, bool PriceOverridden);
 public sealed record SaleTenderDto(Guid Id, Guid CashAccountId, string AccountName, MoneyCurrency Currency,
     bool IsChange, decimal NativeAmount, decimal ConfirmedUsdAmount);
 public sealed record SaleOperationDto(string Status, SaleDto Sale);
 public sealed record SalePaymentAccountDto(Guid Id, string Name, MoneyCurrency Currency, CashAccountKind Kind);
+public sealed record SaleSummaryDto(Guid Id, DateTime PostedAtUtc, string? CustomerName, decimal TotalUsd,
+    int LineCount);

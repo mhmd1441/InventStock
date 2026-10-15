@@ -34,7 +34,73 @@ import type {
   PostOutgoingPaymentRequest,
   OutgoingPayment,
   OutgoingPaymentList,
+  CustomerSummary,
+  CustomerProfile,
+  CustomerStatement,
+  CustomerOpeningStatus,
+  CustomerPayment,
+  CustomerPaymentRequest,
+  PostSaleRequest,
+  Sale,
+  SalePaymentAccount,
+  SaleSummary,
+  ReturnableSale,
+  PostSaleReturnRequest,
+  SaleReturn,
+  SellingPriceSuggestion,
+  PricingPolicy,
+  AdminPriceCalculation,
+  CutHoseSellingRate,
 } from "./types";
+
+export function useCutHoseSellingRate(partId: string | null) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({ queryKey: ["cut-hose-rate", partId, canViewPrivate], enabled: canViewPrivate && Boolean(partId),
+    queryFn: ({ signal }) => api.get<CutHoseSellingRate>(`/api/admin/pricing/cut-hose/${partId}`, undefined, signal) });
+}
+
+export function useSetCutHoseSellingRate() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: ({ partId, expectedCurrentRateId, usdPerMeter }: {
+    partId: string; expectedCurrentRateId: string | null; usdPerMeter: number | null }) =>
+    api.put<CutHoseSellingRate>(`/api/admin/pricing/cut-hose/${partId}`, { expectedCurrentRateId, usdPerMeter }),
+    onSuccess: (_, request) => { void client.invalidateQueries({ queryKey: ["cut-hose-rate", request.partId] });
+      void client.invalidateQueries({ queryKey: ["price-suggestions"] });
+      void client.invalidateQueries({ queryKey: ["admin-price-calculations"] }); },
+  });
+}
+
+const pricingPath = (ids: string[], admin: boolean) =>
+  `${admin ? "/api/admin/pricing/calculations" : "/api/pricing/suggestions"}?${ids.map((id) => `partIds=${encodeURIComponent(id)}`).join("&")}`;
+
+export function useSellingPriceSuggestions(partIds: string[]) {
+  const ids = [...new Set(partIds)].sort();
+  return useQuery({ queryKey: ["price-suggestions", ids], enabled: ids.length > 0,
+    queryFn: ({ signal }) => api.get<SellingPriceSuggestion[]>(pricingPath(ids, false), undefined, signal) });
+}
+
+export function useAdminPriceCalculations(partIds: string[]) {
+  const { canViewPrivate } = useAuth();
+  const ids = [...new Set(partIds)].sort();
+  return useQuery({ queryKey: ["admin-price-calculations", ids, canViewPrivate], enabled: canViewPrivate && ids.length > 0,
+    queryFn: ({ signal }) => api.get<AdminPriceCalculation[]>(pricingPath(ids, true), undefined, signal) });
+}
+
+export function usePricingPolicy() {
+  const { canViewPrivate } = useAuth();
+  return useQuery({ queryKey: ["pricing-policy", canViewPrivate], enabled: canViewPrivate,
+    queryFn: ({ signal }) => api.get<PricingPolicy>("/api/admin/pricing/policy", undefined, signal) });
+}
+
+export function useUpdatePricingPolicy() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: Omit<PricingPolicy, "updatedById" | "updatedAtUtc" | "revision"> & { expectedRevision: number }) =>
+    api.put<PricingPolicy>("/api/admin/pricing/policy", request),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["pricing-policy"] });
+      void client.invalidateQueries({ queryKey: ["price-suggestions"] });
+      void client.invalidateQueries({ queryKey: ["admin-price-calculations"] }); },
+  });
+}
 
 export const queryKeys = {
   dashboard: ["dashboard"] as const,
@@ -52,7 +118,110 @@ export const queryKeys = {
   cashAccounts: ["cash-accounts"] as const,
   expenseCategories: ["expense-categories"] as const,
   outgoings: (year: number, month: number) => ["outgoings", year, month] as const,
+  customers: (search: string) => ["customers", search] as const,
+  customerStatement: (id: string, page: number) => ["customer-statement", id, page] as const,
+  customerOpening: (id: string) => ["customer-opening", id] as const,
+  salePaymentAccounts: ["sale-payment-accounts"] as const,
+  recentSales: ["recent-sales"] as const,
+  returnableSale: (id: string) => ["returnable-sale", id] as const,
 };
+
+export function useCustomers(search: string) {
+  return useQuery({
+    queryKey: queryKeys.customers(search),
+    enabled: search.trim().length > 0,
+    queryFn: ({ signal }) => api.get<PagedResult<CustomerSummary>>("/api/customers", { search, page: 1, pageSize: 12 }, signal),
+  });
+}
+
+export function useCustomerStatement(id: string | null, page = 1) {
+  return useQuery({
+    enabled: Boolean(id), queryKey: queryKeys.customerStatement(id ?? "", page),
+    queryFn: ({ signal }) => api.get<CustomerStatement>(`/api/customers/${id}/statement`, { page, pageSize: 20 }, signal),
+  });
+}
+
+export function useCustomerOpeningStatus(id: string | null, enabled: boolean) {
+  return useQuery({
+    enabled: Boolean(id) && enabled, queryKey: queryKeys.customerOpening(id ?? ""),
+    queryFn: ({ signal }) => api.get<CustomerOpeningStatus | null>(`/api/customers/${id}/opening-balance`, undefined, signal),
+  });
+}
+
+export function useCorrectCustomerOpening() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ openingEntryId, operationId, expectedCurrentOpeningBalanceUsd, correctedOpeningBalanceUsd,
+      confirmedBalanceAfterUsd, reason }: { openingEntryId: string; operationId: string;
+      expectedCurrentOpeningBalanceUsd: number; correctedOpeningBalanceUsd: number;
+      confirmedBalanceAfterUsd: number; reason: string }) =>
+      api.post(`/api/customers/opening-balances/${openingEntryId}/corrections`,
+        { operationId, expectedCurrentOpeningBalanceUsd, correctedOpeningBalanceUsd, confirmedBalanceAfterUsd, reason }),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer-opening"] });
+      void client.invalidateQueries({ queryKey: ["customer-statement"] }); void client.invalidateQueries({ queryKey: ["customers"] }); },
+  });
+}
+
+export function useCreateCustomer() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: { operationId: string; name: string; distinguishingLabel: string | null; phone: string | null; address: string | null; expectedRevision: number }) =>
+      api.post<CustomerProfile>("/api/customers", request),
+    onSuccess: () => client.invalidateQueries({ queryKey: ["customers"] }),
+  });
+}
+
+export function useSalePaymentAccounts() {
+  return useQuery({ queryKey: queryKeys.salePaymentAccounts,
+    queryFn: ({ signal }) => api.get<SalePaymentAccount[]>("/api/sales/payment-accounts", undefined, signal) });
+}
+
+export function usePostSale() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (request: PostSaleRequest) => api.post<Sale>("/api/sales", request),
+    onSuccess: async () => { await invalidateStockViews(client); await client.invalidateQueries({ queryKey: ["customer-statement"] }); },
+  });
+}
+
+export function useRecentSales() {
+  return useQuery({ queryKey: queryKeys.recentSales,
+    queryFn: ({ signal }) => api.get<SaleSummary[]>("/api/sales/recent", undefined, signal) });
+}
+
+export function useReturnableSale(id: string | null) {
+  return useQuery({ enabled: Boolean(id), queryKey: queryKeys.returnableSale(id ?? ""),
+    queryFn: ({ signal }) => api.get<ReturnableSale>(`/api/sale-returns/sales/${id}/availability`, undefined, signal) });
+}
+
+export function usePostSaleReturn() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: PostSaleReturnRequest) => api.post<SaleReturn>("/api/sale-returns", request),
+    onSuccess: async (_, request) => {
+      await invalidateStockViews(client);
+      await client.invalidateQueries({ queryKey: queryKeys.returnableSale(request.saleId) });
+      await client.invalidateQueries({ queryKey: ["customer-statement"] });
+      await client.invalidateQueries({ queryKey: ["customers"] });
+    } });
+}
+
+export function usePostCustomerPayment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ customerId, request }: { customerId: string; request: CustomerPaymentRequest }) =>
+      api.post<CustomerPayment>(`/api/customers/${customerId}/payments`, request),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer-statement"] }); void client.invalidateQueries({ queryKey: ["customers"] }); },
+  });
+}
+
+export function useCorrectCustomerPayment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ paymentId, operationId, reason, confirmedBalanceAfterUsd }: { paymentId: string; operationId: string; reason: string; confirmedBalanceAfterUsd: number }) =>
+      api.post(`/api/customers/payments/${paymentId}/corrections`, { operationId, reason, confirmedBalanceAfterUsd }),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer-statement"] }); void client.invalidateQueries({ queryKey: ["customers"] }); },
+  });
+}
 
 export function useCashAccounts() {
   const { canViewPrivate } = useAuth();

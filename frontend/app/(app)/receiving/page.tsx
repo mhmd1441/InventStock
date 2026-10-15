@@ -128,7 +128,7 @@ export default function ReceivingPage() {
                 <button key={part.id} type="button" onClick={() => addPart(part)}
                   className="flex items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-surface-muted">
                   <span><strong>{part.partNumber}</strong> <span className="text-muted">{part.brand} {part.name}</span></span>
-                  <span className="text-xs text-muted">{part.stockConfidence === "Counted" ? `${part.quantityOnHand} ${part.stockUnit}` : "Not counted"}</span>
+                  <span className="text-xs text-muted">{part.stockConfidence === "NotCounted" ? "Not counted" : `${part.quantityOnHand} ${part.stockUnit}${part.stockConfidence === "NeedsRecount" ? " (recount needed)" : ""}`}</span>
                 </button>
               ))}
               {results.data?.items.length === 0 && <p className="text-sm text-muted">No matching part.</p>}

@@ -17,6 +17,7 @@ public class ReferenceUpgradeTests
     {
         var builder = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
         Assert.Equal("inventstock_test", builder.Database);
+        await TestPostgresExtensions.EnsurePublicAsync(builder.ConnectionString);
         var schema = "upgrade_test_" + Guid.NewGuid().ToString("N");
         builder.SearchPath = schema + ",public";
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(builder.ConnectionString,

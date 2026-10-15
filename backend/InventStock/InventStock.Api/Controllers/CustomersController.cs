@@ -27,6 +27,17 @@ public sealed class CustomersController(ICustomerService customers) : Controller
     [HttpPost("{id:guid}/opening-balance")]
     [Authorize(Roles = RoleNames.Admin)]
     public async Task<ActionResult<CustomerOpeningDto>> Opening(Guid id, PostCustomerOpeningRequest request, CancellationToken ct) => Ok(await customers.OpenAccountAsync(id, request, ct));
+    [HttpGet("{id:guid}/opening-balance")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<CustomerOpeningStatusDto>> OpeningStatus(Guid id, CancellationToken ct)
+    {
+        var status = await customers.OpeningStatusAsync(id, ct);
+        return status is null ? NoContent() : Ok(status);
+    }
+    [HttpPost("opening-balances/{openingEntryId:guid}/corrections")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<CustomerOpeningCorrectionDto>> CorrectOpening(Guid openingEntryId,
+        CorrectCustomerOpeningRequest request, CancellationToken ct) => Ok(await customers.CorrectOpeningAsync(openingEntryId, request, ct));
     [HttpPost("{id:guid}/payments")]
     public async Task<ActionResult<CustomerPaymentDto>> Payment(Guid id, PostCustomerPaymentRequest request, CancellationToken ct)
     {
@@ -40,6 +51,10 @@ public sealed class CustomersController(ICustomerService customers) : Controller
     [HttpGet("operations/openings/{operationId:guid}")]
     [Authorize(Roles = RoleNames.Admin)]
     public async Task<ActionResult<CustomerOpeningDto>> OpeningOperation(Guid operationId, CancellationToken ct) => Ok(await customers.GetOpeningOperationAsync(operationId, ct));
+    [HttpGet("operations/opening-corrections/{operationId:guid}")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<CustomerOpeningCorrectionDto>> OpeningCorrectionOperation(Guid operationId,
+        CancellationToken ct) => Ok(await customers.GetOpeningCorrectionOperationAsync(operationId, ct));
     [HttpGet("operations/payments/{operationId:guid}")]
     public async Task<ActionResult<CustomerPaymentDto>> PaymentOperation(Guid operationId, CancellationToken ct) => Ok(await customers.GetPaymentOperationAsync(operationId, ct));
     [HttpGet("operations/corrections/{operationId:guid}")]

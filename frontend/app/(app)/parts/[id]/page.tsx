@@ -67,6 +67,7 @@ export default function PartDetailPage({
           <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight">
             {part.partNumber}
             {part.isLowStock && <Badge tone="warning">Needs reorder</Badge>}
+            {part.stockConfidence === "NeedsRecount" && <Badge tone="danger">Recount needed</Badge>}
             {!part.isActive && <Badge tone="danger">Inactive</Badge>}
           </h1>
           <p className="text-sm text-muted">{part.name}</p>
@@ -108,7 +109,7 @@ export default function PartDetailPage({
             {part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.quantityOnHand, part.stockUnit)}
           </p>
           <p className="mt-1 text-xs text-muted">
-            {part.stockConfidence === "NotCounted" ? "No verified physical count yet" : "Derived from the last count and later movements"}
+            {part.stockConfidence === "NeedsRecount" ? "Book quantity is disputed after a physically confirmed sale. Count this part before another exception sale." : part.stockConfidence === "NotCounted" ? "No verified physical count yet" : "Derived from the last count and later movements"}
           </p>
         </div>
 

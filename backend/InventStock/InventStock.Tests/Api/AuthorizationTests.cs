@@ -93,7 +93,7 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
-    public async Task Staff_CannotPostStockAdjustmentsOrPhysicalCounts()
+    public async Task Staff_CannotAdjustStockButMaySubmitPhysicalCounts()
     {
         var client = await _factory.CreateStaffClientAsync();
         var parts = await client.GetFromJsonAsync<PagedResult<PartDto>>("/api/parts");
@@ -114,7 +114,8 @@ public class AuthorizationTests : IClassFixture<ApiFactory>
             CountedQuantity = 1,
             ExpectedBookQuantity = 1
         });
-        Assert.Equal(HttpStatusCode.Forbidden, countResponse.StatusCode);
+        // This may conflict if another test changed the book quantity; authorization must not forbid staff.
+        Assert.NotEqual(HttpStatusCode.Forbidden, countResponse.StatusCode);
     }
 
     [Fact]

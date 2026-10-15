@@ -33,16 +33,22 @@ public sealed class SaleLineConfiguration : IEntityTypeConfiguration<SaleLine>
 {
     public void Configure(EntityTypeBuilder<SaleLine> b)
     {
-        b.ToTable("SaleLines", t => t.HasCheckConstraint("CK_SaleLines_Amounts", "\"Quantity\" > 0 AND \"UnitSellingPriceUsd\" > 0 AND \"LineTotalUsd\" >= 0"));
+        b.ToTable("SaleLines", t =>
+        {
+            t.HasCheckConstraint("CK_SaleLines_Amounts", "\"Quantity\" > 0 AND \"UnitSellingPriceUsd\" > 0 AND \"LineTotalUsd\" >= 0");
+            t.HasCheckConstraint("CK_SaleLines_PriceOverride", "(\"SuggestedUnitPriceUsd\" IS NULL AND \"PriceOverridden\" = FALSE) OR (\"SuggestedUnitPriceUsd\" > 0 AND \"PriceOverridden\" = (\"UnitSellingPriceUsd\" <> \"SuggestedUnitPriceUsd\"))");
+        });
         b.HasKey(x => x.Id);
         b.HasIndex(x => new { x.SaleId, x.Position }).IsUnique();
         b.HasIndex(x => x.StockMovementId).IsUnique();
+        b.HasIndex(x => x.PartId).HasFilter("\"StockShortage\" = TRUE");
         b.Property(x => x.PartNumber).HasMaxLength(64).IsRequired();
         b.Property(x => x.Name).HasMaxLength(200).IsRequired();
         b.Property(x => x.Brand).HasMaxLength(80).IsRequired();
         b.Property(x => x.Variant).HasMaxLength(120).IsRequired();
         b.Property(x => x.StockUnit).HasConversion<string>().HasMaxLength(20);
         b.Property(x => x.UnitSellingPriceUsd).HasPrecision(18, 6);
+        b.Property(x => x.SuggestedUnitPriceUsd).HasPrecision(18, 6);
         b.Property(x => x.LineTotalUsd).HasPrecision(18, 2);
         b.Property(x => x.EstimatedBaseUnitCost).HasPrecision(20, 6);
         b.Property(x => x.CostCurrency).HasConversion<string>().HasMaxLength(8);
@@ -89,20 +95,26 @@ public sealed class CustomerAccountEntryConfiguration : IEntityTypeConfiguration
     public void Configure(EntityTypeBuilder<CustomerAccountEntry> b)
     {
         b.ToTable("CustomerAccountEntries", t => t.HasCheckConstraint("CK_CustomerEntries_Kind",
-            "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)"));
+            "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'OpeningCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"OriginalOpeningEntryId\" IS NOT NULL AND \"CorrectedOpeningBalanceUsd\" IS NOT NULL AND \"BalanceAfterUsd\" IS NOT NULL AND \"AmountUsd\" <> 0) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'ReturnReduction' AND \"SaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)"));
         b.HasKey(x => x.Id);
         b.Property(x => x.Kind).HasMaxLength(30).IsRequired();
         b.Property(x => x.AmountUsd).HasPrecision(18, 2);
+        b.Property(x => x.CorrectedOpeningBalanceUsd).HasPrecision(18, 2);
+        b.Property(x => x.BalanceAfterUsd).HasPrecision(18, 2);
         b.Property(x => x.Reason).HasMaxLength(500);
         b.Property(x => x.PayloadFingerprint).HasMaxLength(64);
         b.HasIndex(x => x.CustomerId).IsUnique().HasFilter("\"Kind\" = 'Opening'");
         b.HasIndex(x => new { x.CustomerPaymentId, x.Kind }).IsUnique();
         b.HasIndex(x => x.CustomerPaymentCorrectionId).IsUnique();
+        b.HasIndex(x => x.SaleReturnId).IsUnique().HasFilter("\"SaleReturnId\" IS NOT NULL");
+        b.HasIndex(x => x.OriginalOpeningEntryId);
         b.HasIndex(x => new { x.CustomerId, x.CreatedAtUtc });
         b.HasIndex(x => new { x.OperationId, x.Kind }).IsUnique();
         b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Sale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<CustomerPayment>().WithMany().HasForeignKey(x => x.CustomerPaymentId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<CustomerPaymentCorrection>().WithMany().HasForeignKey(x => x.CustomerPaymentCorrectionId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<SaleReturn>().WithMany().HasForeignKey(x => x.SaleReturnId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CustomerAccountEntry>().WithMany().HasForeignKey(x => x.OriginalOpeningEntryId).OnDelete(DeleteBehavior.Restrict);
     }
 }

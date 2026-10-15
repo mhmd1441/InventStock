@@ -11,6 +11,9 @@ import { PendingOperationRecovery } from "@/components/pending-operation-recover
 const navigation = [
   { href: "/dashboard", label: "Dashboard", adminOnly: false },
   { href: "/parts", label: "Parts", adminOnly: false },
+  { href: "/sales", label: "Counter sale", adminOnly: false },
+  { href: "/returns", label: "Returns", adminOnly: false },
+  { href: "/customers", label: "Customers", adminOnly: false },
   { href: "/movements", label: "Movements", adminOnly: false },
   { href: "/categories", label: "Categories", adminOnly: false },
   { href: "/brands", label: "Brands", adminOnly: false },
@@ -18,8 +21,12 @@ const navigation = [
   { href: "/receiving", label: "Receiving", adminOnly: true },
   { href: "/imports", label: "Imports", adminOnly: true },
   { href: "/cash", label: "Cash out", adminOnly: true },
+  { href: "/pricing", label: "Pricing rules", adminOnly: true },
   { href: "/users", label: "Users", adminOnly: true },
 ];
+
+const transactionReleaseEnabled = process.env.NEXT_PUBLIC_TRANSACTION_RELEASE_ENABLED === "true";
+const transactionPages = ["/sales", "/returns", "/customers", "/cash", "/pricing"];
 
 export default function AppLayout({
   children,
@@ -36,8 +43,11 @@ export default function AppLayout({
   useEffect(() => {
     if (status === "anonymous") {
       router.replace("/login");
+    } else if (status === "authenticated" && !transactionReleaseEnabled &&
+      transactionPages.some((page) => pathname === page || pathname.startsWith(`${page}/`))) {
+      router.replace("/dashboard");
     }
-  }, [status, router]);
+  }, [status, router, pathname]);
 
   if (status !== "authenticated" || !user) {
     return (
@@ -47,11 +57,18 @@ export default function AppLayout({
     );
   }
 
-  const links = navigation.filter((item) => !item.adminOnly || canViewPrivate);
+  if (!transactionReleaseEnabled &&
+    transactionPages.some((page) => pathname === page || pathname.startsWith(`${page}/`))) {
+    return <main className="flex min-h-screen items-center justify-center"><Spinner label="Returning to catalogue…" /></main>;
+  }
+
+  const links = navigation.filter((item) =>
+    (!item.adminOnly || canViewPrivate) &&
+    (transactionReleaseEnabled || !transactionPages.includes(item.href)));
 
   return (
     <div className="min-h-screen">
-      <PendingOperationRecovery actorId={user.id} />
+      {transactionReleaseEnabled && <PendingOperationRecovery actorId={user.id} />}
       <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
           <Link href="/dashboard" className="text-base font-semibold">
@@ -149,9 +166,9 @@ export default function AppLayout({
             <span className="text-muted">
               {feed.lastChange.partNumber} is now at{" "}
               <strong className="text-foreground">
-                {feed.lastChange.stockConfidence === "Counted" ? feed.lastChange.quantityOnHand : "not counted"}
+                {feed.lastChange.stockConfidence === "NotCounted" ? "not counted" : feed.lastChange.quantityOnHand}
               </strong>{" "}
-              {feed.lastChange.stockConfidence === "Counted" ? "units" : ""} — {feed.lastChange.performedByUserName}
+              {feed.lastChange.stockConfidence === "NotCounted" ? "" : feed.lastChange.stockConfidence === "NeedsRecount" ? "units · recount needed" : "units"} — {feed.lastChange.performedByUserName}
             </span>
             {feed.lastChange.isLowStock && <Badge tone="warning">Low stock</Badge>}
           </div>

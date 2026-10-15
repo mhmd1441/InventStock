@@ -10,6 +10,7 @@ import type { Part } from "@/lib/types";
 import { Alert, Badge, Button, Field, Input, Modal } from "./ui";
 
 type Mode = "In" | "Out" | "Adjustment" | "PhysicalCount" | "Hold" | "Release";
+const transactionReleaseEnabled = process.env.NEXT_PUBLIC_TRANSACTION_RELEASE_ENABLED === "true";
 
 export function StockMovementModal({
   part,
@@ -26,7 +27,7 @@ export function StockMovementModal({
   const hold = useStockHold();
   const release = useStockRelease();
 
-  const [mode, setMode] = useState<Mode>("In");
+  const [mode, setMode] = useState<Mode>(transactionReleaseEnabled ? "In" : "PhysicalCount");
   const [quantity, setQuantity] = useState("1");
   const [reason, setReason] = useState("");
   const [reference, setReference] = useState("");
@@ -34,7 +35,9 @@ export function StockMovementModal({
   // Kept stable after an uncertain response so pressing Record again replays rather than duplicates.
   const [operationId] = useState(() => crypto.randomUUID());
 
-  const modes: Mode[] = isAdmin ? ["In", "Out", "Hold", "Release", "Adjustment", "PhysicalCount"] : ["In", "Out", "Hold"];
+  const modes: Mode[] = transactionReleaseEnabled
+    ? isAdmin ? ["In", "Out", "Hold", "Release", "Adjustment", "PhysicalCount"] : ["In", "Out", "Hold", "PhysicalCount"]
+    : isAdmin ? ["Hold", "Release", "Adjustment", "PhysicalCount"] : ["Hold", "PhysicalCount"];
   const pending = stockIn.isPending || stockOut.isPending || adjust.isPending || count.isPending || hold.isPending || release.isPending;
 
   const parsedQuantity = Number(quantity);
@@ -201,7 +204,7 @@ export function StockMovementModal({
                   : ""
             }`}
           >
-            {mode === "PhysicalCount" || part.stockConfidence === "Counted" ? formatStockQuantity(projected, part.stockUnit) : "Still not counted"}
+            {mode === "PhysicalCount" || part.stockConfidence !== "NotCounted" ? formatStockQuantity(projected, part.stockUnit) : "Still not counted"}
           </span>
         </div>
 

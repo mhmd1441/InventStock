@@ -136,7 +136,7 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
     }
 
     private IQueryable<Part> LowStock(IQueryable<Part> source) => source.Where(p =>
-        db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) &&
+        (p.NeedsRecount || db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null)) &&
         ((db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
          (db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0)) <= p.LowStockThreshold);
 
@@ -193,7 +193,7 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
         Id = p.Id, PartNumber = p.PartNumber, Brand = p.Brand, BrandId = p.BrandId, Variant = p.Variant, Name = p.Name, Description = p.Description,
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
         Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc, StockUnit = p.StockUnit,
-        StockConfidence = db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
+        StockConfidence = p.NeedsRecount ? Domain.Enums.StockConfidence.NeedsRecount : db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
         PhysicalQuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
         QuarantinedQuantity = db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
         QuantityOnHand = (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -
@@ -206,7 +206,7 @@ public sealed class PartRepository(AppDbContext db) : IPartRepository
         CategoryId = p.CategoryId, CategoryName = p.Category.Name, LowStockThreshold = p.LowStockThreshold,
         Barcode = p.Barcode, IsActive = p.IsActive, CreatedAtUtc = p.CreatedAtUtc, StockUnit = p.StockUnit,
         SupplierId = p.SupplierId, SupplierName = p.Supplier != null ? p.Supplier.Name : null, UnitPrice = p.UnitPrice,
-        StockConfidence = db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
+        StockConfidence = p.NeedsRecount ? Domain.Enums.StockConfidence.NeedsRecount : db.StockMovements.Any(m => m.PartId == p.Id && m.CountedQuantity != null) ? Domain.Enums.StockConfidence.Counted : Domain.Enums.StockConfidence.NotCounted,
         PhysicalQuantityOnHand = db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
         QuarantinedQuantity = db.StockHoldMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0,
         QuantityOnHand = (db.StockMovements.Where(m => m.PartId == p.Id).Sum(m => (int?)m.QuantityChange) ?? 0) -

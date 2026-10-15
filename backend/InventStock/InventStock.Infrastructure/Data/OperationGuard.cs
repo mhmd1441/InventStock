@@ -19,9 +19,11 @@ public static class OperationGuard
         }
         if ((kind != "CustomerProfile" && await db.CustomerProfileEvents.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "CustomerOpening" && await db.CustomerAccountEntries.AnyAsync(x => x.OperationId == id && x.Kind == "Opening", ct)) ||
+            (kind != "CustomerOpeningCorrection" && await db.CustomerAccountEntries.AnyAsync(x => x.OperationId == id && x.Kind == "OpeningCorrection", ct)) ||
             (kind != "CustomerPayment" && await db.CustomerPayments.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "CustomerCorrection" && await db.CustomerPaymentCorrections.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Sale" && await db.Sales.AnyAsync(x => x.OperationId == id, ct)) ||
+            (kind != "SaleReturn" && await db.SaleReturns.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Stock" && await db.StockMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Hold" && await db.StockHoldMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Receipt" && await db.PurchaseReceipts.AnyAsync(x => x.OperationId == id, ct)) ||

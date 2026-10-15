@@ -206,6 +206,7 @@ function PartsPageContent() {
                         <span className="font-medium">{part.stockConfidence === "NotCounted" ? "Not counted" : formatStockQuantity(part.quantityOnHand, part.stockUnit)}</span>
                         <span className="ml-2 inline-flex gap-1">
                           {part.isLowStock && <Badge tone="warning">Reorder</Badge>}
+                          {part.stockConfidence === "NeedsRecount" && <Badge tone="danger">Recount needed</Badge>}
                           {part.quarantinedQuantity > 0 && <Badge tone="danger">{formatStockQuantity(part.quarantinedQuantity, part.stockUnit)} held</Badge>}
                           {!part.isActive && <Badge>Inactive</Badge>}
                         </span>

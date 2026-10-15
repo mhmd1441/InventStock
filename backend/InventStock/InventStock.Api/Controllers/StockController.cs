@@ -66,7 +66,7 @@ public sealed class StockController : ControllerBase
     }
 
     [HttpPost("api/parts/{partId:guid}/stock/count")]
-    [Authorize(Roles = RoleNames.Admin)]
+    [Authorize(Roles = RoleNames.Admin + "," + RoleNames.Staff)]
     [ProducesResponseType(typeof(StockMovementDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<StockMovementDto>> Count(

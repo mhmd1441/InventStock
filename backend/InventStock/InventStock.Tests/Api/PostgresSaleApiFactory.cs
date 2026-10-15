@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
+using InventStock.Tests.Infrastructure;
 
 namespace InventStock.Tests.Api;
 
@@ -33,6 +34,7 @@ public sealed class PostgresSaleApiFactory : ApiFactory
 
     protected override async Task PrepareDatabaseAsync(AppDbContext db)
     {
+        await TestPostgresExtensions.EnsurePublicAsync(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
 #pragma warning disable EF1002 // Private generated schema, never supplied by a request.
         await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
 #pragma warning restore EF1002
