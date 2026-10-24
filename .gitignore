@@ -56,6 +56,7 @@ Docs/*
 !Docs/STATE.md
 !Docs/CHANGELOG.md
 !Docs/Backup-Restore.md
+!Docs/Real-Database-Setup.md
 !Docs/Release-Checklist.md
 !Docs/Return-Posting.md
 !Docs/Sale-Posting.md

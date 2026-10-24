@@ -23,6 +23,62 @@ public sealed class CashMovement : AuditableEntity
     public Guid? CustomerPaymentCorrectionId { get; private set; }
     public Guid? SaleRefundTenderId { get; private set; }
     public Guid? LegacySaleRefundTenderId { get; private set; }
+    public Guid? SupplierPaymentLineId { get; private set; }
+    public Guid? SupplierPaymentReversalId { get; private set; }
+    public Guid? CashTransferId { get; private set; }
+    public Guid? CashTransferReversalId { get; private set; }
+    public Guid? SaleTenderAccountCorrectionId { get; private set; }
+    public Guid? SaleTenderAccountCorrectionReversalId { get; private set; }
+
+    public static CashMovement SaleTenderAccountCorrectionReversal(Guid accountId, decimal amountChange,
+        Guid actorId, DateTime occurredAtUtc, Guid reversalId)
+    {
+        var movement = Create(accountId, CashMovementType.SaleTenderAccountCorrectionReversal,
+            amountChange, actorId, occurredAtUtc, null, null, null);
+        movement.SaleTenderAccountCorrectionReversalId = reversalId;
+        return movement;
+    }
+
+    public static CashMovement SaleTenderAccountCorrection(Guid accountId, decimal amountChange, bool isRepost,
+        Guid actorId, DateTime occurredAtUtc, Guid correctionId)
+    {
+        var movement = Create(accountId, isRepost ? CashMovementType.SaleTenderAccountCorrectionIn : CashMovementType.SaleTenderAccountCorrectionOut,
+            amountChange, actorId, occurredAtUtc, null, null, null);
+        movement.SaleTenderAccountCorrectionId = correctionId;
+        return movement;
+    }
+
+    public static CashMovement Transfer(Guid accountId, CashMovementType type, decimal amountChange, Guid actorId,
+        DateTime occurredAtUtc, Guid transferId)
+    {
+        var movement = Create(accountId, type, amountChange, actorId, occurredAtUtc, null, null, null);
+        movement.CashTransferId = transferId;
+        return movement;
+    }
+
+    public static CashMovement TransferReversal(Guid accountId, decimal amountChange, Guid actorId,
+        DateTime occurredAtUtc, Guid reversalId)
+    {
+        var movement = Create(accountId, CashMovementType.TransferReversal, amountChange, actorId, occurredAtUtc, null, null, null);
+        movement.CashTransferReversalId = reversalId;
+        return movement;
+    }
+
+    public static CashMovement SupplierPayment(SupplierPaymentLine line, Guid accountId, Guid actorId, DateTime occurredAtUtc)
+    {
+        var type = line.Kind == SupplierPaymentLineKind.Fee ? CashMovementType.SupplierPaymentFee : CashMovementType.SupplierPayment;
+        var movement = Create(accountId, type, -line.OriginalAmount, actorId, occurredAtUtc, null, null, null);
+        movement.SupplierPaymentLineId = line.Id;
+        return movement;
+    }
+
+    public static CashMovement SupplierPaymentReversal(Guid accountId, decimal originalAmount, Guid actorId,
+        DateTime occurredAtUtc, Guid reversalId)
+    {
+        var movement = Create(accountId, CashMovementType.SupplierPaymentReversal, originalAmount, actorId, occurredAtUtc, null, null, null);
+        movement.SupplierPaymentReversalId = reversalId;
+        return movement;
+    }
 
     public static CashMovement LegacySaleRefund(LegacySaleRefundTender tender, Guid actor, DateTime time)
     {

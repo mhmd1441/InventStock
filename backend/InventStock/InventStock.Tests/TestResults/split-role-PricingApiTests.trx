@@ -1,0 +1,122 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="cc7fd3fe-d580-42e5-b673-03264aacf0b3" name="user@MOUMNEH-LAPTOP 2026-10-24 22:21:38" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:21:38.0485711+03:00" queuing="2026-10-24T22:21:38.0485716+03:00" start="2026-10-24T22:21:14.4674830+03:00" finish="2026-10-24T22:21:38.7093297+03:00" />
+  <TestSettings name="default" id="930ae540-5e23-4995-9711-3a4e8d7459b0">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_21_38" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="b8373369-62b8-434e-bbdd-74656e18a49a" testId="a4937e7b-e9b4-c91a-498e-c5c271be9574" testName="InventStock.Tests.Api.PricingApiTests.Staff_sees_only_suggestion_from_latest_actual_purchase_and_owner_controls_the_rule" computerName="MOUMNEH-LAPTOP" duration="00:00:00.1576093" startTime="2026-10-24T22:21:38.4868626+03:00" endTime="2026-10-24T22:21:38.4868628+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b8373369-62b8-434e-bbdd-74656e18a49a" />
+    <UnitTestResult executionId="33253c07-7dd4-4b83-8f33-27396dd21227" testId="24da460e-e73f-2ceb-152d-a6ad5cf0eb54" testName="InventStock.Tests.Api.PricingApiTests.Direct_cut_hose_rate_sells_half_a_metre_for_three_dollars_and_remains_audited" computerName="MOUMNEH-LAPTOP" duration="00:00:02.2142817" startTime="2026-10-24T22:21:38.0105116+03:00" endTime="2026-10-24T22:21:38.0105610+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="33253c07-7dd4-4b83-8f33-27396dd21227" />
+    <UnitTestResult executionId="504f3a54-6924-4b4c-a7f1-692488a8a05b" testId="84658ea0-ef2c-7c9c-d1ac-515f8f8777e2" testName="InventStock.Tests.Api.PricingApiTests.Posted_sale_keeps_the_server_suggestion_and_below_suggestion_override_after_policy_changes" computerName="MOUMNEH-LAPTOP" duration="00:00:00.3165557" startTime="2026-10-24T22:21:38.3287329+03:00" endTime="2026-10-24T22:21:38.3287331+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="504f3a54-6924-4b4c-a7f1-692488a8a05b" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Api.PricingApiTests.Staff_sees_only_suggestion_from_latest_actual_purchase_and_owner_controls_the_rule" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="a4937e7b-e9b4-c91a-498e-c5c271be9574">
+      <Execution id="b8373369-62b8-434e-bbdd-74656e18a49a" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.PricingApiTests" name="Staff_sees_only_suggestion_from_latest_actual_purchase_and_owner_controls_the_rule" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.PricingApiTests.Direct_cut_hose_rate_sells_half_a_metre_for_three_dollars_and_remains_audited" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="24da460e-e73f-2ceb-152d-a6ad5cf0eb54">
+      <Execution id="33253c07-7dd4-4b83-8f33-27396dd21227" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.PricingApiTests" name="Direct_cut_hose_rate_sells_half_a_metre_for_three_dollars_and_remains_audited" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.PricingApiTests.Posted_sale_keeps_the_server_suggestion_and_below_suggestion_override_after_policy_changes" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="84658ea0-ef2c-7c9c-d1ac-515f8f8777e2">
+      <Execution id="504f3a54-6924-4b4c-a7f1-692488a8a05b" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.PricingApiTests" name="Posted_sale_keeps_the_server_suggestion_and_below_suggestion_override_after_policy_changes" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a4937e7b-e9b4-c91a-498e-c5c271be9574" executionId="b8373369-62b8-434e-bbdd-74656e18a49a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="24da460e-e73f-2ceb-152d-a6ad5cf0eb54" executionId="33253c07-7dd4-4b83-8f33-27396dd21227" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="84658ea0-ef2c-7c9c-d1ac-515f8f8777e2" executionId="504f3a54-6924-4b4c-a7f1-692488a8a05b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="3" executed="3" passed="3" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Starting:    InventStock.Tests&#xD;
+[22:21:35 INF] Created role Admin. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:35 INF] Created role Staff. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:35 INF] Created seed administrator admin@inventstock.local. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:35 INF] Seeded demo catalogue with 6 parts. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:36 WRN] The query uses the 'First'/'FirstOrDefault' operator without 'OrderBy' and filter operators. This may lead to unpredictable results. {"EventId": {"Id": 10103, "Name": "Microsoft.EntityFrameworkCore.Query.FirstWithoutOrderByAndFilterWarning"}, "SourceContext": "Microsoft.EntityFrameworkCore.Query"}&#xD;
+[22:21:36 WRN] The query uses the 'First'/'FirstOrDefault' operator without 'OrderBy' and filter operators. This may lead to unpredictable results. {"EventId": {"Id": 10103, "Name": "Microsoft.EntityFrameworkCore.Query.FirstWithoutOrderByAndFilterWarning"}, "SourceContext": "Microsoft.EntityFrameworkCore.Query"}&#xD;
+[22:21:36 WRN] Failed to determine the https port for redirect. {"EventId": {"Id": 3, "Name": "FailedToDeterminePort"}, "SourceContext": "Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware", "RequestId": "0HNPI0G2P1I4B", "RequestPath": "/api/auth/login"}&#xD;
+[22:21:36 INF] HTTP POST /api/auth/login responded 200 in 185.0381 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4B"}&#xD;
+[22:21:36 INF] HTTP POST /api/auth/login responded 200 in 70.2095 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4C"}&#xD;
+[22:21:36 INF] HTTP GET /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 403 in 33.5044 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4D"}&#xD;
+[22:21:36 INF] HTTP GET /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 200 in 57.1565 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4E"}&#xD;
+[22:21:36 INF] HTTP PUT /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 200 in 68.3975 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4F"}&#xD;
+[22:21:37 INF] HTTP GET /api/pricing/suggestions responded 200 in 187.8526 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4G"}&#xD;
+[22:21:37 INF] HTTP POST /api/sales responded 201 in 578.7898 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4H"}&#xD;
+[22:21:37 ERR] HTTP PUT /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 500 in 27.1736 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4I"}&#xD;
+InventStock.Application.Common.Exceptions.ConflictException: The cut-hose rate changed. Reload it before saving.&#xD;
+   at InventStock.Infrastructure.Services.PricingService.SetCutHoseRateAsync(Guid partId, SetCutHoseSellingRateRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\PricingService.cs:line 36&#xD;
+   at InventStock.Infrastructure.Services.PricingService.SetCutHoseRateAsync(Guid partId, SetCutHoseSellingRateRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\PricingService.cs:line 41&#xD;
+   at InventStock.Api.Controllers.PricingController.SetCutHoseRate(Guid partId, SetCutHoseSellingRateRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\PricingController.cs:line 40&#xD;
+   at lambda_method1710(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:21:37 INF] Request PUT /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 rejected: The cut-hose rate changed. Reload it before saving. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0G2P1I4I", "RequestPath": "/api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23"}&#xD;
+[22:21:37 INF] HTTP PUT /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 200 in 64.8738 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4J"}&#xD;
+[22:21:37 INF] HTTP PUT /api/admin/pricing/cut-hose/46e1d1c4-1a8e-47b7-a8c2-3539776c1b23 responded 200 in 18.6464 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4K"}&#xD;
+[22:21:37 INF] HTTP GET /api/pricing/suggestions responded 200 in 18.3774 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4L"}&#xD;
+[22:21:37 INF] HTTP POST /api/sales responded 201 in 85.1721 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4M"}&#xD;
+[22:21:38 INF] HTTP POST /api/sales responded 201 in 89.4187 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4N"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/policy responded 200 in 12.6853 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4O"}&#xD;
+[22:21:38 INF] HTTP PUT /api/admin/pricing/policy responded 200 in 50.9024 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4P"}&#xD;
+[22:21:38 INF] HTTP POST /api/sales responded 201 in 53.7417 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4Q"}&#xD;
+[22:21:38 INF] HTTP GET /api/sale-returns/sales/045275ce-890b-4e0c-b226-d5ef32509d4a/availability responded 200 in 47.8377 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4R"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/policy responded 200 in 5.7067 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4S"}&#xD;
+[22:21:38 INF] HTTP PUT /api/admin/pricing/policy responded 200 in 16.9822 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4T"}&#xD;
+[22:21:38 INF] HTTP GET /api/pricing/suggestions responded 200 in 14.9276 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4U"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/policy responded 403 in 0.4541 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I4V"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/calculations responded 403 in 0.3109 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I50"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/policy responded 200 in 7.3547 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I51"}&#xD;
+[22:21:38 INF] HTTP PUT /api/admin/pricing/policy responded 200 in 15.6660 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I52"}&#xD;
+[22:21:38 INF] HTTP GET /api/pricing/suggestions responded 200 in 11.8105 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I53"}&#xD;
+[22:21:38 ERR] HTTP PUT /api/admin/pricing/policy responded 500 in 16.5101 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I54"}&#xD;
+InventStock.Application.Common.Exceptions.ConflictException: Pricing settings changed. Reload them before saving.&#xD;
+   at InventStock.Infrastructure.Services.PricingService.UpdatePolicyAsync(UpdatePricingPolicyRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\PricingService.cs:line 83&#xD;
+   at InventStock.Infrastructure.Services.PricingService.UpdatePolicyAsync(UpdatePricingPolicyRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\PricingService.cs:line 87&#xD;
+   at InventStock.Api.Controllers.PricingController.Update(UpdatePricingPolicyRequest request, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\PricingController.cs:line 24&#xD;
+   at lambda_method2848(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:21:38 INF] Request PUT /api/admin/pricing/policy rejected: Pricing settings changed. Reload them before saving. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0G2P1I54", "RequestPath": "/api/admin/pricing/policy"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/calculations responded 200 in 28.4942 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I55"}&#xD;
+[22:21:38 INF] HTTP GET /api/admin/pricing/policy responded 200 in 6.0664 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I56"}&#xD;
+[22:21:38 INF] HTTP PUT /api/admin/pricing/policy responded 200 in 15.5233 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0G2P1I57"}&#xD;
+[xUnit.net 00:00:23.72]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

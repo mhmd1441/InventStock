@@ -30,6 +30,12 @@ import type {
   Supplier,
   User,
   CashAccount,
+  CashReconciliationDay,
+  PostCashReconciliationRequest,
+  SupplierPayment,
+  PostSupplierPaymentRequest,
+  CashTransfer,
+  PostCashTransferRequest,
   ExpenseCategory,
   PostOutgoingPaymentRequest,
   OutgoingPayment,
@@ -40,6 +46,7 @@ import type {
   CustomerOpeningStatus,
   CustomerPayment,
   CustomerPaymentRequest,
+  PaperRecoveryCustomerPaymentRequest,
   PostSaleRequest,
   Sale,
   SalePaymentAccount,
@@ -49,10 +56,14 @@ import type {
   ReturnableSale,
   PostSaleReturnRequest,
   SaleReturn,
+  PostLegacySaleReturnRequest,
+  LegacySaleReturn,
   SellingPriceSuggestion,
   PricingPolicy,
   AdminPriceCalculation,
   CutHoseSellingRate,
+  TransactionException,
+  TransactionExceptionQuery,
 } from "./types";
 
 export function useCutHoseSellingRate(partId: string | null) {
@@ -118,8 +129,11 @@ export const queryKeys = {
   users: ["users"] as const,
   supplierImport: (id: string) => ["supplier-import", id] as const,
   cashAccounts: ["cash-accounts"] as const,
+  cashReconciliation: (businessDate: string) => ["cash-reconciliation", businessDate] as const,
   expenseCategories: ["expense-categories"] as const,
   outgoings: (year: number, month: number) => ["outgoings", year, month] as const,
+  supplierPayments: (year: number, month: number) => ["supplier-payments", year, month] as const,
+  cashTransfers: (year: number, month: number) => ["cash-transfers", year, month] as const,
   customers: (search: string) => ["customers", search] as const,
   customerStatement: (id: string, page: number) => ["customer-statement", id, page] as const,
   customerOpening: (id: string) => ["customer-opening", id] as const,
@@ -214,11 +228,37 @@ export function usePostSaleReturn() {
     } });
 }
 
+export function usePostLegacySaleReturn() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: PostLegacySaleReturnRequest) =>
+    api.post<LegacySaleReturn>("/api/sale-returns/legacy", request),
+    onSuccess: async () => { await invalidateStockViews(client);
+      await client.invalidateQueries({ queryKey: ["customer-statement"] });
+      await client.invalidateQueries({ queryKey: ["customers"] });
+    } });
+}
+
+export function useTransactionExceptions(query: TransactionExceptionQuery) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({ enabled: canViewPrivate, queryKey: ["transaction-exceptions", query],
+    queryFn: ({ signal }) => api.get<PagedResult<TransactionException>>(
+      "/api/admin/transaction-exceptions", query, signal) });
+}
+
 export function usePostCustomerPayment() {
   const client = useQueryClient();
   return useMutation({
     mutationFn: ({ customerId, request }: { customerId: string; request: CustomerPaymentRequest }) =>
       api.post<CustomerPayment>(`/api/customers/${customerId}/payments`, request),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer-statement"] }); void client.invalidateQueries({ queryKey: ["customers"] }); },
+  });
+}
+
+export function usePostPaperRecoveryCustomerPayment() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ customerId, request }: { customerId: string; request: PaperRecoveryCustomerPaymentRequest }) =>
+      api.post<CustomerPayment>(`/api/customers/${customerId}/payments/paper-recovery`, request),
     onSuccess: () => { void client.invalidateQueries({ queryKey: ["customer-statement"] }); void client.invalidateQueries({ queryKey: ["customers"] }); },
   });
 }
@@ -249,6 +289,27 @@ export function useSetCashOpeningBalance() {
         operationId: crypto.randomUUID(), countedAmount, countedAtUtc: new Date().toISOString(),
       }),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.cashAccounts }),
+  });
+}
+
+export function useCashReconciliation(businessDate: string) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({
+    enabled: canViewPrivate,
+    queryKey: queryKeys.cashReconciliation(businessDate),
+    queryFn: ({ signal }) => api.get<CashReconciliationDay>("/api/admin/cash/reconciliation", { businessDate }, signal),
+  });
+}
+
+export function usePostCashReconciliation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ accountId, request }: { accountId: string; request: PostCashReconciliationRequest }) =>
+      api.post(`/api/admin/cash/accounts/${accountId}/reconciliation`, request),
+    onSuccess: (_, variables) => {
+      void client.invalidateQueries({ queryKey: queryKeys.cashReconciliation(variables.request.businessDate) });
+      void client.invalidateQueries({ queryKey: queryKeys.cashAccounts });
+    },
   });
 }
 
@@ -310,6 +371,44 @@ export function useReverseOutgoing() {
     }),
     onSuccess: () => client.invalidateQueries({ queryKey: ["outgoings"] }),
   });
+}
+
+export function useSupplierPayments(year: number, month: number) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({ enabled: canViewPrivate, queryKey: queryKeys.supplierPayments(year, month),
+    queryFn: ({ signal }) => api.get<SupplierPayment[]>("/api/admin/cash/supplier-payments", { year, month }, signal) });
+}
+
+export function usePostSupplierPayment() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: PostSupplierPaymentRequest) => api.post<SupplierPayment>("/api/admin/cash/supplier-payments", request),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["supplier-payments"] }); void client.invalidateQueries({ queryKey: ["cash-reconciliation"] }); } });
+}
+
+export function useReverseSupplierPayment() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: ({ id, operationId, reason }: { id: string; operationId: string; reason: string }) =>
+    api.post<SupplierPayment>(`/api/admin/cash/supplier-payments/${id}/reverse`, { operationId, reason, reversedAtUtc: new Date().toISOString() }),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["supplier-payments"] }); void client.invalidateQueries({ queryKey: ["cash-reconciliation"] }); } });
+}
+
+export function useCashTransfers(year: number, month: number) {
+  const { canViewPrivate } = useAuth();
+  return useQuery({ enabled: canViewPrivate, queryKey: queryKeys.cashTransfers(year, month),
+    queryFn: ({ signal }) => api.get<CashTransfer[]>("/api/admin/cash/transfers", { year, month }, signal) });
+}
+
+export function usePostCashTransfer() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: PostCashTransferRequest) => api.post<CashTransfer>("/api/admin/cash/transfers", request),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["cash-transfers"] }); void client.invalidateQueries({ queryKey: ["cash-reconciliation"] }); } });
+}
+
+export function useReverseCashTransfer() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: ({ id, operationId, reason }: { id: string; operationId: string; reason: string }) =>
+    api.post<CashTransfer>(`/api/admin/cash/transfers/${id}/reverse`, { operationId, reason, reversedAtUtc: new Date().toISOString() }),
+    onSuccess: () => { void client.invalidateQueries({ queryKey: ["cash-transfers"] }); void client.invalidateQueries({ queryKey: ["cash-reconciliation"] }); } });
 }
 
 /** Everything that can change when stock moves. */

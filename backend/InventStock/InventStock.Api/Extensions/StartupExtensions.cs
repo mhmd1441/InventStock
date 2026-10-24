@@ -58,6 +58,11 @@ public static class StartupExtensions
             throw new InvalidOperationException("The development JWT signing key must not be used in production.");
         }
 
+        if (app.Configuration.GetValue<bool>("Seed:IncludeDemoData"))
+        {
+            throw new InvalidOperationException("Seed:IncludeDemoData cannot be enabled in Production.");
+        }
+
         var origins = app.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
         if (origins is null || origins.Length == 0)
         {
@@ -78,10 +83,11 @@ public static class StartupExtensions
         try
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var options = scope.ServiceProvider.GetRequiredService<IOptions<SeedOptions>>().Value;
+            SeedSafety.EnsureDemoSeedIsAllowed(app.Environment.IsProduction(), options);
             await db.Database.MigrateAsync();
 
             var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
-            var options = scope.ServiceProvider.GetRequiredService<IOptions<SeedOptions>>().Value;
             await seeder.SeedAsync(options);
         }
         catch (Exception ex)

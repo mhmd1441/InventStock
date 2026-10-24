@@ -22,17 +22,30 @@ namespace InventStock.Infrastructure.Services;
 public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser, IStockNotifier notifier,
     ILogger<SaleService> logger) : ISaleService
 {
-    public async Task<SaleDto> PostAsync(PostSaleRequest request, CancellationToken cancellationToken = default)
+    public Task<SaleDto> PostAsync(PostSaleRequest request, CancellationToken cancellationToken = default) =>
+        PostCoreAsync(request, null, cancellationToken);
+
+    public async Task<SaleDto> PostPaperRecoveryAsync(PostPaperRecoverySaleRequest request, CancellationToken cancellationToken = default)
+    {
+        await new PostPaperRecoverySaleRequestValidator().ValidateAndThrowAsync(request, cancellationToken);
+        return await PostCoreAsync(request.Sale, new PaperRecoveryContext(request.OriginalOccurredAtUtc,
+            request.PaperReference.Trim(), request.Reason.Trim(), request.OriginalSellerNote?.Trim()), cancellationToken);
+    }
+
+    private async Task<SaleDto> PostCoreAsync(PostSaleRequest request, PaperRecoveryContext? paperRecovery,
+        CancellationToken cancellationToken)
     {
         await new PostSaleRequestValidator().ValidateAndThrowAsync(request, cancellationToken);
-        var fingerprint = Fingerprint(request);
+        var fingerprint = paperRecovery is null ? Fingerprint(request) : PaperRecoveryFingerprint(request, paperRecovery);
         SaleDto result;
         var notifications = new List<StockChangedNotification>();
         // This service owns the entire transaction. Do not call other independently committing services.
         await using (var tx = await db.Database.BeginTransactionAsync(cancellationToken))
         {
             await OperationGuard.LockAsync(db, request.OperationId, "Sale", cancellationToken);
-            var actor = await AuthorizedActor(cancellationToken);
+            var actor = paperRecovery is null
+                ? await AuthorizedActor(cancellationToken)
+                : await CounterAuthorization.RequireAsync(db, currentUser, cancellationToken, adminOnly: true);
             var replay = await Query().SingleOrDefaultAsync(x => x.OperationId == request.OperationId, cancellationToken);
             if (replay is not null)
             {
@@ -42,6 +55,9 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 await tx.CommitAsync(cancellationToken);
                 return result;
             }
+            if (paperRecovery is not null && await db.PaperRecoveryEntries.AnyAsync(
+                x => x.PaperReference == paperRecovery.PaperReference, cancellationToken))
+                throw new ConflictException("This paper reference was already recovered.");
 
             // Global resource order: operation -> customer -> distinct part IDs in Guid order.
             Customer? customer = null;
@@ -106,7 +122,12 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 throw new ConflictException("Sale total must equal confirmed payments minus change plus customer credit used plus unpaid debt.");
 
             var sale = Sale.Create(request.OperationId, fingerprint, actor, customer, total, payments, change,
-                request.CustomerCreditUsedUsd, request.UnpaidDebtUsd);
+                request.CustomerCreditUsedUsd, request.UnpaidDebtUsd, postedAtUtc: paperRecovery?.OriginalOccurredAtUtc);
+            if (!db.Database.IsNpgsql())
+            {
+                var nextReceipt = (await db.Sales.Select(x => (long?)x.ReceiptNumber).MaxAsync(cancellationToken) ?? 99_999L) + 1;
+                sale.AssignReceiptNumberForNonPostgres(nextReceipt);
+            }
             // One query for latest actual cost per SKU. Quotes and unknown costs never become a fabricated cost basis.
             var costs = await db.SupplierCostObservations.AsNoTracking()
                 .Where(x => partIds.Contains(x.PartId) && x.Source == CostSource.ActualPurchase && x.ObservedAtUtc <= sale.PostedAtUtc)
@@ -159,6 +180,9 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
                 // Do not add a second debit for CustomerCreditUsedUsd.
             }
             db.Sales.Add(sale);
+            if (paperRecovery is not null)
+                db.PaperRecoveryEntries.Add(PaperRecoveryEntry.ForSale(paperRecovery.PaperReference,
+                    sale.PostedAtUtc, paperRecovery.Reason, paperRecovery.OriginalSellerNote, sale.Id, actor, DateTime.UtcNow));
             await db.SaveChangesAsync(cancellationToken);
             result = Map(sale); // Immutable outcome built before commit; no fallible result lookup afterward.
             foreach (var part in parts.Values)
@@ -187,6 +211,83 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
         var sale = await Query().SingleOrDefaultAsync(x => x.OperationId == operationId && x.ActorId == actor, cancellationToken)
             ?? throw new NotFoundException("Sale operation", operationId);
         return new("Committed", Map(sale));
+    }
+
+    public async Task<SaleTenderAccountCorrectionDto> CorrectTenderAccountAsync(Guid tenderId,
+        CorrectSaleTenderAccountRequest request, CancellationToken cancellationToken = default)
+    {
+        await new CorrectSaleTenderAccountRequestValidator().ValidateAndThrowAsync(request, cancellationToken);
+        var fingerprint = CorrectionFingerprint(tenderId, request);
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await OperationGuard.LockAsync(db, request.OperationId, "SaleTenderAccountCorrection", cancellationToken);
+        var actor = await CounterAuthorization.RequireAsync(db, currentUser, cancellationToken, adminOnly: true);
+        var replay = await db.SaleTenderAccountCorrections.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.OperationId == request.OperationId, cancellationToken);
+        if (replay is not null)
+        {
+            if (replay.CorrectedByUserId != actor || replay.PayloadFingerprint != fingerprint)
+                throw new ConflictException("This operation ID belongs to another actor or correction payload.");
+            await tx.CommitAsync(cancellationToken);
+            return Map(replay);
+        }
+
+        // Tender row first, then its two account rows. This never edits the sale or customer ledger.
+        if (db.Database.IsNpgsql())
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"SaleTenders\" WHERE \"Id\" = {tenderId} FOR UPDATE", cancellationToken);
+        var original = await db.SaleTenders.SingleOrDefaultAsync(x => x.Id == tenderId, cancellationToken)
+            ?? throw new NotFoundException("Sale tender", tenderId);
+        if (await db.SaleTenderAccountCorrections.AnyAsync(x => x.OriginalSaleTenderId == tenderId, cancellationToken))
+            throw new ConflictException("This sale tender already has an account correction.");
+        if (db.Database.IsNpgsql())
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"CashAccounts\" WHERE \"Id\" IN ({original.CashAccountId}, {request.CorrectCashAccountId}) ORDER BY \"Id\" FOR UPDATE", cancellationToken);
+        var replacement = await db.CashAccounts.SingleOrDefaultAsync(x => x.Id == request.CorrectCashAccountId && x.IsActive, cancellationToken)
+            ?? throw new NotFoundException("Active corrected cash account", request.CorrectCashAccountId);
+        var correction = SaleTenderAccountCorrection.Create(original, replacement, request.Reason, actor,
+            request.OperationId, fingerprint, DateTime.UtcNow);
+        db.SaleTenderAccountCorrections.Add(correction);
+        // Dated now: a historical close is never rewritten. Reconciliation will show this as post-close where applicable.
+        db.CashMovements.Add(CashMovement.SaleTenderAccountCorrection(original.CashAccountId, -original.NativeAmount,
+            false, actor, correction.CorrectedAtUtc, correction.Id));
+        db.CashMovements.Add(CashMovement.SaleTenderAccountCorrection(replacement.Id, original.NativeAmount,
+            true, actor, correction.CorrectedAtUtc, correction.Id));
+        await db.SaveChangesAsync(cancellationToken);
+        await tx.CommitAsync(cancellationToken);
+        return Map(correction);
+    }
+
+    public async Task<SaleTenderAccountCorrectionDto> GetTenderAccountCorrectionOperationAsync(Guid operationId,
+        CancellationToken cancellationToken = default)
+    {
+        var actor = await CounterAuthorization.RequireAsync(db, currentUser, cancellationToken, adminOnly: true);
+        var correction = await db.SaleTenderAccountCorrections.AsNoTracking().SingleOrDefaultAsync(
+            x => x.OperationId == operationId && x.CorrectedByUserId == actor, cancellationToken)
+            ?? throw new NotFoundException("Sale tender account correction operation", operationId);
+        return Map(correction);
+    }
+
+    public async Task<SaleTenderAccountCorrectionReversalDto> ReverseTenderAccountCorrectionAsync(Guid correctionId,
+        ReverseSaleTenderAccountCorrectionRequest request, CancellationToken cancellationToken = default)
+    {
+        await new ReverseSaleTenderAccountCorrectionRequestValidator().ValidateAndThrowAsync(request, cancellationToken);
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { correctionId, Reason = request.Reason.Trim() }))));
+        await using var tx = await db.Database.BeginTransactionAsync(cancellationToken);
+        await OperationGuard.LockAsync(db, request.OperationId, "SaleTenderAccountCorrectionReversal", cancellationToken);
+        var actor = await CounterAuthorization.RequireAsync(db, currentUser, cancellationToken, adminOnly: true);
+        var replay = await db.SaleTenderAccountCorrectionReversals.AsNoTracking().SingleOrDefaultAsync(x => x.OperationId == request.OperationId, cancellationToken);
+        if (replay is not null)
+        {
+            if (replay.ReversedByUserId != actor || replay.PayloadFingerprint != fingerprint) throw new ConflictException("This operation ID belongs to another actor or reversal payload.");
+            await tx.CommitAsync(cancellationToken); return Map(replay);
+        }
+        var correction = await db.SaleTenderAccountCorrections.SingleOrDefaultAsync(x => x.Id == correctionId, cancellationToken)
+            ?? throw new NotFoundException("Sale tender account correction", correctionId);
+        if (await db.SaleTenderAccountCorrectionReversals.AnyAsync(x => x.SaleTenderAccountCorrectionId == correctionId, cancellationToken))
+            throw new ConflictException("This tender-account correction already has a reversal.");
+        var reversal = SaleTenderAccountCorrectionReversal.Create(correctionId, request.Reason, actor, request.OperationId, fingerprint, DateTime.UtcNow);
+        db.SaleTenderAccountCorrectionReversals.Add(reversal);
+        db.CashMovements.Add(CashMovement.SaleTenderAccountCorrectionReversal(correction.CorrectCashAccountId, -correction.NativeAmount, actor, reversal.ReversedAtUtc, reversal.Id));
+        db.CashMovements.Add(CashMovement.SaleTenderAccountCorrectionReversal(correction.OriginalCashAccountId, correction.NativeAmount, actor, reversal.ReversedAtUtc, reversal.Id));
+        await db.SaveChangesAsync(cancellationToken); await tx.CommitAsync(cancellationToken); return Map(reversal);
     }
 
     public async Task<IReadOnlyList<SalePaymentAccountDto>> GetPaymentAccountsAsync(CancellationToken cancellationToken = default)
@@ -269,8 +370,8 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
 
     private Task<Guid> AuthorizedActor(CancellationToken ct) => CounterAuthorization.RequireAsync(db, currentUser, ct);
     private IQueryable<Sale> Query() => db.Sales.AsNoTracking().Include(x => x.Lines).Include(x => x.Tenders).AsSplitQuery();
-    private static SaleDto Map(Sale s) => new(s.Id, s.OperationId, s.ActorId, s.PostedAtUtc, s.CustomerId, s.CustomerName,
-        Normalize(s.TotalUsd), Normalize(s.PaymentsUsd), Normalize(s.ChangeUsd), Normalize(s.CustomerCreditUsedUsd), Normalize(s.UnpaidDebtUsd),
+    private static SaleDto Map(Sale s) => new(s.Id, s.ReceiptNumber, s.OperationId, s.ActorId, s.PostedAtUtc, s.CustomerId, s.CustomerName,
+        Normalize(s.TotalUsd), Normalize(s.PaymentsUsd), Normalize(s.ChangeUsd), Normalize(s.ExchangeCreditUsd), Normalize(s.CustomerCreditUsedUsd), Normalize(s.UnpaidDebtUsd),
         s.Lines.OrderBy(x => x.Position).Select(x => new SaleLineDto(x.Id, x.PartId, x.Position, x.PartNumber, x.Name,
             x.Brand, x.Variant, x.StockUnit, x.Quantity, Normalize(x.UnitSellingPriceUsd), Normalize(x.LineTotalUsd), x.StockException, x.StockShortage, x.StockExceptionReason,
             x.SuggestedUnitPriceUsd is null ? null : Normalize(x.SuggestedUnitPriceUsd.Value), x.PriceOverridden)).ToArray(),
@@ -280,6 +381,15 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
     private static string LiteralContains(string value) => "%" + value.Trim().Replace("\\", "\\\\")
         .Replace("%", "\\%").Replace("_", "\\_") + "%";
     private static string Number(decimal x) => x.ToString("G29", CultureInfo.InvariantCulture);
+    private static string CorrectionFingerprint(Guid tenderId, CorrectSaleTenderAccountRequest request) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        { tenderId, request.CorrectCashAccountId, Reason = request.Reason.Trim() }))));
+    private static SaleTenderAccountCorrectionDto Map(SaleTenderAccountCorrection correction) => new(correction.Id,
+        correction.OperationId, correction.OriginalSaleTenderId, correction.OriginalCashAccountId,
+        correction.CorrectCashAccountId, correction.Currency, Normalize(correction.NativeAmount),
+        Normalize(correction.ConfirmedUsdAmount), correction.Reason, correction.CorrectedAtUtc, correction.CorrectedByUserId);
+    private static SaleTenderAccountCorrectionReversalDto Map(SaleTenderAccountCorrectionReversal reversal) => new(reversal.Id,
+        reversal.OperationId, reversal.SaleTenderAccountCorrectionId, reversal.Reason, reversal.ReversedAtUtc, reversal.ReversedByUserId);
     private static string Fingerprint(PostSaleRequest r)
     {
         // Structured serialization avoids ambiguous delimiter-based fingerprints in free text.
@@ -292,4 +402,14 @@ public sealed class SaleService(AppDbContext db, ICurrentUserService currentUser
         });
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical)));
     }
+
+    private static string PaperRecoveryFingerprint(PostSaleRequest request, PaperRecoveryContext recovery) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            Sale = Fingerprint(request), recovery.OriginalOccurredAtUtc, recovery.PaperReference, recovery.Reason,
+            recovery.OriginalSellerNote
+        }))));
+
+    private sealed record PaperRecoveryContext(DateTime OriginalOccurredAtUtc, string PaperReference,
+        string Reason, string? OriginalSellerNote);
 }

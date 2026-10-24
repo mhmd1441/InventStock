@@ -241,9 +241,9 @@ public sealed class SaleReturnService(AppDbContext db, ICurrentUserService user)
                 Normalize(x.LineTotalUsd - (returned?.Refunded ?? 0)));
         }).ToArray();
         // The sale endpoint uses the same counter-only projection; neither response includes cost or supplier.
-        var saleDto = new SaleDto(sale.Id, sale.OperationId, sale.ActorId, sale.PostedAtUtc,
+        var saleDto = new SaleDto(sale.Id, sale.ReceiptNumber, sale.OperationId, sale.ActorId, sale.PostedAtUtc,
             sale.CustomerId, sale.CustomerName, Normalize(sale.TotalUsd), Normalize(sale.PaymentsUsd),
-            Normalize(sale.ChangeUsd), Normalize(sale.CustomerCreditUsedUsd), Normalize(sale.UnpaidDebtUsd),
+            Normalize(sale.ChangeUsd), Normalize(sale.ExchangeCreditUsd), Normalize(sale.CustomerCreditUsedUsd), Normalize(sale.UnpaidDebtUsd),
             sale.Lines.OrderBy(x => x.Position).Select(x => new SaleLineDto(x.Id, x.PartId, x.Position,
                 x.PartNumber, x.Name, x.Brand, x.Variant, x.StockUnit, x.Quantity,
                 Normalize(x.UnitSellingPriceUsd), Normalize(x.LineTotalUsd), x.StockException,

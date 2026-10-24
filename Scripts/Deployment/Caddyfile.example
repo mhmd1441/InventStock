@@ -1,0 +1,8 @@
+https://inventstock.local:8443 {
+    tls internal
+
+    reverse_proxy /api/* 127.0.0.1:5100
+    reverse_proxy /hubs/* 127.0.0.1:5100
+    reverse_proxy /health 127.0.0.1:5100
+    reverse_proxy 127.0.0.1:3000
+}

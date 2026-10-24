@@ -66,6 +66,10 @@ public sealed class CashApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var staff = await factory.CreateStaffClientAsync();
         using var forbidden = await staff.GetAsync("/api/admin/cash/accounts");
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+        using var reconciliationForbidden = await staff.GetAsync("/api/admin/cash/reconciliation?businessDate=2026-01-02");
+        Assert.Equal(HttpStatusCode.Forbidden, reconciliationForbidden.StatusCode);
+        using var supplierPaymentsForbidden = await staff.GetAsync("/api/admin/cash/supplier-payments?year=2026&month=1");
+        Assert.Equal(HttpStatusCode.Forbidden, supplierPaymentsForbidden.StatusCode);
 
         Guid categoryId;
         int movementCount;

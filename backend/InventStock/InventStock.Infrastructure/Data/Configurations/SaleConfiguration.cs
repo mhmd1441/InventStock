@@ -10,17 +10,19 @@ public sealed class SaleConfiguration : IEntityTypeConfiguration<Sale>
     {
         b.ToTable("Sales", t =>
         {
-            t.HasCheckConstraint("CK_Sales_Settlement", "\"TotalUsd\" > 0 AND \"PaymentsUsd\" >= \"ChangeUsd\" AND \"ChangeUsd\" >= 0 AND \"CustomerCreditUsedUsd\" >= 0 AND \"UnpaidDebtUsd\" >= 0 AND \"TotalUsd\" = \"PaymentsUsd\" - \"ChangeUsd\" + \"CustomerCreditUsedUsd\" + \"UnpaidDebtUsd\"");
+            t.HasCheckConstraint("CK_Sales_Settlement", "\"TotalUsd\" > 0 AND \"PaymentsUsd\" >= \"ChangeUsd\" AND \"ChangeUsd\" >= 0 AND \"ExchangeCreditUsd\" >= 0 AND \"CustomerCreditUsedUsd\" >= 0 AND \"UnpaidDebtUsd\" >= 0 AND \"TotalUsd\" = \"PaymentsUsd\" - \"ChangeUsd\" + \"ExchangeCreditUsd\" + \"CustomerCreditUsedUsd\" + \"UnpaidDebtUsd\"");
             t.HasCheckConstraint("CK_Sales_Customer", "\"CustomerId\" IS NOT NULL OR (\"CustomerCreditUsedUsd\" = 0 AND \"UnpaidDebtUsd\" = 0)");
         });
         b.HasKey(x => x.Id);
         b.HasIndex(x => x.OperationId).IsUnique();
+        b.HasIndex(x => x.ReceiptNumber).IsUnique();
         b.HasIndex(x => x.PostedAtUtc);
         b.Property(x => x.PayloadFingerprint).HasMaxLength(64).IsRequired();
         b.Property(x => x.CustomerName).HasMaxLength(200);
         b.Property(x => x.TotalUsd).HasPrecision(18, 2);
         b.Property(x => x.PaymentsUsd).HasPrecision(18, 2);
         b.Property(x => x.ChangeUsd).HasPrecision(18, 2);
+        b.Property(x => x.ExchangeCreditUsd).HasPrecision(18, 2);
         b.Property(x => x.CustomerCreditUsedUsd).HasPrecision(18, 2);
         b.Property(x => x.UnpaidDebtUsd).HasPrecision(18, 2);
         b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
@@ -77,6 +79,43 @@ public sealed class SaleTenderConfiguration : IEntityTypeConfiguration<SaleTende
     }
 }
 
+public sealed class SaleTenderAccountCorrectionConfiguration : IEntityTypeConfiguration<SaleTenderAccountCorrection>
+{
+    public void Configure(EntityTypeBuilder<SaleTenderAccountCorrection> b)
+    {
+        b.ToTable("SaleTenderAccountCorrections", t =>
+        {
+            t.HasCheckConstraint("CK_SaleTenderAccountCorrections_Amounts", "\"NativeAmount\" > 0 AND \"ConfirmedUsdAmount\" > 0 AND (\"Currency\" <> 'USD' OR \"NativeAmount\" = \"ConfirmedUsdAmount\")");
+            t.HasCheckConstraint("CK_SaleTenderAccountCorrections_Accounts", "\"OriginalCashAccountId\" <> \"CorrectCashAccountId\"");
+        });
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.OriginalSaleTenderId).IsUnique();
+        b.HasIndex(x => x.OperationId).IsUnique();
+        b.Property(x => x.Currency).HasConversion<string>().HasMaxLength(8);
+        b.Property(x => x.NativeAmount).HasPrecision(20, 6);
+        b.Property(x => x.ConfirmedUsdAmount).HasPrecision(18, 2);
+        b.Property(x => x.Reason).HasMaxLength(SaleTenderAccountCorrection.ReasonMaxLength).IsRequired();
+        b.Property(x => x.PayloadFingerprint).HasMaxLength(SaleTenderAccountCorrection.FingerprintMaxLength).IsRequired();
+        b.HasOne<SaleTender>().WithMany().HasForeignKey(x => x.OriginalSaleTenderId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CashAccount>().WithMany().HasForeignKey(x => x.OriginalCashAccountId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<CashAccount>().WithMany().HasForeignKey(x => x.CorrectCashAccountId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
+public sealed class SaleTenderAccountCorrectionReversalConfiguration : IEntityTypeConfiguration<SaleTenderAccountCorrectionReversal>
+{
+    public void Configure(EntityTypeBuilder<SaleTenderAccountCorrectionReversal> b)
+    {
+        b.ToTable("SaleTenderAccountCorrectionReversals");
+        b.HasKey(x => x.Id);
+        b.HasIndex(x => x.SaleTenderAccountCorrectionId).IsUnique();
+        b.HasIndex(x => x.OperationId).IsUnique();
+        b.Property(x => x.Reason).HasMaxLength(SaleTenderAccountCorrectionReversal.ReasonMaxLength).IsRequired();
+        b.Property(x => x.PayloadFingerprint).HasMaxLength(SaleTenderAccountCorrection.FingerprintMaxLength).IsRequired();
+        b.HasOne<SaleTenderAccountCorrection>().WithMany().HasForeignKey(x => x.SaleTenderAccountCorrectionId).OnDelete(DeleteBehavior.Restrict);
+    }
+}
+
 public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
 {
     public void Configure(EntityTypeBuilder<Customer> b)
@@ -97,7 +136,7 @@ public sealed class CustomerAccountEntryConfiguration : IEntityTypeConfiguration
     public void Configure(EntityTypeBuilder<CustomerAccountEntry> b)
     {
         b.ToTable("CustomerAccountEntries", t => t.HasCheckConstraint("CK_CustomerEntries_Kind",
-            "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'OpeningCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"OriginalOpeningEntryId\" IS NOT NULL AND \"CorrectedOpeningBalanceUsd\" IS NOT NULL AND \"BalanceAfterUsd\" IS NOT NULL AND \"AmountUsd\" <> 0) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'ReturnReduction' AND \"SaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'LegacyReturnReduction' AND \"LegacySaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)"));
+            "(\"Kind\" = 'Opening' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL) OR (\"Kind\" = 'OpeningCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"OriginalOpeningEntryId\" IS NOT NULL AND \"CorrectedOpeningBalanceUsd\" IS NOT NULL AND \"BalanceAfterUsd\" IS NOT NULL AND \"AmountUsd\" <> 0) OR (\"Kind\" = 'SaleCharge' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" > 0) OR (\"Kind\" = 'SalePayment' AND \"SaleId\" IS NOT NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'ReturnReduction' AND \"SaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'LegacyReturnReduction' AND \"LegacySaleReturnId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'ExchangeReturnValue' AND \"SaleExchangeId\" IS NOT NULL AND \"SaleId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'AccountPayment' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NULL AND \"AmountUsd\" < 0) OR (\"Kind\" = 'PaymentCorrection' AND \"SaleId\" IS NULL AND \"CustomerPaymentId\" IS NOT NULL AND \"CustomerPaymentCorrectionId\" IS NOT NULL AND \"AmountUsd\" > 0)"));
         b.HasKey(x => x.Id);
         b.Property(x => x.Kind).HasMaxLength(30).IsRequired();
         b.Property(x => x.AmountUsd).HasPrecision(18, 2);
@@ -110,6 +149,7 @@ public sealed class CustomerAccountEntryConfiguration : IEntityTypeConfiguration
         b.HasIndex(x => x.CustomerPaymentCorrectionId).IsUnique();
         b.HasIndex(x => x.SaleReturnId).IsUnique().HasFilter("\"SaleReturnId\" IS NOT NULL");
         b.HasIndex(x => x.LegacySaleReturnId).IsUnique().HasFilter("\"LegacySaleReturnId\" IS NOT NULL");
+        b.HasIndex(x => x.SaleExchangeId).IsUnique().HasFilter("\"SaleExchangeId\" IS NOT NULL");
         b.HasIndex(x => x.OriginalOpeningEntryId);
         b.HasIndex(x => new { x.CustomerId, x.CreatedAtUtc });
         b.HasIndex(x => new { x.OperationId, x.Kind }).IsUnique();
@@ -119,6 +159,7 @@ public sealed class CustomerAccountEntryConfiguration : IEntityTypeConfiguration
         b.HasOne<CustomerPaymentCorrection>().WithMany().HasForeignKey(x => x.CustomerPaymentCorrectionId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<SaleReturn>().WithMany().HasForeignKey(x => x.SaleReturnId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<LegacySaleReturn>().WithMany().HasForeignKey(x => x.LegacySaleReturnId).OnDelete(DeleteBehavior.Restrict);
+        b.HasOne<SaleExchange>().WithMany().HasForeignKey(x => x.SaleExchangeId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<CustomerAccountEntry>().WithMany().HasForeignKey(x => x.OriginalOpeningEntryId).OnDelete(DeleteBehavior.Restrict);
     }
 }

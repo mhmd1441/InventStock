@@ -9,7 +9,7 @@ public sealed class SaleReturnConfiguration : IEntityTypeConfiguration<SaleRetur
     public void Configure(EntityTypeBuilder<SaleReturn> b)
     {
         b.ToTable("SaleReturns", t => t.HasCheckConstraint("CK_SaleReturns_Settlement",
-            "\"TotalUsd\" > 0 AND \"AccountReductionUsd\" >= 0 AND \"AccountReductionUsd\" <= \"TotalUsd\""));
+            "\"TotalUsd\" > 0 AND \"AccountReductionUsd\" >= 0 AND \"ExchangeAppliedUsd\" >= 0 AND \"AccountReductionUsd\" + \"ExchangeAppliedUsd\" <= \"TotalUsd\""));
         b.HasKey(x => x.Id);
         b.HasIndex(x => x.OperationId).IsUnique();
         b.HasIndex(x => new { x.SaleId, x.PostedAtUtc });
@@ -17,6 +17,7 @@ public sealed class SaleReturnConfiguration : IEntityTypeConfiguration<SaleRetur
         b.Property(x => x.Reason).HasMaxLength(500).IsRequired();
         b.Property(x => x.TotalUsd).HasPrecision(18, 2);
         b.Property(x => x.AccountReductionUsd).HasPrecision(18, 2);
+        b.Property(x => x.ExchangeAppliedUsd).HasPrecision(18, 2);
         b.HasOne<Sale>().WithMany().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Restrict);
         b.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
         b.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.SaleReturnId).OnDelete(DeleteBehavior.Restrict);

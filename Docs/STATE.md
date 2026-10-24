@@ -1,149 +1,108 @@
 # InventStock state
 
 ## Current
+- Catalogue, stock, suppliers, imports, cash, sales, customers, returns, pricing, reconciliation and internal receipts are implemented in code; transaction release is **OFF**.
+- All 37 EF migrations through `InternalSaleReceipts` are applied to local `InventStockDev`; it is development-only, not a shop deployment.
+- Last full backend: **206/206** baseline on disposable PostgreSQL 17. Current split-role PostgreSQL coverage: **64/64** passed (`inventstock_migrator` setup, `inventstock_app` runtime). Last frontend: **22/22**, ESLint, TypeScript and production build.
+- Disposable browser passes: admin/staff/session, supplier import, linked return, supplier payment and daily reconciliation.
+- `Scripts/Run-BrowserSmoke.ps1` is written and syntax-checked, but has not been run locally by the owner.
+- Browser smoke now discovers 11 serial scenarios, including sale/receipt, opening correction, complete paper payment, exceptions and legacy return. The complete wrapper has not been run by the owner.
+- Encrypted frequent/nightly backup, two-destination verification, bounded retention, 30-minute health check and restore drill passed on disposable PostgreSQL 17; Windows Task Scheduler is not installed/tested on the shop PC.
+- Windows LAN deployment scripts/docs are written: one Caddy HTTPS port, loopback-only API/frontend/PostgreSQL, startup/restart tasks, firewall isolation and release/rollback procedure. They are build/syntax verified but not installed on the shop PC.
+- Priority: protected real catalogue onboarding, not enabling shop transactions.
 
-- Task: older-sale lookup is implemented and PostgreSQL-tested with paged filters for date, customer identity context, part number/name and exact USD total. Results remain staff-safe and newest-first.
-- Next concrete step: implement the separate, clearly labelled paper-era return workflow and its exception audit trail. Real-browser localhost automation is unavailable under the current Windows URL-policy guard; use the documented manual smoke script when an operator can run it.
-- Normal database remains at the previously user-applied `ReviewedSupplierImports`. Ten later migrations through `SaleLookupIndexes` are generated, NOT applied to `InventStockDev`/shop/remote DB.
+## Next steps
+1. Run `Run-BrowserSmoke.ps1` locally and fix only confirmed failures; the complete 11-scenario pack remains unexecuted.
+2. Install/test deployment plus frequent/nightly backup tasks on the shop PC; verify reboot, LAN HTTPS, offline UI and next-morning backup results.
+3. Exchange UI (optional; do not block catalogue pilot).
+4. Review 50 real import rows, then scale only after search/privacy/no-movement checks.
+5. Run hostile-search benchmark and messy-import matrix on the owner's PC before the 1,000-item import.
+6. Ask accountant about legal invoice/receipt obligations.
 
-## Done
+## Work queue
+- Database security: done and verified on disposable PostgreSQL 17 — script safely transfers a postgres-owned DB to migrator; app DDL plus five ledger mutations denied; `Parts.NeedsRecount` allowed; trigger denial and backup-role dump/restore (`1|1|1|37`) passed. Split-role fixture coverage is **64/64** passed in per-class TRX reports.
+- 15-minute backup: script/docs done and disposable verification passed — frequent/nightly retention sets, two encrypted destinations, 30-minute health warning, authenticated restore and source/restore comparisons. Real Windows Task Scheduler installation remains owner/shop-PC work.
+- LAN/HTTPS deployment: scripts/docs written and compile/syntax checked — standalone frontend, loopback reverse proxy trust, startup/restart tasks, LAN-only firewall and safe update/rollback. Actual task/firewall/certificate/reboot/LAN installation remains shop-PC work.
+- Browser specs: required cheap gaps are written and TypeScript/test discovery pass — receipt print/reprint, opening correction, complete paper payment, exceptions and sold-before return. Live wrapper run remains owner-PC work.
+- Exchange UI: not started; only eligible after items above complete.
 
-- Catalogue/search: brands and aliases, SKU references, exact/prefix/suffix/contains search, Mercedes optional-`A`, audited unlink/restore.
-- Transaction release gate: API `TransactionRelease:Enabled` and frontend `NEXT_PUBLIC_TRANSACTION_RELEASE_ENABLED` default off. Both must be explicitly enabled for transaction testing. Raw stock-in/out is included so it cannot become an unofficial sale/receiving path; physical counts and quarantine remain usable. Existing API tests opt in. See `Docs/Release-Checklist.md`.
-- Upgrade/backup safety: a PostgreSQL regression starts at the populated `ReviewedSupplierImports` schema, applies the exact ten-migration chain through `SaleLookupIndexes` and verifies unchanged part/movement IDs, category/supplier/brand links, piece quantity and hose length. Disposable custom-format dump/delete/restore preserved a sentinel row. Operator procedure: `Docs/Backup-Restore.md`.
-- Privacy/session: separate counter/admin DTOs, customer-safe admin mode, cross-tab logout isolation and delayed exact-session revocation.
-- Inventory: idempotent commands, piece/centimeter base units, `NotCounted` checkpoints, append-only quarantine holds.
-- Suppliers: private cost history, immutable receiving, and reviewed CSV/TSV/paste imports. Imports create no stock/cash movements and new SKUs remain `NotCounted`.
-- Cash foundation: safe USD/LBP/EUR and Whish USD/LBP account definitions; admin opening counts and categorized actual outgoings with native amount, agreed USD, dates/period, actor, funding source and optional receipt reference. Personal-pocket payments never reduce shop cash; corrections are idempotent linked reversals.
-- Cash UI: private-mode-only counts/payment form/categories/monthly list/totals/reversals; no expected-safe balance. Migration `20261012152847_CashFoundation` remains unapplied to the normal DB.
-- `next.config.ts` supports an isolated `NEXT_DIST_DIR`, allowing a production build while the normal development server owns `.next`.
-- Sale backend: one transaction posts immutable header/line/tender snapshots, per-line stock deductions, native cash/Whish movements, USD customer charges/settlements and permanent idempotent result. Costs are nullable private last-actual-purchase estimates.
-- Sale safety: aggregate repeated SKU quantities; lock operation, customer, then sorted distinct SKUs; check credit under the customer lock; batch stock reads; receiving now uses the same SKU locks. Shared operation guard prevents cross-command ID reuse.
-- Sale recovery/privacy: same actor/payload replays a stable outcome; current DB user/role checked on posting/recovery; staff-safe DTOs and events; notifications only after commit and failures do not undo sales.
-- Uncounted sales require physical confirmation/reason and retain unknown confidence. Physically confirmed shortage may post with `NeedsRecount` as described below; quarantine is never released/consumed by a sale.
-- New migration: `20261012203135_AtomicCounterSales`, additive tables plus nullable cash-tender link; exercised only on disposable PostgreSQL schemas.
-- Customer backend: immutable customer IDs; name required, label/phone/address optional; audited revisioned profile changes and no name-based merge. Search, account balance and paged statement APIs. Admin-reviewed, historical-as-of opening debt/credit before first account activity.
-- Customer payments: confirmed USD settlement with native-currency cash/Whish tender and explicit change, confirmed excess kept as credit, customer-row locking, permanent operation replay/status, employee-permitted linked correction with reason and exact inverse cash/account movements. Current actor/role checked on every command/replay. Migration `20261013074603_CustomerAccountsAndPayments` generated and exercised only on disposable PostgreSQL.
-- Insufficient-stock sale exception: when sellable goods are physically in hand, every affected line must be confirmed with a reason. A sale may leave the book quantity negative but creates no fake receipt/stock-in; it flags `StockShortage` and `NeedsRecount`. A second shortage for that SKU is blocked until a physical count atomically reconciles the ledger and clears the flag. Any existing quarantine hold hard-blocks this exception. Part search/detail and refresh hints expose `NeedsRecount`; dashboard stock value excludes disputed quantities. Migration `20261013080730_SaleStockDiscrepancy` generated only, not applied to normal DB.
-- Counter sale UI: SKU-specific search/cart, USD/piece for pieces and metres with USD/metre for cut hose (converted to cm and USD/cm for posting), explicit physical-confirmation/recount warnings, named or anonymous customer, customer credit/debt, multi-tender native USD/LBP/EUR safe or Whish with confirmed USD and explicit change, exact per-line cent settlement, review/confirm, actor-scoped minimal operation-status recovery without blind replay. No receipt printing yet.
-- Customer UI: search/identity labels, new customer, statement, admin-reviewed opening debt/credit, confirmed mixed-currency payment and excess credit, employee-permitted linked payment correction. Switching customers clears old correction/review state. Backend permissions and current actor are rechecked for operation recovery.
-- Opening correction: admin-only append-only delta linked to the original reviewed opening; later sales/payments remain untouched. Admin confirms the expected current opening and resulting full account balance, so stale concurrent edits conflict. Actor-scoped permanent operation replay/status, statement linkage, and an admin form are wired. Migration `20261013142722_CustomerOpeningCorrections` generated only, not applied to normal DB.
-- Linked-return allocation: `ReturnAllocation.AdditionalRefund` derives each partial refund from the original posted line total and cumulative returned base units. A three-piece $1.01 line allocates $0.34 + $0.33 + $0.34, not $1.02. The return posting service now uses this rule under original-line locks.
-- Linked-return backend: `POST /api/sale-returns` locks the operation, customer, original sale lines and SKUs in order; atomically posts capped partial return lines, physical stock-in, sellable or physically separated quarantine, explicit native cash/Whish refund and/or USD customer-account reduction. It supports the owner's flexible choice rather than forced debt-first. Same actor/payload replay and actor-scoped status, rollback/race and staff privacy are tested. A return against shortage does not clear `NeedsRecount`. Migration `20261013151728_LinkedSaleReturns` generated only, not applied to normal DB.
-- Linked-return UI: `/returns` searches paged older sales and accepts an exact sale ID; sale confirmation and customer-account history link to it. A counter-safe availability endpoint shows original lines, already-returned quantities, remaining quantities/refunds. Staff can choose quantity, sellable/quarantined condition with physical-separation confirmation, cash/Whish refund and/or named-customer account reduction. Review uses cumulative original-line cent allocation; uncertain POSTs retain only actor/operation ID and require a status check, never blind replay. No paper-era return/exchange path. The browser flow itself is not yet smoke-tested.
-- Older-sale lookup: `/api/sales/search` and the return screen support bounded, newest-first pagination by local-day date range, customer name/label/phone, normalized part number or item name, and exact USD total. Results include only public posted snapshots. A general sale-line part index was added without replacing the shortage-only index. Migration `20261015174820_SaleLookupIndexes` is generated only.
-- Pricing suggestion: singleton owner policy stores markup, TVA, nullable EUR→USD and LBP-per-USD rates with revision/actor/time; staff-safe batched endpoint returns only per-base-unit USD suggestions, owner-only endpoint shows actual purchase cost and calculation. Piece items use the latest actual purchase only; quotes/unknown inputs never invent a price. Counter cart auto-fills only an empty price and marks a manual override; owner-only rule page is hidden in customer-safe mode. Migration `SuggestedSellingPrice` generated only, not applied to normal DB.
-- Sale-price snapshot: posting recomputes the suggestion on the server from the then-current policy and actual cost under the sale transaction; `SaleLine` stores nullable suggested USD/base unit and whether the chosen price differed. Staff-safe sale/return projections expose only the suggestion and override flag, never purchase cost or supplier. Replays retain the original snapshot after policy changes. Existing lines migrate to null suggestion/false override. Migration `SalePriceGuidanceSnapshot` generated only, not applied to normal DB.
-- Cut hose direct selling: owner enters a final USD/metre price for each centimeter-unit SKU. Append-only, actor-stamped revisions use a part-row lock and expected prior rate ID to reject stale writes; clearing a rate retains history. No cost, TVA, EUR conversion or markup is applied to the hose rate. Counter staff see the suggestion per metre and enter metre lengths to 0.01m; exact parsing posts whole centimetres and USD/base-centimetre into the existing atomic sale, with the sale-time suggestion/override retained. $6/m × 0.5m = 50cm and $3. Migration `DirectCutHoseSellingRate` generated only, not applied to normal DB.
-- Disposable PostgreSQL test fixtures now ensure shared `pg_trgm` extension objects live in `public`, so isolated test schemas can migrate independently; this changes test setup only, not any shop schema.
-- Staff physical counts: owner permits staff to count and clear `NeedsRecount`; count retains expected-book concurrency check and actor audit. A second shortage still requires that count first. Negative book quantities from a shortage are now valid expected-count input; staff API and modal expose the action. Raw adjustments remain admin-only.
-- Frontend verification build uses isolated `NEXT_DIST_DIR`, and ESLint excludes `.next-*` generated output. No backend files or migrations changed in the counter-UI batch.
-- Browser integration (disposable only): anonymous USD cash sale; named sale paid with LBP cash + Whish USD + partial debt; separate Whish payment creating confirmed credit; credit-only sale; linked payment correction after credit was spent. The resulting $15 USD debt and earlier sale both remained visible. Existing browser test initially launched a stale Debug binary, so it exposed unavailable payment accounts; current Release API was rebuilt and migrated only `inventstock_test`, then all flows passed. Tender rows now default to USD physical safe, while a blank preselected row does not block all-debt/all-credit sales.
+## Open items and risks
+- Do not enable transactions: backup/recovery and browser coverage remain incomplete.
+- `InventStockDev` still uses a PostgreSQL superuser and lacks DB-level append-only triggers; never use it for sales.
+- Task Scheduler backup jobs are documented but not installed/tested under the shop Windows account; scripts alone do not provide scheduled protection.
+- Deployment tasks, Caddy private CA trust and firewall rules are not installed/tested; real-PC reboot, second-client LAN and internet-disconnected checks remain mandatory.
+- Codex Windows browser orchestration is unreliable; the local smoke script is authoritative.
+- Benchmark and messy-import verification are deferred to the owner's PC before a 1,000-item import.
+- PDF parsing, hose remnants and formal accounting are deferred; exchange UI is optional.
+- Suggested prices may reveal approximate cost to staff who know the formula; accepted tradeoff needs review.
+- Cut-hose total does not guarantee a continuous remnant; physical confirmation remains required.
+- Pooled/unknown costs must never be shown as factual margin or valuation.
 
-## Checks passed
-
-- `uncommitted + 2026-10-15 Asia/Beirut`, older-sale lookup source: focused real-PostgreSQL sale API tests 4/4 (combined filters, renamed/normalized part lookup, older date, paging, staff privacy); migration upgrade tests 2/2 after replacing the fragile fixed-count assertion with the exact named ten-migration chain; EF reports no pending model changes. Full backend run reached 174/175 with only that now-corrected checkpoint assertion failing; the other 174 tests passed unchanged. Frontend client tests 21/21, TypeScript, ESLint and isolated production build passed (sandboxed build hit the known Windows EPERM, permitted rerun passed). No normal database or Git action.
-- `uncommitted + 2026-10-15 Asia/Beirut`, browser-launch verification only: a fresh disposable database `inventstock_browser_20261015` accepted the full migration chain and demo seed; the Release API listened on `http://localhost:5176` and the isolated Next dev server reached ready on `http://localhost:3001`. Windows Computer Use then stopped before navigation because localhost URL-policy enforcement is unsupported, confirming the existing browser blocker. No browser workflow passed, no normal database or Git action; temporary processes were stopped and dev-only `tsconfig.json` additions reverted.
-- `uncommitted + 2026-10-15 Asia/Beirut`, populated-upgrade/backup batch: focused upgrade tests 2/2; full backend 174/174, skipped 0, disposable PostgreSQL 17; frontend production build passed. The new exact-baseline test preserved two part IDs, three movement IDs, relationships, 5 pieces and 300cm through all nine pending migrations. Disposable `pg_dump -Fc`/`pg_restore` restored a sentinel row; temporary schema/dump removed. Normal database and Git untouched.
-- `uncommitted + 2026-10-15 Asia/Beirut`, focused stabilization scan/fixes: release-gate tests 12/12; frontend client tests 21/21; TypeScript and ESLint passed. Verified Development config has automatic migration/demo seed disabled, raw stock-in/out is gated while count remains available, and cut-hose returns accept metres then post whole centimeters. Full backend/PostgreSQL suite and browser smoke were not run for this code state. No database or Git action.
-- `uncommitted + 2026-10-14 Asia/Beirut`, release-gate source: focused middleware tests 9/9 passed (disabled routes, catalogue allowance, explicit enable); backend Release build 0 warnings/errors; frontend TypeScript and ESLint passed. Full backend PostgreSQL suite made no progress before the user's 10-minute limit and was cancelled; it is **not passed** for this code state. No migration, normal DB, or Git action.
-- `uncommitted + 2026-10-14 Asia/Beirut`, stabilization docs only: corrected nine-migration checkpoint and current linked-return status; release gates/manual browser smoke are documented. Targeted stale-phrase search passed. No code/database tests rerun because the tested source was unchanged after the full checks below.
-- `uncommitted + 2026-10-14 Asia/Beirut`, direct cut-hose selling source: 161/161 full backend tests, skipped 0, reusable disposable PostgreSQL 17 `inventstock_test`; 3/3 focused pricing API tests including direct rate, staff privacy, stale edit conflict, half-metre sale, historical snapshot and cleared-rate behavior. EF reports no pending model changes after `DirectCutHoseSellingRate`. Frontend: 21/21 client tests (including 0.5m × $6/m = $3 and invalid precision), ESLint, TypeScript, isolated production build. No browser smoke, normal DB or Git action.
-- `uncommitted + 2026-10-14 Asia/Beirut`, sale-time price snapshot source: 160/160 full backend tests, skipped 0, reusable disposable PostgreSQL 17 `inventstock_test`; 2/2 focused pricing PostgreSQL API tests (below-suggestion sale, persisted/replayed price marker after policy change, staff privacy). EF reports no pending model changes after `SalePriceGuidanceSnapshot`. Frontend: 19/19 client tests, ESLint, TypeScript, isolated production build. Initial sandboxed Next build failed with Windows EPERM; permitted rerun passed. No browser smoke, normal DB or Git action.
-- `uncommitted + 2026-10-14 Asia/Beirut`, suggested-pricing backend and UI source: 159/159 full backend tests, skipped 0, disposable PostgreSQL 17 `inventstock_test`; focused pricing PostgreSQL API test passed (actual versus quote, USD/EUR/LBP, missing inputs, cut hose, privacy, policy revision). EF reports no pending model changes after `SuggestedSellingPrice`. Frontend: 19/19 client tests, ESLint, TypeScript, isolated production build including `/pricing`. No browser pricing smoke, no normal DB or Git action. Dedicated `inventstock-test-postgres` container remains running on localhost port 55439 for reuse, not the shop database.
-- `uncommitted + 2026-10-14 Asia/Beirut`, linked-return UI/lookup and disposable-test setup source: 158/158 full backend tests, skipped 0, disposable PostgreSQL 17 `inventstock_test`; 8/8 focused sale/return API+service tests. Frontend: 19/19 client tests, ESLint, TypeScript, production build including `/returns`. Backend Release build succeeded with 0 warnings/errors. An initial full run failed because `pg_trgm` was installed inside a temporary test schema; fixed the test fixture, reran full suite green. No normal DB or Git action. Browser return screen not exercised yet.
-- `uncommitted + 2026-10-14 Asia/Beirut`, browser-test attempt: Release API launched and all migrations/demo seed succeeded on a newly created disposable PostgreSQL 17 `inventstock_test`; separate Next frontend reached ready on port 3001. The in-app browser timed out on Windows localhost, and Windows browser control then stopped under URL-policy enforcement. No browser sale/return interaction was completed. API/frontend and disposable database were stopped; the test container and demo data were removed. Dev-server-only `tsconfig.json` additions were reverted. No normal DB or Git action.
-- `uncommitted + 2026-10-13 Asia/Beirut`, current linked-return/staff-count source: 158/158 full backend tests, skipped 0, disposable PostgreSQL 17 `inventstock_test`; 6/6 focused linked-return API/service tests and 2/2 focused staff-count authorization/recount tests; EF no pending model changes. Frontend: 17/17 client tests, ESLint, TypeScript and production build. Initial sandboxed Next build hit Windows EPERM; permitted rerun passed. No normal DB touched. Full historical checks are in `Docs/CHANGELOG.md` (do not reread routinely).
-- `uncommitted + 2026-10-13 Asia/Beirut`, opening-correction source: 149/149 full backend tests, skipped 0, disposable PostgreSQL 17 `inventstock_test`; 7/7 focused customer tests; EF no pending model changes. Frontend: 17/17 client tests, ESLint, TypeScript and production build. Initial sandboxed build hit Windows EPERM; permitted rerun passed. No normal DB touched.
-- `uncommitted + 2026-10-13 Asia/Beirut`, previous sale/customer browser state: five real-browser sale/customer flows against disposable migrated PostgreSQL 17; new opening-correction form itself has not had a browser smoke test.
-
-## Unresolved / open
-
-- All ten pending migrations still need a reviewed backup of the user's actual database before user application; no normal-database action authorized. The representative populated upgrade chain passes, but an actual restored copy of `InventStockDev` has not been rehearsed.
-- The transaction release gate is present but not yet browser-verified. Windows Computer Use has twice stopped before localhost navigation because URL-policy enforcement is unsupported; do not spend another turn retrying the same automation path unless that capability changes. The backend and frontend flags must both be explicitly enabled for test transactions; Development no longer applies migrations or demo data automatically. Shop activation remains prohibited by `Docs/Release-Checklist.md`.
-- Sale and customer UI passed a disposable PostgreSQL browser smoke test before the new opening-correction form; no real shop/normal-DB pilot. Receipt numbering/printing remains unfinished. Opening correction has backend/API and UI tests but no browser smoke yet.
-- Linked-return UI and older-sale lookup are coded and built, but not yet exercised in a real browser. Browser smoke attempt was blocked by unavailable local-browser access; do not mark it passed. Paper-era returns, atomic exchanges, supplier payments, wallet/cash transfers, daily reconciliation, automatic backup/restore and deployment remain unfinished. This is NOT an operational sales release.
-- Cash totals are intentionally incomplete until sales, customer payments, refunds, supplier payments, transfers and corrections are all represented.
-- Correcting a sale tender posted to the wrong account is unfinished. Customer-payment correction can reverse the whole original payment with a reason, after which staff can post it correctly; do not model that as a customer refund. A future Whish-to-safe withdrawal must record Whish outflow, actual cash received, and fee separately; e.g. $1,000 withdrawn at 1% = $1,000 wallet out, $990 cash in, $10 fee. Sending $1,010 for a $1,000 supplier settlement similarly separates the $10 fee. No transfer/fee UI or ledger exists yet.
-- Suggested selling price, sale-time override snapshot and direct cut-hose selling rate are implemented in code but unavailable on the normal database until reviewed migrations. Manual selling-price overrides still work. Cut-hose total stock length does not guarantee a continuous remnant is available; staff must confirm physically. Avoid claiming a factual margin from pooled/unknown cost.
-- Do not import 1,000 authoritative items until the persistent dataset is protected from demo resets and a backup/restore has been tested. Supplier-PDF parsing is deferred; reviewed CSV/TSV/paste import already exists.
-
-## Decisions (do not reopen unless asked)
-
-- One shop-wide stock pool; Center/Zeit/Yesser/fo2 are not separately tracked.
-- PostgreSQL modular monolith; local/LAN first, online later. Twenty-thousand-plus catalogue rows are within scope.
-- Employees never receive supplier/cost/cash-outgoing data. Admin private data is hidden by default at the counter.
-- Customer name required; phone/address optional. Cash sales may be anonymous. Debt is USD-denominated.
-- Confirmed excess customer payment may remain as credit. Employees may correct a mistaken payment via a linked, reasoned reversal; no silent deletion. Customer openings remain admin-only.
-- Payments: physical USD/LBP/EUR cash and Whish. Whish is separate from physical-safe liquidity.
-- Whish is digital; customer refunds paid through Whish can be digital. Supplier payments/fees and Whish cash-out are distinct future ledger operations; fees must not be hidden inside a cash or supplier amount.
-- Preserve original tender amount/currency and the explicitly confirmed USD credit/value; historical conversion is never rewritten by a current rate.
-- Selling price is flexible/manual; no minimum-price rule in v1.
-- Uncounted/incorrect stock later uses an explicit logged exception; quarantined stock is hard blocked.
-- Routine linked returns/refunds require no admin PIN. Refund tender is explicit; refunds cannot exceed the original refundable amount.
-- On a return, staff may explicitly choose cash, Whish, customer-account reduction, or later an exchange; debt-first is not forced. Faulty returns are physically separated/quarantined for supplier follow-up. Staff may handle paper-era returns, but that separate workflow is not yet built.
-- Staff may perform a physical count to clear `NeedsRecount`. Another shortage sale must wait for that count; staff cannot simply repeat shortage overrides.
-- Suggested selling price is configurable and advisory. The owner approves adding TVA only where cost is marked exclusive, converting EUR using an entered rate, adding a configurable markup, and rounding up to a whole USD. Cost/calculation are owner-only; staff sees suggested selling price and an override indicator. Approximate cost can be inferred from a known formula; this is a conscious privacy tradeoff to review before shop use. Selling price remains flexible.
-- Cut hose is separate: the owner enters the final USD selling price per metre directly for each SKU, without TVA, exchange conversion or markup. A fractional metre is charged proportionally; stock remains whole centimetres. Example: $6/m × 0.5m = $3 and 50cm removed. No automatic continuous-remnant guarantee.
-- Inventory uses integer pieces or centimeters. Packs convert on receipt. Remnants are deferred; confirm continuous length physically.
-- Supplier catalogues/imports never establish shop stock. Receiving goods and paying a supplier are separate operations.
-- Unknown cost remains null and never blocks receipt/sale. Do not present estimated margin as factual.
-- No formal general ledger in v1: use sale-linked native-currency cash/wallet movements and a customer-account ledger with reconciliation.
-- Outgoings are recorded only when actually paid. Payment date and recorded timestamp are separate; optional period records what the payment relates to.
-- Shop-funded and family-personal-pocket payments are distinct. Personal-pocket payments do not reduce the safe.
-- Municipality/government, utilities, internet, professional fees, shop refreshments, personal/family withdrawal, charity and other are separate editable categories. Supplier payments are not expenses.
-- Planned expenses have no cash effect and are not recorded as paid outgoings.
-- No blind replay of uncertain commands; query operation status and require confirmation if not committed.
-- A shortage exception means sellable goods actually in hand, never a supplier promise. It may show negative book stock; only a physical count clears `NeedsRecount`. A SKU with held/quarantined goods cannot use this exception, even if other goods appear available; count or receive verified separate goods first.
-- Sale posting: total = received USD settlements - explicit change USD settlements + customer credit used + unpaid debt. Anonymous sales cannot use credit or leave debt. Preserve native amounts and confirmed USD settlements; do not silently infer change or create credit from overpayment.
-- Backend price is per stock base unit with six decimals; the counter enters USD/piece or USD/metre and converts the latter to USD/cm. Each line rounds once to USD cents (midpoint away from zero), total sums posted lines. Posted line totals cap cumulative refunds.
-- Customer ledger: positive balance = debt, negative = credit. Named sale posts full charge and negative net tender payment; credit is consumed through that net charge, never debited twice. Detailed posting contract: `Docs/Sale-Posting.md`.
+## Decisions
+- One pooled shop stock; Center/Zeit/Yesser/fo2 are not separately tracked.
+- PostgreSQL 17; modular monolith; LAN-first; 20k+ catalogue rows supported.
+- Staff never see supplier/cost/cash-outgoing data; admin private mode is hidden by default.
+- Customer name required; phone/address optional; cash sale anonymous; debt USD-denominated.
+- Confirmed excess may become credit; staff may reason-correct payments; customer openings admin-only.
+- Tender types: physical USD/LBP/EUR plus separate digital Whish; persist native amount and confirmed USD forever.
+- Whish refunds may be digital; supplier payments, cash-out and fees are distinct movements.
+- Selling price is flexible/manual; no v1 minimum.
+- Incorrect stock needs logged exception; quarantine hard-blocks sale.
+- Linked returns need no PIN; tender explicit; never exceed original posted refundable value.
+- Return can be cash, Whish, account reduction or future exchange; no forced debt-first; faulty return quarantined.
+- Legacy returns allowed for staff with known SKU, permanent reason/evidence and no invented historic cap.
+- Exchange explicitly balances return, replacement, tender/change, credit/debt; anonymous exchange cannot create account debt/credit.
+- Staff count to clear `NeedsRecount`; another shortage waits for count.
+- Suggested price is advisory (eligible TVA, optional EUR conversion, markup, ceiling); staff sees suggestion/override only.
+- Cut hose is owner-set USD/metre, proportional sale, whole-centimetre stock, no remnant guarantee.
+- Inventory uses pieces/centimetres; packs convert on receipt; remnants deferred.
+- Catalogue import creates no shop stock; receiving and supplier payment are separate.
+- Unknown cost remains null and never blocks sale/receipt.
+- No v1 general ledger: cash/wallet movements plus customer ledger and reconciliation.
+- Outgoings only when paid; payment/entry times differ; optional historical period.
+- Personal-pocket payments never reduce safe; categories are government, utilities, internet, professional, refreshments, personal/family, charity, other; supplier payment is separate.
+- Planned expenses have no cash effect.
+- Uncertain commands check status; never blindly replay.
+- Shortage means physical goods in hand, never supplier promise; quarantine prevents exception.
+- Sale = received settlement − explicit change + credit used + unpaid debt; anonymous cannot use credit/leave debt.
+- Base price has six decimals; line rounds once to cents; posted totals cap returns.
+- Positive customer balance is debt; negative is credit; customer lock protects credit use.
 
 ## Commands
-
 ```powershell
-# Required for both focused sales and full backend tests (only disposable DB)
-$env:INVENTSTOCK_TEST_POSTGRES='Host=localhost;Port=<test-port>;Database=inventstock_test;Username=postgres;Password=<test-password>'
-# Current reusable disposable container: inventstock-test-postgres, port 55439. Reuse it; do not recreate/remove each turn.
-# Fast current backend slice
-dotnet test backend/InventStock/InventStock.Tests/InventStock.Tests.csproj --no-restore --filter "FullyQualifiedName~SaleApiTests|FullyQualifiedName~ReferenceUpgradeTests"
-# Full backend
+# Disposable PostgreSQL only
+$env:INVENTSTOCK_TEST_POSTGRES='Host=localhost;Port=55439;Database=inventstock_test;Username=postgres;Password=<test-password>'
+$env:INVENTSTOCK_TEST_MIGRATOR_POSTGRES='Host=localhost;Port=55439;Database=inventstock_test;Username=inventstock_migrator;Password=<test-password>'
+dotnet test backend/InventStock/InventStock.Tests/InventStock.Tests.csproj --no-restore --filter 'FullyQualifiedName~PostgresLegacySaleReturnTests|FullyQualifiedName~SaleApiTests|FullyQualifiedName~ReferenceUpgradeTests'
 dotnet test backend/InventStock/InventStock.Tests/InventStock.Tests.csproj --no-restore -m:1 -c Release
-
-# Backend build / migration-model check
 dotnet build backend/InventStock/InventStock.sln --no-restore -m:1 -c Release
-dotnet ef migrations has-pending-model-changes --project backend/InventStock/InventStock.Infrastructure/InventStock.Infrastructure.csproj --startup-project backend/InventStock/InventStock.Api/InventStock.Api.csproj --no-build --configuration Release
-
-# Frontend fast / full
-Set-Location frontend
-npm run test:client
-npm run lint
-npx tsc --noEmit
-$env:NEXT_DIST_DIR='.next-counter-build'
-npm run build -- --webpack
+Set-Location frontend; npm run test:client; npm run lint; npx tsc --noEmit; npm run build -- --webpack
+Set-ExecutionPolicy -Scope Process Bypass; .\Scripts\Run-BrowserSmoke.ps1
+# Backup/restore: Docs/Backup-Restore.md
 ```
 
 ## Key paths
-
-- Cash domain: `backend/InventStock/InventStock.Domain/Entities/Cash*`, `OutgoingPayment*`, `ExpenseCategory.cs`; `Domain/Enums/CashEnums.cs`
-- Cash application: `backend/InventStock/InventStock.Application/DTOs/Cash`, `Interfaces/ICashService.cs`, `Validators/CashValidators.cs`
-- Cash infrastructure/API: `backend/InventStock/InventStock.Infrastructure/Services/CashService.cs`, `Data/Configurations/CashConfiguration.cs`, `backend/InventStock/InventStock.Api/Controllers/CashController.cs`
-- Cash tests/UI: `backend/InventStock/InventStock.Tests/Api/CashApiTests.cs`, `frontend/app/(app)/cash/page.tsx`
-- Customer code: `backend/InventStock/InventStock.Domain/Entities/Customer.cs`, `CustomerPayment.cs`; `InventStock.Application/DTOs/Customers`, `Interfaces/ICustomerService.cs`, `Validators/CustomerValidators.cs`; `InventStock.Infrastructure/Services/CustomerService.cs`, `Data/Configurations/CustomerPaymentConfiguration.cs`; `InventStock.Api/Controllers/CustomersController.cs`; `InventStock.Tests/Infrastructure/PostgresCustomerTests.cs`, `Api/CustomerApiTests.cs`.
-- Other backend modules: `backend/InventStock/InventStock.Domain`, `InventStock.Application`, `InventStock.Infrastructure`, `InventStock.Api`
-- Frontend data/navigation: `frontend/lib/types.ts`, `frontend/lib/queries.ts`, `frontend/components/layout`, `frontend/next.config.ts`
-- Counter UI/helpers/tests: `frontend/app/(app)/sales/page.tsx`, `frontend/app/(app)/customers/page.tsx`, `frontend/components/tender-editor.tsx`, `frontend/lib/sale-math.ts`, `frontend/lib/tender-math.ts`, `frontend/lib/pending-sale-operation.ts`, `frontend/lib/pending-customer-operation.ts`, `frontend/tests/sale-math.test.mjs`.
-- Return allocation: `backend/InventStock/InventStock.Application/Services/ReturnAllocation.cs`, `InventStock.Tests/Infrastructure/ReturnAllocationTests.cs`.
-- Return backend/UI: `backend/InventStock/InventStock.Domain/Entities/SaleReturn.cs`, `InventStock.Application/DTOs/Sales/SaleReturnDtos.cs`, `InventStock.Infrastructure/Services/SaleReturnService.cs`, `InventStock.Infrastructure/Data/Configurations/SaleReturnConfiguration.cs`, `InventStock.Api/Controllers/SaleReturnsController.cs`, `InventStock.Tests/Infrastructure/PostgresSaleReturnTests.cs`, `frontend/app/(app)/returns/page.tsx`, `frontend/lib/return-math.ts`, `frontend/lib/pending-return-operation.ts`, `Docs/Return-Posting.md`.
-- Older-sale lookup: `backend/InventStock/InventStock.Application/DTOs/Sales/SaleDtos.cs`, `Interfaces/ISaleService.cs`, `InventStock.Infrastructure/Services/SaleService.cs`, `Data/Configurations/SaleConfiguration.cs`, `InventStock.Api/Controllers/SalesController.cs`, `InventStock.Tests/Api/SaleApiTests.cs`, `frontend/lib/queries.ts`, `frontend/lib/types.ts`, `frontend/app/(app)/returns/page.tsx`.
-- Suggested pricing/sale snapshot/cut hose: `backend/InventStock/InventStock.Domain/Entities/PricingPolicy.cs`, `CutHoseSellingRate.cs`, `Sale.cs`; `InventStock.Infrastructure/Services/PricingService.cs`, `SaleService.cs`, `Data/Configurations/CutHoseSellingRateConfiguration.cs`, `SaleConfiguration.cs`; `InventStock.Api/Controllers/PricingController.cs`; `InventStock.Tests/Api/PricingApiTests.cs`; `frontend/app/(app)/pricing/page.tsx`, `sales/page.tsx`, `lib/quantity.ts`, `tests/cut-hose-pricing.test.mjs`.
-- Design/checkpoint/release gate: `Docs/Production-Design.md`, `Docs/STATE.md`, `Docs/Release-Checklist.md`
-- Backup/migration safety: `Docs/Backup-Restore.md`, `backend/InventStock/InventStock.Tests/Infrastructure/ReferenceUpgradeTests.cs`.
-- Transaction gate: `backend/InventStock/InventStock.Api/Middleware/TransactionReleaseMiddleware.cs`, `Program.cs`, `appsettings.json`; `frontend/app/(app)/layout.tsx`; `backend/InventStock/InventStock.Tests/Api/TransactionReleaseMiddlewareTests.cs`.
+- Catalogue/search/import: `backend/InventStock/*/{Domain,Application,Infrastructure,Api}`, `frontend/app/(app)/{parts,imports}`.
+- Stock/receiving/quarantine: `Application/Services/StockMovementService.cs`, `Infrastructure/Services/ReceivingService.cs`, `frontend/app/(app)/movements`.
+- Sales/returns/pricing: `Infrastructure/Services/{SaleService,SaleReturnService,PricingService}.cs`, `frontend/app/(app)/{sales,returns,pricing}`.
+- Customers/payments: `Infrastructure/Services/CustomerService.cs`, `frontend/app/(app)/customers`.
+- Cash/reconciliation/transfers: `Infrastructure/Services/CashService.cs`, `frontend/app/(app)/cash`.
+- Privacy/release: `Api/Middleware/TransactionReleaseMiddleware.cs`, `frontend/components/layout`, `Docs/Release-Checklist.md`.
+- Backup/deployment/smoke: `Scripts/{Backup-InventStock,Restore-InventStockBackup,Deployment}*`, `Docs/{Backup-Restore,Real-Database-Setup,Windows-LAN-Deployment,Playwright-Transaction-Smoke}.md`, `frontend/e2e`.
 
 ## Safety
+- Never migrate, seed, reset or benchmark any non-disposable database **unless the user explicitly authorizes that specific task in the message**.
+- Use only named disposable PostgreSQL databases for automated tests/benchmarks; never expose secrets, supplier documents, customer data or backups.
+- No Git/GitHub without explicit authorization; preserve IDs/movements/user data; back up/review before any authorized normal-database migration.
 
-- Never migrate, seed, reset or benchmark a shop/remote/normal database. Use only an isolated disposable database named `inventstock_test` for automated database tests.
-- Never use Git or GitHub unless the user explicitly changes the instruction; no commits, pushes or branches.
-- Never commit or expose secrets, local connection strings, supplier documents, exports, backups or customer data.
-- Preserve existing IDs, movements and user data. Back up and review before any normal-database migration.
+## Verified, never rerun (unless covered files change)
+- Catalogue/search/populated upgrade: PostgreSQL 17 coverage passed.
+- Inventory/receiving/quarantine: focused PostgreSQL coverage passed.
+- Sales/customers/returns: 206/206 baseline; atomic/concurrency/rounding/paper recovery coverage passed.
+- Cash/reconciliation/supplier payment/transfers: focused PostgreSQL coverage passed, including fee/EUR.
+- Database role/security: disposable PostgreSQL 17 app DDL/ledger denial, `NeedsRecount` update, trigger denial, backup-role dump/restore and all 64 split-role PostgreSQL tests passed.
+- Backup/recovery: disposable encrypted two-destination dump/restore counts and stock sum matched; 30-minute fresh/stale check and separate frequent/nightly retention passed. Scheduler execution remains unverified.
+- Deployment code: backend Release build passed; frontend standalone production build passed; all deployment PowerShell scripts parse. Caddy, scheduled tasks, firewall, certificate trust, reboot and LAN access are not run here.
+- Frontend: 22/22 client tests, ESLint, TypeScript and production build passed.
+- Browser: admin/staff/session, supplier import, linked return, supplier payment and reconciliation passed.
+- Browser pack: 11 tests discovered serially; legacy return, receipt/reprint, opening correction, exceptions and complete paper payment are written/type-checked but have no live pass. Pricing override and broader mixed-tender/recovery cases remain uncovered.

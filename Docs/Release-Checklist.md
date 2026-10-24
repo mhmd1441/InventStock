@@ -15,7 +15,8 @@ This project is still a development build. Passing disposable-database tests doe
 
 - [ ] Browser smoke against a **disposable, fully migrated copy**, not the normal/shop database. Verify as admin and employee: anonymous USD sale; LBP + Whish + debt; debt payment and correction; competing last-unit sale; sellable and quarantined linked returns; half-metre hose at USD/metre; page refresh during uncertain post; logout and employee switch. Inspect stock/account/cash records after each step. The newer return, opening-correction and pricing screens have not passed this check.
 - [x] Search older sales by date/customer/item/exact USD amount with paged staff-safe snapshots; exact sale ID remains supported.
-- [ ] Process clearly labelled paper-era returns. Show admin exceptions for reversals, refunds, shortage sales and paper-era returns.
+- [x] Process clearly labelled sold-before-InventStock returns through a separate immutable, idempotent stock/refund/account workflow. The new route is built but still needs the general disposable-browser smoke gate below.
+- [x] Show an admin-role/private-mode exceptions view for reversals, linked/manual refunds, shortage/uncounted sales and customer corrections. Its source/build/gate tests pass; the PostgreSQL query and browser smoke remain part of the general release gates above.
 - [ ] Finish receipt numbering/reprinting and confirm invoice/tax requirements with the shop accountant before treating receipts as final.
 - [ ] Implement and verify supplier payments, Whish fees/transfers, daily per-currency cash and wallet reconciliation, and a paper outage/back-entry procedure. Planned payments must never affect balances.
 - [ ] Test a backup and restore that includes committed, unprinted transactions after the prior backup; choose and document acceptable data-loss window. Set up automatic monitored off-machine backups before authoritative transactions.

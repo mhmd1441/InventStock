@@ -19,6 +19,14 @@ public sealed class SalesController(ISaleService sales) : ControllerBase
         return Created($"/api/sales/operations/{sale.OperationId}", sale);
     }
 
+    [HttpPost("paper-recovery")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<SaleDto>> PostPaperRecovery(PostPaperRecoverySaleRequest request, CancellationToken cancellationToken)
+    {
+        var sale = await sales.PostPaperRecoveryAsync(request, cancellationToken);
+        return Created($"/api/sales/operations/{sale.OperationId}", sale);
+    }
+
     [HttpGet("operations/{operationId:guid}")]
     public async Task<ActionResult<SaleOperationDto>> Operation(Guid operationId, CancellationToken cancellationToken) =>
         Ok(await sales.GetOperationAsync(operationId, cancellationToken));
@@ -38,4 +46,22 @@ public sealed class SalesController(ISaleService sales) : ControllerBase
     [HttpGet("{saleId:guid}")]
     public async Task<ActionResult<SaleDto>> Get(Guid saleId, CancellationToken cancellationToken) =>
         Ok(await sales.GetAsync(saleId, cancellationToken));
+
+    [HttpPost("tenders/{tenderId:guid}/account-corrections")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<SaleTenderAccountCorrectionDto>> CorrectTenderAccount(Guid tenderId,
+        CorrectSaleTenderAccountRequest request, CancellationToken cancellationToken) =>
+        Created($"/api/sales/tender-account-corrections/operations/{request.OperationId}",
+            await sales.CorrectTenderAccountAsync(tenderId, request, cancellationToken));
+
+    [HttpGet("tender-account-corrections/operations/{operationId:guid}")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<SaleTenderAccountCorrectionDto>> TenderAccountCorrectionOperation(Guid operationId,
+        CancellationToken cancellationToken) => Ok(await sales.GetTenderAccountCorrectionOperationAsync(operationId, cancellationToken));
+
+    [HttpPost("tender-account-corrections/{correctionId:guid}/reversal")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<SaleTenderAccountCorrectionReversalDto>> ReverseTenderAccountCorrection(Guid correctionId,
+        ReverseSaleTenderAccountCorrectionRequest request, CancellationToken cancellationToken) =>
+        Ok(await sales.ReverseTenderAccountCorrectionAsync(correctionId, request, cancellationToken));
 }

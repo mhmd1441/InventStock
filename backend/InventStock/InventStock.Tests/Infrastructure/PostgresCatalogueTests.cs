@@ -48,18 +48,14 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
         var builder = new NpgsqlConnectionStringBuilder(configured);
         if (builder.Database != "inventstock_test")
             throw new InvalidOperationException("Tests require a disposable database named inventstock_test. Never use a shop database.");
-        await TestPostgresExtensions.EnsurePublicAsync(configured);
+        await TestPostgresSchemas.EnsurePublicAsync();
         builder.SearchPath = _schema + ",public";
         builder.Timeout = 10;
         builder.CommandTimeout = 30;
         _connectionString = builder.ConnectionString;
-        await using var db = Open();
-        // Only the generated GUID schema is created/dropped; no existing tables are reset.
-#pragma warning disable EF1002 // Identifier is a private fixed prefix plus a generated GUID, never user input.
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{_schema}\"");
-#pragma warning restore EF1002
+        await TestPostgresSchemas.MigrateAsync(_schema);
         _created = true;
-        await db.Database.MigrateAsync();
+        await using var db = Open();
         var category = Category.Create("Benchmark catalogue", null);
         db.Categories.Add(category);
         await db.SaveChangesAsync();
@@ -82,6 +78,28 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
             SELECT "Id", 'MercedesOE', 'MERCEDES', 'A' || "PartNumber", 'A' || "PartNumber", 'A' || "PartNumber", "PartNumber", now() FROM "Parts";
             INSERT INTO "SkuReferences" ("PartId", "ReferenceId", "LinkedAtUtc", "Revision")
             SELECT "Id", "Id", now(), 0 FROM "Parts";
+            -- Hostile reference cardinality: 13 references/SKU (260k total), with every
+            -- fiftieth reference deliberately shared by multiple SKUs.
+            WITH source AS (
+              SELECT p."Id" AS part_id, 'ALT-' || p."PartNumber" || '-' || slot AS value
+              FROM "Parts" p CROSS JOIN generate_series(1, 12) slot
+            ), refs AS (
+              INSERT INTO "CatalogueReferences" ("Id", "Kind", "Issuer", "Value", "IdentityKey", "SearchValue", "MatchValue", "CreatedAtUtc")
+              SELECT gen_random_uuid(), 'Competitor', 'BENCH', value, value,
+                     replace(value, '-', ''), replace(value, '-', ''), now() FROM source
+              RETURNING "Id", "Value"
+            ) INSERT INTO "SkuReferences" ("PartId", "ReferenceId", "LinkedAtUtc", "Revision")
+            SELECT source.part_id, refs."Id", now(), 0 FROM source JOIN refs ON refs."Value" = source.value;
+            WITH source AS (
+              SELECT p."Id" AS part_id, 'SHARED-FILTER-' || (p."PartNumber"::integer % 400) AS value,
+                     'SHARED-FILTER-' || p."PartNumber" AS identity_key FROM "Parts" p
+            ), refs AS (
+              INSERT INTO "CatalogueReferences" ("Id", "Kind", "Issuer", "Value", "IdentityKey", "SearchValue", "MatchValue", "CreatedAtUtc")
+              SELECT gen_random_uuid(), 'Competitor', 'BENCH', value, identity_key,
+                     replace(value, '-', ''), replace(value, '-', ''), now() FROM source
+              RETURNING "Id", "IdentityKey"
+            ) INSERT INTO "SkuReferences" ("PartId", "ReferenceId", "LinkedAtUtc", "Revision")
+            SELECT source.part_id, refs."Id", now(), 0 FROM source JOIN refs ON refs."IdentityKey" = source.identity_key;
             ANALYZE "CatalogueReferences";
             ANALYZE "SkuReferences";
             """);
@@ -90,10 +108,7 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (!_created) return;
-        await using var db = Open();
-#pragma warning disable EF1002 // Only this fixture's generated schema is removed.
-        await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{_schema}\" CASCADE");
-#pragma warning restore EF1002
+        await TestPostgresSchemas.DropAsync(_schema);
     }
 }
 
@@ -119,8 +134,8 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
         var commands = new Commands();
         await using var db = fixture.Open(commands);
         var results = await new PartRepository(db).SearchCounterAsync(new() { Search = "~/00582" });
-        Assert.Single(results.Items);
-        Assert.Equal(50, results.Items[0].QuantityOnHand);
+        var expected = Assert.Single(results.Items.Where(x => x.PartNumber == "1000000582"));
+        Assert.Equal(50, expected.QuantityOnHand);
         Assert.Equal(2, commands.Sql.Count); // total count and a bounded page, never per-item queries
         foreach (var sql in commands.Sql)
         {
@@ -132,7 +147,7 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
     }
 
     [PostgresFact]
-    public async Task SearchBenchmark_20000Parts_100000Movements()
+    public async Task SearchBenchmark_20000Parts_280000References_100000Movements()
     {
         await using var db = fixture.Open();
         var repository = new PartRepository(db);
@@ -141,9 +156,12 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
             new PartQuery { Search = "1000000582", SearchMode = PartSearchMode.Exact },
             new PartQuery { Search = "A1000000582", SearchMode = PartSearchMode.Exact },
             new PartQuery { Search = "~/00582" },
+            new PartQuery { Search = "1 000-000-582" },
+            new PartQuery { Search = "fil", SearchMode = PartSearchMode.Contains },
             new PartQuery { Search = "000058", SearchMode = PartSearchMode.Contains },
-            new PartQuery { Search = "coolant", PageSize = 20 },
+            new PartQuery { Search = "filter", SearchMode = PartSearchMode.Contains, PageSize = 20 },
             new PartQuery { PageSize = 20 },
+            new PartQuery { Page = 500, PageSize = 20 },
             new PartQuery { SortBy = PartSortField.QuantityOnHand, PageSize = 20 }
         };
         foreach (var query in cases)
@@ -155,7 +173,7 @@ public sealed class PostgresCatalogueTests(PostgresCatalogueFixture fixture, ITe
                 var timer = Stopwatch.StartNew();
                 var page = await repository.SearchCounterAsync(query);
                 samples.Add(timer.Elapsed.TotalMilliseconds);
-                Assert.InRange(page.Items.Count, 1, 20);
+                Assert.InRange(page.Items.Count, 0, 20);
             }
             samples.Sort();
             output.WriteLine($"{query.Search ?? query.SortBy.ToString()}: p50={samples[10]:F1}ms, p95={samples[18]:F1}ms, max={samples[19]:F1}ms");

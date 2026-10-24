@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCreateCustomer, useCustomerStatement, useCustomers, useCorrectCustomerOpening, useCustomerOpeningStatus, useCorrectCustomerPayment, usePostCustomerPayment, useSalePaymentAccounts } from "@/lib/queries";
+import { useCreateCustomer, useCustomerStatement, useCustomers, useCorrectCustomerOpening, useCustomerOpeningStatus, useCorrectCustomerPayment, usePostCustomerPayment, usePostPaperRecoveryCustomerPayment, useSalePaymentAccounts } from "@/lib/queries";
 import { centsNumber, excessCreditCents, formatCents, signedUsdCents, usdCents } from "@/lib/sale-math";
 import { parseTenderDrafts, preferredTenderAccount, type TenderDraft } from "@/lib/tender-math";
 import { readPendingCustomerOperation, rememberPendingCustomerOperation, clearPendingCustomerOperation, type PendingCustomerOperation } from "@/lib/pending-customer-operation";
@@ -16,7 +16,7 @@ import { Alert, Badge, Button, Card, Field, Input, Spinner } from "@/components/
 function message(error: unknown) { return error instanceof ApiError ? [error.message, ...error.fieldMessages].join(" ") : "The server result is uncertain. Check the operation before recording another one."; }
 
 export default function CustomersPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, canViewPrivate } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -38,6 +38,16 @@ export default function CustomersPage() {
   const [paymentId, setPaymentId] = useState(() => crypto.randomUUID());
   const [confirmExcess, setConfirmExcess] = useState(false);
   const [reviewPayment, setReviewPayment] = useState<{ credit: number; excess: number } | null>(null);
+  const [paperPayments, setPaperPayments] = useState<TenderDraft[]>(() => [newTender()]);
+  const [paperChange, setPaperChange] = useState<TenderDraft[]>([]);
+  const [paperNote, setPaperNote] = useState("");
+  const [paperReference, setPaperReference] = useState("");
+  const [paperReason, setPaperReason] = useState("");
+  const [paperOriginalSeller, setPaperOriginalSeller] = useState("");
+  const [paperOccurredAt, setPaperOccurredAt] = useState(() => new Date().toISOString().slice(0, 16));
+  const [paperPaymentId, setPaperPaymentId] = useState(() => crypto.randomUUID());
+  const [confirmPaperExcess, setConfirmPaperExcess] = useState(false);
+  const [reviewPaperPayment, setReviewPaperPayment] = useState<{ credit: number; excess: number } | null>(null);
   const [correcting, setCorrecting] = useState<CustomerStatementEntry | null>(null);
   const [correctionReason, setCorrectionReason] = useState("");
   const [pending, setPending] = useState<PendingCustomerOperation | null>(null);
@@ -50,6 +60,7 @@ export default function CustomersPage() {
   const accounts = useSalePaymentAccounts();
   const create = useCreateCustomer();
   const pay = usePostCustomerPayment();
+  const postPaperPayment = usePostPaperRecoveryCustomerPayment();
   const correct = useCorrectCustomerPayment();
   const correctOpening = useCorrectCustomerOpening();
   const summary = statement.data?.summary;
@@ -58,8 +69,12 @@ export default function CustomersPage() {
 
   useEffect(() => {
     if (!preferredAccount) return;
-    queueMicrotask(() => setPayments((rows) => rows.map((row) =>
-      row.accountId || row.native.trim() || row.usd.trim() ? row : { ...row, accountId: preferredAccount.id })));
+    queueMicrotask(() => {
+      const setDefault = (rows: TenderDraft[]) => rows.map((row) =>
+        row.accountId || row.native.trim() || row.usd.trim() ? row : { ...row, accountId: preferredAccount.id });
+      setPayments(setDefault);
+      setPaperPayments(setDefault);
+    });
   }, [preferredAccount]);
 
   useEffect(() => {
@@ -68,7 +83,7 @@ export default function CustomersPage() {
     const item = readPendingCustomerOperation(user.id);
     queueMicrotask(() => { if (active) setPending(item); });
     if (item) {
-      const path = item.kind === "profile" ? "profiles" : item.kind === "payment" ? "payments" : item.kind === "correction" ? "corrections" : item.kind === "openingCorrection" ? "opening-corrections" : "openings";
+      const path = item.kind === "profile" ? "profiles" : item.kind === "payment" || item.kind === "paperPayment" ? "payments" : item.kind === "correction" ? "corrections" : item.kind === "openingCorrection" ? "opening-corrections" : "openings";
       void api.get<unknown>(`/api/customers/operations/${path}/${item.operationId}`).then((result) => {
         if (!active) return;
         clearPendingCustomerOperation(user.id, item.operationId);
@@ -114,7 +129,7 @@ export default function CustomersPage() {
   });
   const checkPending = async (item: PendingCustomerOperation) => {
     setError(null);
-    const path = item.kind === "profile" ? "profiles" : item.kind === "payment" ? "payments" : item.kind === "correction" ? "corrections" : item.kind === "openingCorrection" ? "opening-corrections" : "openings";
+    const path = item.kind === "profile" ? "profiles" : item.kind === "payment" || item.kind === "paperPayment" ? "payments" : item.kind === "correction" ? "corrections" : item.kind === "openingCorrection" ? "opening-corrections" : "openings";
     try {
       const result = await api.get<unknown>(`/api/customers/operations/${path}/${item.operationId}`);
       if (user) clearPendingCustomerOperation(user.id, item.operationId);
@@ -207,6 +222,49 @@ export default function CustomersPage() {
       setError(message(caught));
     }
   };
+  const preparePaperPayment = () => {
+    setError(null); setNotice(null);
+    try {
+      if (!selectedId || !summary) throw new Error("Select a customer and wait for the current balance.");
+      if (!paperReference.trim() || !paperReason.trim()) throw new Error("Paper reference and recovery reason are required.");
+      const occurred = new Date(paperOccurredAt);
+      if (Number.isNaN(occurred.getTime()) || occurred > new Date()) throw new Error("Enter the original payment date and time; it cannot be in the future.");
+      const received = parseTenderDrafts(paperPayments, activeAccounts);
+      const given = parseTenderDrafts(paperChange, activeAccounts);
+      const inCents = received.reduce((sum, x) => sum + usdCents(x.confirmedUsdAmount.toFixed(2))!, BigInt(0));
+      const outCents = given.reduce((sum, x) => sum + usdCents(x.confirmedUsdAmount.toFixed(2))!, BigInt(0));
+      if (inCents <= outCents) throw new Error("The payment after change must be greater than zero.");
+      const net = inCents - outCents;
+      const balance = signedUsdCents(summary.balanceUsd.toFixed(2))!;
+      const excess = excessCreditCents(net, balance);
+      setReviewPaperPayment({ credit: centsNumber(net), excess: centsNumber(excess) });
+      setConfirmPaperExcess(false);
+    } catch (caught) { setError(caught instanceof Error ? caught.message : "Cannot prepare paper payment."); }
+  };
+  const postPaperRecoveryPayment = async () => {
+    if (!selectedId || !user || !isAdmin || !canViewPrivate || !reviewPaperPayment || pending || postPaperPayment.isPending) return;
+    if (reviewPaperPayment.excess > 0 && !confirmPaperExcess) return setError("Confirm the extra amount kept as customer credit, or enter change instead.");
+    const occurred = new Date(paperOccurredAt);
+    if (Number.isNaN(occurred.getTime())) return setError("Enter a valid original payment date and time.");
+    const item = journalFor("paperPayment", paperPaymentId);
+    rememberPendingCustomerOperation(item); setPending(item); setError(null);
+    try {
+      const result = await postPaperPayment.mutateAsync({ customerId: selectedId, request: {
+        payment: { operationId: paperPaymentId, confirmedUsdCredit: reviewPaperPayment.credit,
+          confirmedExcessCreditUsd: reviewPaperPayment.excess, payments: parseTenderDrafts(paperPayments, activeAccounts),
+          change: parseTenderDrafts(paperChange, activeAccounts), note: paperNote.trim() || null },
+        originalOccurredAtUtc: occurred.toISOString(), paperReference: paperReference.trim(), reason: paperReason.trim(),
+        originalSellerNote: paperOriginalSeller.trim() || null,
+      } });
+      clearPendingCustomerOperation(user.id, paperPaymentId); setPending(null); setPaperPaymentId(crypto.randomUUID());
+      setLastPayment(result); setReviewPaperPayment(null); setPaperChange([]); setPaperNote(""); setPaperReference("");
+      setPaperReason(""); setPaperOriginalSeller(""); setConfirmPaperExcess(false); setPaperPayments([newTender(preferredAccount)]);
+      setNotice(`Paper payment recorded. New balance ${result.balanceAfterUsd.toFixed(2)} USD.`);
+    } catch (caught) {
+      if (caught instanceof ApiError) { clearPendingCustomerOperation(user.id, paperPaymentId); setPending(null); setPaperPaymentId(crypto.randomUUID()); setReviewPaperPayment(null); }
+      setError(message(caught));
+    }
+  };
   const correctPayment = async () => {
     if (!user || !selectedId || !summary || !correcting || !correctionReason.trim() || pending) return;
     const id = crypto.randomUUID();
@@ -241,6 +299,7 @@ export default function CustomersPage() {
           {isAdmin && statement.data?.entries.totalCount === 0 && <Card title="Reviewed opening balance"><div className="space-y-3 p-5"><Alert tone="warning">Opening balances are only for verified legacy debt or credit before the first transaction.</Alert><Field label="Opening balance · USD" hint="Positive = customer debt; negative = customer credit"><Input value={openingAmount} onChange={(e) => setOpeningAmount(e.target.value)} inputMode="decimal" placeholder="500.00 or -25.00" /></Field><Field label="Balance valid as of"><Input type="date" min="2000-01-01" max={new Date().toISOString().slice(0, 10)} value={openingAsOf} onChange={(e) => setOpeningAsOf(e.target.value)} /></Field><Field label="Review source / reason"><Input maxLength={500} value={openingReason} onChange={(e) => setOpeningReason(e.target.value)} /></Field><Button disabled={Boolean(pending)} onClick={() => void postOpening()}>Post opening balance</Button></div></Card>}
           {isAdmin && openingStatus.data && <Card title="Correct reviewed opening"><div className="space-y-3 p-5"><p className="text-sm">Original: {openingStatus.data.originalBalanceUsd.toFixed(2)} USD · current opening: {openingStatus.data.currentOpeningBalanceUsd.toFixed(2)} USD</p><p className="text-xs text-muted">A correction adjusts only the opening. Sales and payments remain intact; the original stays visible in history.</p><Field label="Corrected opening · USD"><Input inputMode="decimal" value={correctedOpening} onChange={(e) => setCorrectedOpening(e.target.value)} placeholder="Correct debt or negative credit" /></Field><Field label="Why is it wrong?"><Input maxLength={500} value={openingCorrectionReason} onChange={(e) => setOpeningCorrectionReason(e.target.value)} /></Field><Button disabled={Boolean(pending) || correctOpening.isPending || !openingCorrectionReason.trim()} onClick={() => void postOpeningCorrection()}>Review & correct opening</Button></div></Card>}
           <Card title="Record customer payment"><div className="space-y-3 p-5"><p className="text-xs text-muted">An ordinary payment reduces USD debt. Excess may be kept as credit only after confirmation. Native cash/Whish and agreed USD are saved separately.</p>{payments.map((row) => <TenderEditor key={row.key} row={row} accounts={activeAccounts} title="Received" onPatch={(patch) => patchTender(setPayments, row.key, patch)} onRemove={() => { setPayments((items) => items.filter((x) => x.key !== row.key)); setReviewPayment(null); }} />)}<Button variant="secondary" onClick={() => setPayments((rows) => [...rows, newTender(preferredAccount)])}>Add payment</Button>{change.map((row) => <TenderEditor key={row.key} row={row} accounts={activeAccounts} title="Change given" onPatch={(patch) => patchTender(setChange, row.key, patch)} onRemove={() => { setChange((items) => items.filter((x) => x.key !== row.key)); setReviewPayment(null); }} />)}<Button variant="secondary" onClick={() => setChange((rows) => [...rows, newTender(preferredAccount)])}>Add change</Button><Field label="Note (optional)"><Input maxLength={500} value={paymentNote} onChange={(e) => setPaymentNote(e.target.value)} /></Field><Button className="w-full" disabled={Boolean(pending)} onClick={preparePayment}>Review payment</Button>{reviewPayment && <div className="space-y-2 rounded-lg border border-accent p-3 text-sm"><p>Credit account by <strong>{formatCents(usdCents(reviewPayment.credit.toFixed(2))!)}</strong>; new balance approximately {(summary!.balanceUsd - reviewPayment.credit).toFixed(2)} USD.</p>{reviewPayment.excess > 0 && <label className="flex items-start gap-2 rounded bg-warning-surface p-2"><input type="checkbox" checked={confirmExcess} onChange={(e) => setConfirmExcess(e.target.checked)} /><span>Keep extra ${reviewPayment.excess.toFixed(2)} as customer credit. Otherwise enter change above.</span></label>}<Button className="w-full" disabled={pay.isPending || Boolean(pending) || (reviewPayment.excess > 0 && !confirmExcess)} onClick={() => void postPayment()}>{pay.isPending ? "Posting…" : "Confirm & record payment"}</Button></div>}{lastPayment && <p className="text-xs text-muted">Last payment operation: {lastPayment.operationId}</p>}</div></Card>
+          {isAdmin && canViewPrivate && <Card title="Record paper-era customer payment"><div className="space-y-3 p-5"><Alert tone="warning">Use only for a payment already taken on paper. This creates a flagged, append-only recovery entry using the normal payment rules; it never edits the old day.</Alert><Field label="Original payment date and time"><Input type="datetime-local" value={paperOccurredAt} onChange={(e) => setPaperOccurredAt(e.target.value)} /></Field><Field label="Paper reference"><Input maxLength={120} value={paperReference} onChange={(e) => { setPaperReference(e.target.value); setReviewPaperPayment(null); }} placeholder="Receipt, notebook page, or reference" /></Field><Field label="Why is this being recovered?"><Input maxLength={500} value={paperReason} onChange={(e) => { setPaperReason(e.target.value); setReviewPaperPayment(null); }} /></Field><Field label="Original seller note (optional)"><Input maxLength={200} value={paperOriginalSeller} onChange={(e) => setPaperOriginalSeller(e.target.value)} placeholder="Text only; logged-in admin remains the actor" /></Field>{paperPayments.map((row) => <TenderEditor key={row.key} row={row} accounts={activeAccounts} title="Paper payment received" onPatch={(patch) => { patchTender(setPaperPayments, row.key, patch); setReviewPaperPayment(null); }} onRemove={() => { setPaperPayments((items) => items.filter((x) => x.key !== row.key)); setReviewPaperPayment(null); }} />)}<Button variant="secondary" onClick={() => setPaperPayments((rows) => [...rows, newTender(preferredAccount)])}>Add paper payment tender</Button>{paperChange.map((row) => <TenderEditor key={row.key} row={row} accounts={activeAccounts} title="Paper change given" onPatch={(patch) => { patchTender(setPaperChange, row.key, patch); setReviewPaperPayment(null); }} onRemove={() => { setPaperChange((items) => items.filter((x) => x.key !== row.key)); setReviewPaperPayment(null); }} />)}<Button variant="secondary" onClick={() => setPaperChange((rows) => [...rows, newTender(preferredAccount)])}>Add paper change</Button><Field label="Note (optional)"><Input maxLength={500} value={paperNote} onChange={(e) => setPaperNote(e.target.value)} /></Field><Button className="w-full" disabled={Boolean(pending)} onClick={preparePaperPayment}>Review paper payment</Button>{reviewPaperPayment && <div className="space-y-2 rounded-lg border border-accent p-3 text-sm"><p>Credit account by <strong>{formatCents(usdCents(reviewPaperPayment.credit.toFixed(2))!)}</strong>; new balance approximately {(summary!.balanceUsd - reviewPaperPayment.credit).toFixed(2)} USD.</p>{reviewPaperPayment.excess > 0 && <label className="flex items-start gap-2 rounded bg-warning-surface p-2"><input type="checkbox" checked={confirmPaperExcess} onChange={(e) => setConfirmPaperExcess(e.target.checked)} /><span>Keep extra ${reviewPaperPayment.excess.toFixed(2)} as customer credit. Otherwise enter paper change above.</span></label>}<Button className="w-full" disabled={postPaperPayment.isPending || Boolean(pending) || (reviewPaperPayment.excess > 0 && !confirmPaperExcess)} onClick={() => void postPaperRecoveryPayment()}>{postPaperPayment.isPending ? "Posting…" : "Confirm & record paper payment"}</Button></div>}</div></Card>}
           <Card title="Account history"><div className="divide-y divide-border">{statement.data?.entries.items.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm"><div><strong>{entry.kind.replaceAll(/([A-Z])/g, " $1").trim()}</strong><p className="text-xs text-muted">{new Date(entry.recordedAtUtc).toLocaleString()} {entry.reason && `· ${entry.reason}`}</p>{entry.effectiveAtUtc && <p className="text-xs text-muted">As of {new Date(entry.effectiveAtUtc).toLocaleDateString()}</p>}{entry.saleId && <Link href={`/returns?sale=${entry.saleId}`} className="text-xs text-accent hover:underline">View sale / return an item →</Link>}</div><div className="text-right"><span className="font-medium tabular-nums">{entry.amountUsd >= 0 ? "+" : ""}{entry.amountUsd.toFixed(2)} USD</span>{entry.kind === "AccountPayment" && entry.customerPaymentId && !correctedIds.has(entry.customerPaymentId) && <Button variant="ghost" onClick={() => { setCorrecting(entry); setCorrectionReason(""); }}>Correct</Button>}</div></div>)}{statement.data?.entries.items.length === 0 && <p className="p-5 text-sm text-muted">No account entries yet.</p>}</div></Card>
           {correcting && <Card title="Correct mistaken payment"><div className="space-y-3 p-5"><Alert tone="warning">This reverses the customer credit and the exact original native cash/Whish movements. It does not erase the payment.</Alert><p className="text-sm">Payment to reverse: {(-correcting.amountUsd).toFixed(2)} USD</p><Field label="Reason"><Input maxLength={500} value={correctionReason} onChange={(e) => setCorrectionReason(e.target.value)} /></Field><div className="flex gap-2"><Button variant="danger" disabled={correct.isPending || Boolean(pending) || !correctionReason.trim()} onClick={() => void correctPayment()}>Confirm correction</Button><Button variant="secondary" onClick={() => setCorrecting(null)}>Cancel</Button></div></div></Card>}
         </>}

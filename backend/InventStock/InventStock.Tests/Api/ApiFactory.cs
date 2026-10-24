@@ -27,9 +27,15 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
     private readonly Dictionary<string, string> _tokens = new();
     private readonly SemaphoreSlim _loginLock = new(1, 1);
+    private readonly bool _transactionReleaseEnabled;
 
-    public ApiFactory()
+    public ApiFactory() : this(transactionReleaseEnabled: true)
     {
+    }
+
+    internal ApiFactory(bool transactionReleaseEnabled)
+    {
+        _transactionReleaseEnabled = transactionReleaseEnabled;
         // The API reads configuration while composing services, which happens before any source this
         // factory could add takes effect, so the test settings have to be in the environment first.
         var settings = new Dictionary<string, string>
@@ -41,7 +47,6 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             ["Jwt__AccessTokenMinutes"] = "15",
             ["Jwt__RefreshTokenDays"] = "1",
             ["Database__MigrateOnStartup"] = "false",
-            ["INVENTSTOCK_TransactionRelease__Enabled"] = "true",
             ["Cors__AllowedOrigins__0"] = "http://localhost:3000"
         };
 
@@ -54,6 +59,11 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment(Environments.Staging);
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?>
+            {
+                ["TransactionRelease:Enabled"] = _transactionReleaseEnabled.ToString()
+            }));
 
         builder.ConfigureServices(services =>
         {

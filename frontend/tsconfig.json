@@ -34,8 +34,18 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    ".next-counter-build/types/**/*.ts",
-    ".next-counter-build/dev/types/**/*.ts"
+    ".next-playwright-smoke/types/**/*.ts",
+    ".next-playwright-smoke/dev/types/**/*.ts",
+    ".next-import-smoke/types/**/*.ts",
+    ".next-import-smoke/dev/types/**/*.ts",
+    ".next-return-smoke/types/**/*.ts",
+    ".next-return-smoke/dev/types/**/*.ts",
+    ".next-supplier-payment-smoke/types/**/*.ts",
+    ".next-supplier-payment-smoke/dev/types/**/*.ts",
+    ".next-reconciliation-smoke/types/**/*.ts",
+    ".next-reconciliation-smoke/dev/types/**/*.ts",
+    ".next-reconciliation-diag/types/**/*.ts",
+    ".next-reconciliation-diag/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

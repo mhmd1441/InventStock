@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="2be2876e-056c-4c7e-9a8d-8eb393d8d566" name="user@MOUMNEH-LAPTOP 2026-10-24 22:21:13" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:21:13.6201115+03:00" queuing="2026-10-24T22:21:13.6201121+03:00" start="2026-10-24T22:20:51.1024675+03:00" finish="2026-10-24T22:21:13.6255025+03:00" />
+  <TestSettings name="default" id="4296e4b6-334e-4d9e-9909-7be96b9c791c">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_21_13" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="05685183-e7e1-4730-9648-b829d5f3c979" testId="a45a3df1-b1f3-edd6-6b6a-f10532a40e86" testName="InventStock.Tests.Api.CustomerApiTests.Staff_can_manage_customer_payments_but_not_opening_balances_or_private_fields" computerName="MOUMNEH-LAPTOP" duration="00:00:01.5967965" startTime="2026-10-24T22:21:13.4823606+03:00" endTime="2026-10-24T22:21:13.4823730+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="05685183-e7e1-4730-9648-b829d5f3c979" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Api.CustomerApiTests.Staff_can_manage_customer_payments_but_not_opening_balances_or_private_fields" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="a45a3df1-b1f3-edd6-6b6a-f10532a40e86">
+      <Execution id="05685183-e7e1-4730-9648-b829d5f3c979" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.CustomerApiTests" name="Staff_can_manage_customer_payments_but_not_opening_balances_or_private_fields" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a45a3df1-b1f3-edd6-6b6a-f10532a40e86" executionId="05685183-e7e1-4730-9648-b829d5f3c979" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.11]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.18]   Starting:    InventStock.Tests&#xD;
+[22:21:11 INF] Created role Admin. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:11 INF] Created role Staff. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:11 INF] Created seed administrator admin@inventstock.local. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:11 INF] Seeded demo catalogue with 6 parts. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:21:11 WRN] Failed to determine the https port for redirect. {"EventId": {"Id": 3, "Name": "FailedToDeterminePort"}, "SourceContext": "Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware", "RequestId": "0HNPI0FREU2DC", "RequestPath": "/api/auth/login"}&#xD;
+[22:21:12 INF] HTTP POST /api/auth/login responded 200 in 242.5337 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DC"}&#xD;
+[22:21:12 INF] HTTP POST /api/auth/login responded 200 in 70.8072 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DD"}&#xD;
+[22:21:12 INF] HTTP POST /api/customers responded 201 in 234.6238 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DE"}&#xD;
+[22:21:12 INF] HTTP POST /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/opening-balance responded 403 in 2.1263 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DF"}&#xD;
+[22:21:12 INF] HTTP POST /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/opening-balance responded 200 in 142.1070 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DG"}&#xD;
+[22:21:12 INF] HTTP GET /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/opening-balance responded 403 in 0.4922 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DH"}&#xD;
+[22:21:13 INF] HTTP POST /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/payments responded 201 in 332.2581 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DI"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/statement responded 200 in 64.3500 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DJ"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/operations/payments/bfa6ee61-5008-4697-acd8-0bc672f0a59a responded 200 in 20.7993 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DK"}&#xD;
+[22:21:13 ERR] HTTP GET /api/customers/operations/payments/bfa6ee61-5008-4697-acd8-0bc672f0a59a responded 500 in 12.6027 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DL"}&#xD;
+InventStock.Application.Common.Exceptions.NotFoundException: Customer payment operation with identifier 'bfa6ee61-5008-4697-acd8-0bc672f0a59a' was not found.&#xD;
+   at InventStock.Infrastructure.Services.CustomerService.GetPaymentOperationAsync(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\CustomerService.cs:line 267&#xD;
+   at InventStock.Api.Controllers.CustomersController.PaymentOperation(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\CustomersController.cs:line 66&#xD;
+   at lambda_method2692(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:21:13 INF] Request GET /api/customers/operations/payments/bfa6ee61-5008-4697-acd8-0bc672f0a59a rejected: Customer payment operation with identifier 'bfa6ee61-5008-4697-acd8-0bc672f0a59a' was not found. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0FREU2DL", "RequestPath": "/api/customers/operations/payments/bfa6ee61-5008-4697-acd8-0bc672f0a59a"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/operations/payments/bfa6ee61-5008-4697-acd8-0bc672f0a59a responded 401 in 1.5041 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DM"}&#xD;
+[22:21:13 INF] HTTP POST /api/customers/payments/bede9a9a-5a8b-4317-9d09-6f3201e70b4e/corrections responded 200 in 134.3632 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DN"}&#xD;
+[22:21:13 INF] HTTP POST /api/customers/opening-balances/a7b19cd1-31fe-49de-970e-2ae0330e7c8b/corrections responded 403 in 0.3663 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DO"}&#xD;
+[22:21:13 INF] HTTP POST /api/customers/opening-balances/a7b19cd1-31fe-49de-970e-2ae0330e7c8b/corrections responded 200 in 124.2335 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DP"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/operations/opening-corrections/2f2b0138-1760-4032-a992-376bb895cfd2 responded 200 in 17.6865 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DQ"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/operations/opening-corrections/2f2b0138-1760-4032-a992-376bb895cfd2 responded 403 in 0.2946 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DR"}&#xD;
+[22:21:13 INF] HTTP GET /api/customers/2ea26039-83ad-48f5-8524-6b9d2dff2c02/opening-balance responded 200 in 37.1087 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0FREU2DS"}&#xD;
+[xUnit.net 00:00:21.99]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

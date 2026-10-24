@@ -4,6 +4,7 @@ import { usdCents, signedUsdCents, lineCents, settlementCents, excessCreditCents
 import { parseTenderDrafts, preferredTenderAccount } from "../.test-build/tender-math.js";
 import { rememberPendingSale, readPendingSale, clearPendingSale } from "../.test-build/pending-sale-operation.js";
 import { rememberPendingCustomerOperation, readPendingCustomerOperation, clearPendingCustomerOperation } from "../.test-build/pending-customer-operation.js";
+import { rememberPendingLegacyReturn, readPendingLegacyReturn, clearPendingLegacyReturn } from "../.test-build/pending-legacy-return-operation.js";
 
 const savedWindow = global.window;
 const storage = new Map();
@@ -63,4 +64,19 @@ test("sale and customer recovery records are minimal and isolated by actor", () 
   clearPendingCustomerOperation("a", sale.operationId);
   assert.equal(readPendingSale("a"), null);
   assert.equal(readPendingCustomerOperation("a"), null);
+});
+
+test("legacy return recovery stores only actor and operation and cannot cross users", () => {
+  const pending = { operationId: "33333333-3333-3333-3333-333333333333", actorId: "staff-a",
+    createdAtUtc: "2026-10-16T00:00:00Z" };
+  rememberPendingLegacyReturn(pending);
+  assert.equal(readPendingLegacyReturn("staff-b"), null);
+  assert.deepEqual(readPendingLegacyReturn("staff-a"), pending);
+  const stored = JSON.stringify([...storage.values()]);
+  for (const privateValue of ["part", "customer", "refund", "supplier", "cost", "900000"])
+    assert.equal(stored.includes(privateValue), false);
+  clearPendingLegacyReturn("staff-a", "44444444-4444-4444-4444-444444444444");
+  assert.deepEqual(readPendingLegacyReturn("staff-a"), pending);
+  clearPendingLegacyReturn("staff-a", pending.operationId);
+  assert.equal(readPendingLegacyReturn("staff-a"), null);
 });

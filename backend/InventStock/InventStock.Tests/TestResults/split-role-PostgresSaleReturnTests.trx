@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="9af817c4-e4ca-46d2-970b-166388d6bdf9" name="user@MOUMNEH-LAPTOP 2026-10-24 22:23:07" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:23:07.2272642+03:00" queuing="2026-10-24T22:23:07.2272645+03:00" start="2026-10-24T22:22:46.6824805+03:00" finish="2026-10-24T22:23:11.7876210+03:00" />
+  <TestSettings name="default" id="d970e4a0-bacc-4c76-ba09-5948cea761cb">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_23_07" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="de13b055-0345-400d-9007-646495d5bd0e" testId="54d83149-b963-5b19-ef47-1188c774f89c" testName="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Faulty_return_is_held_and_a_shortage_return_keeps_recount_warning" computerName="MOUMNEH-LAPTOP" duration="00:00:01.4932338" startTime="2026-10-24T22:23:07.1786244+03:00" endTime="2026-10-24T22:23:07.1786385+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="de13b055-0345-400d-9007-646495d5bd0e" />
+    <UnitTestResult executionId="7c9d3aa0-2d65-4992-bb95-0d074a71f390" testId="5553dd6b-34c0-6eda-fdf3-e02f0a55b1e0" testName="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Competing_last_unit_returns_have_one_winner" computerName="MOUMNEH-LAPTOP" duration="00:00:02.3210367" startTime="2026-10-24T22:23:11.4797813+03:00" endTime="2026-10-24T22:23:11.4797814+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7c9d3aa0-2d65-4992-bb95-0d074a71f390" />
+    <UnitTestResult executionId="197c19e4-2622-4838-bfa4-af434fb28ef5" testId="314120cf-d914-7ed7-fd2f-e829b9386f45" testName="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Failure_after_sql_writes_rolls_back_return_stock_and_cash" computerName="MOUMNEH-LAPTOP" duration="00:00:00.1960745" startTime="2026-10-24T22:23:11.6763390+03:00" endTime="2026-10-24T22:23:11.6763393+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="197c19e4-2622-4838-bfa4-af434fb28ef5" />
+    <UnitTestResult executionId="ddf103e7-3883-47d5-b470-cd5b3eb3892a" testId="5eaabed8-caef-d85f-50a6-ba507c3cd1db" testName="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Named_customer_can_choose_whish_refund_while_debt_remains_or_reduce_debt" computerName="MOUMNEH-LAPTOP" duration="00:00:00.6448399" startTime="2026-10-24T22:23:07.8244248+03:00" endTime="2026-10-24T22:23:07.8244250+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ddf103e7-3883-47d5-b470-cd5b3eb3892a" />
+    <UnitTestResult executionId="3300de92-52e8-41d6-bb32-bac4e3d13462" testId="7f39410c-71bf-c5fa-6d44-8faff95c423c" testName="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Partial_returns_refund_exact_posted_cents_and_reject_overreturn" computerName="MOUMNEH-LAPTOP" duration="00:00:01.3334950" startTime="2026-10-24T22:23:09.1583368+03:00" endTime="2026-10-24T22:23:09.1583370+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3300de92-52e8-41d6-bb32-bac4e3d13462" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Partial_returns_refund_exact_posted_cents_and_reject_overreturn" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="7f39410c-71bf-c5fa-6d44-8faff95c423c">
+      <Execution id="3300de92-52e8-41d6-bb32-bac4e3d13462" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSaleReturnTests" name="Partial_returns_refund_exact_posted_cents_and_reject_overreturn" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Named_customer_can_choose_whish_refund_while_debt_remains_or_reduce_debt" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="5eaabed8-caef-d85f-50a6-ba507c3cd1db">
+      <Execution id="ddf103e7-3883-47d5-b470-cd5b3eb3892a" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSaleReturnTests" name="Named_customer_can_choose_whish_refund_while_debt_remains_or_reduce_debt" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Competing_last_unit_returns_have_one_winner" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="5553dd6b-34c0-6eda-fdf3-e02f0a55b1e0">
+      <Execution id="7c9d3aa0-2d65-4992-bb95-0d074a71f390" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSaleReturnTests" name="Competing_last_unit_returns_have_one_winner" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Failure_after_sql_writes_rolls_back_return_stock_and_cash" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="314120cf-d914-7ed7-fd2f-e829b9386f45">
+      <Execution id="197c19e4-2622-4838-bfa4-af434fb28ef5" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSaleReturnTests" name="Failure_after_sql_writes_rolls_back_return_stock_and_cash" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSaleReturnTests.Faulty_return_is_held_and_a_shortage_return_keeps_recount_warning" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="54d83149-b963-5b19-ef47-1188c774f89c">
+      <Execution id="de13b055-0345-400d-9007-646495d5bd0e" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSaleReturnTests" name="Faulty_return_is_held_and_a_shortage_return_keeps_recount_warning" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="54d83149-b963-5b19-ef47-1188c774f89c" executionId="de13b055-0345-400d-9007-646495d5bd0e" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5553dd6b-34c0-6eda-fdf3-e02f0a55b1e0" executionId="7c9d3aa0-2d65-4992-bb95-0d074a71f390" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="314120cf-d914-7ed7-fd2f-e829b9386f45" executionId="197c19e4-2622-4838-bfa4-af434fb28ef5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="5eaabed8-caef-d85f-50a6-ba507c3cd1db" executionId="ddf103e7-3883-47d5-b470-cd5b3eb3892a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7f39410c-71bf-c5fa-6d44-8faff95c423c" executionId="3300de92-52e8-41d6-bb32-bac4e3d13462" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="5" executed="5" passed="5" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.16]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Starting:    InventStock.Tests&#xD;
+[xUnit.net 00:00:24.64]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

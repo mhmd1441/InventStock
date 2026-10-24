@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentValidation;
 using InventStock.Application.Common;
 using InventStock.Application.Common.Exceptions;
+using InventStock.Application.DTOs.Cash;
 using InventStock.Application.DTOs.Sales;
 using InventStock.Application.DTOs.Stock;
 using InventStock.Application.Interfaces;
@@ -43,17 +44,14 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
         if (string.IsNullOrWhiteSpace(configured)) throw new InvalidOperationException("Real PostgreSQL is required: set INVENTSTOCK_TEST_POSTGRES to disposable inventstock_test.");
         var builder = new NpgsqlConnectionStringBuilder(configured);
         if (builder.Database != "inventstock_test") throw new InvalidOperationException("Only disposable inventstock_test is allowed.");
-        await TestPostgresExtensions.EnsurePublicAsync(configured);
+        await TestPostgresSchemas.EnsurePublicAsync();
         builder.SearchPath = schema + ",public";
         builder.CommandTimeout = 15;
         builder.Timeout = 10;
         connection = builder.ConnectionString;
-        await using var db = Open();
-#pragma warning disable EF1002
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
-#pragma warning restore EF1002
+        await TestPostgresSchemas.MigrateAsync(schema);
         created = true;
-        await db.Database.MigrateAsync();
+        await using var db = Open();
         var role = new ApplicationRole(RoleNames.Staff) { Id = Guid.NewGuid() };
         db.Roles.Add(role);
         var adminRole = new ApplicationRole(RoleNames.Admin) { Id = Guid.NewGuid() };
@@ -82,10 +80,7 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
     public async Task DisposeAsync()
     {
         if (!created) return;
-        await using var db = Open();
-#pragma warning disable EF1002
-        await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE");
-#pragma warning restore EF1002
+        await TestPostgresSchemas.DropAsync(schema);
     }
     public SaleService Service(AppDbContext db, IStockNotifier? notifier = null, Guid? actor = null)
     {
@@ -101,7 +96,23 @@ public sealed class PostgresSaleFixture : IAsyncLifetime
         current.FullName.Returns("Counter staff");
         return new(db, current);
     }
+    public SaleExchangeService ExchangeService(AppDbContext db, Guid? actor = null,
+        IStockNotifier? notifier = null)
+    {
+        var current = Substitute.For<ICurrentUserService>();
+        current.UserId.Returns(actor ?? Actor);
+        current.FullName.Returns("Counter staff");
+        return new(db, current, notifier ?? Substitute.For<IStockNotifier>(),
+            NullLogger<SaleExchangeService>.Instance);
+    }
     public CustomerService CustomerService(AppDbContext db, Guid? actor = null)
+    {
+        var user = Substitute.For<ICurrentUserService>();
+        user.UserId.Returns(actor ?? Actor);
+        user.FullName.Returns("Counter staff");
+        return new(db, user);
+    }
+    public CashService CashService(AppDbContext db, Guid? actor = null)
     {
         var user = Substitute.For<ICurrentUserService>();
         user.UserId.Returns(actor ?? Actor);
@@ -143,6 +154,107 @@ public sealed class PostgresSaleTests(PostgresSaleFixture fixture) : IClassFixtu
     {
         await using var db = fixture.Open(interceptors);
         return await fixture.Service(db, notifier, actor).PostAsync(request);
+    }
+
+    [Fact]
+    public async Task Admin_tender_account_correction_is_idempotent_and_moves_only_cash_accounts()
+    {
+        var part = await fixture.Part(2);
+        var sale = await Post(fixture.CashSale(part));
+        var originalTender = sale.Tenders.Single();
+        var request = new CorrectSaleTenderAccountRequest
+        {
+            OperationId = Guid.NewGuid(), CorrectCashAccountId = fixture.Accounts["WHISH"].Id,
+            Reason = "Customer paid through Whish, not the physical USD safe."
+        };
+        await using var deniedDb = fixture.Open();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service(deniedDb)
+            .CorrectTenderAccountAsync(originalTender.Id, request));
+
+        await using var db = fixture.Open();
+        var service = fixture.Service(db, actor: fixture.AdminActor);
+        var correction = await service.CorrectTenderAccountAsync(originalTender.Id, request);
+        var replay = await service.CorrectTenderAccountAsync(originalTender.Id, request);
+        Assert.Equal(correction.Id, replay.Id);
+        Assert.Equal(originalTender.NativeAmount, correction.NativeAmount);
+        Assert.Equal(originalTender.Currency, correction.Currency);
+        Assert.Equal(sale.TotalUsd, (await db.Sales.SingleAsync(x => x.Id == sale.Id)).TotalUsd);
+        var cash = await db.CashMovements.Where(x => x.SaleTenderAccountCorrectionId == correction.Id).ToListAsync();
+        Assert.Equal(2, cash.Count);
+        Assert.Contains(cash, x => x.CashAccountId == originalTender.CashAccountId && x.AmountChange == -10m);
+        Assert.Contains(cash, x => x.CashAccountId == fixture.Accounts["WHISH"].Id && x.AmountChange == 10m);
+        var reversal = await service.ReverseTenderAccountCorrectionAsync(correction.Id,
+            new ReverseSaleTenderAccountCorrectionRequest { OperationId = Guid.NewGuid(), Reason = "It was cash after all." });
+        var reversalCash = await db.CashMovements.Where(x => x.SaleTenderAccountCorrectionReversalId == reversal.Id).ToListAsync();
+        Assert.Contains(reversalCash, x => x.CashAccountId == fixture.Accounts["WHISH"].Id && x.AmountChange == -10m);
+        Assert.Contains(reversalCash, x => x.CashAccountId == originalTender.CashAccountId && x.AmountChange == 10m);
+        await Assert.ThrowsAsync<ConflictException>(() => service.CorrectTenderAccountAsync(originalTender.Id,
+            new CorrectSaleTenderAccountRequest { OperationId = request.OperationId, CorrectCashAccountId = fixture.Accounts["USD"].Id, Reason = request.Reason }));
+    }
+
+    [Fact]
+    public async Task Tender_account_correction_after_close_keeps_close_immutable_and_is_post_close()
+    {
+        var part = await fixture.Part(2);
+        var sale = await Post(fixture.CashSale(part));
+        var account = fixture.Accounts["USD"];
+        await using var db = fixture.Open();
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Beirut");
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
+        var cash = fixture.CashService(db, fixture.AdminActor);
+        var close = await cash.ReconcileAsync(account.Id, new PostCashReconciliationRequest
+        {
+            OperationId = Guid.NewGuid(), BusinessDate = today, OpeningAmount = 0m,
+            CountedAmount = 10m, DifferenceReason = "Fixture count captures the posted cash.",
+            CountedAtUtc = DateTime.UtcNow
+        });
+        var correction = await fixture.Service(db, actor: fixture.AdminActor).CorrectTenderAccountAsync(sale.Tenders.Single().Id,
+            new CorrectSaleTenderAccountRequest { OperationId = Guid.NewGuid(), CorrectCashAccountId = fixture.Accounts["WHISH"].Id, Reason = "Wrong account" });
+        Assert.Equal(close.CountedAmount, (await db.CashReconciliations.SingleAsync(x => x.Id == close.Id)).CountedAmount);
+        var day = await cash.GetReconciliationDayAsync(today);
+        var status = day.Accounts.Single(x => x.CashAccountId == account.Id);
+        Assert.True(status.RequiresExplicitCorrection);
+        Assert.Equal(-10m, status.PostCloseNetChange);
+        Assert.Equal(1, status.PostCloseMovementCount);
+        Assert.NotEqual(Guid.Empty, correction.Id);
+    }
+
+    [Fact]
+    public async Task Paper_recovery_sale_uses_normal_posting_rules_and_retains_a_unique_paper_record()
+    {
+        var part = await fixture.Part(2);
+        var occurred = DateTime.UtcNow.AddHours(-2);
+        var request = new PostPaperRecoverySaleRequest
+        {
+            Sale = fixture.CashSale(part), OriginalOccurredAtUtc = occurred,
+            PaperReference = "PAPER-SALE-" + Guid.NewGuid().ToString("N"),
+            Reason = "Counter was offline.", OriginalSellerNote = "Uncle's handwritten book"
+        };
+        await using var db = fixture.Open();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service(db).PostPaperRecoveryAsync(request));
+        var posted = await fixture.Service(db, actor: fixture.AdminActor).PostPaperRecoveryAsync(request);
+        Assert.Equal(new DateTime(occurred.Ticks - occurred.Ticks % 10, DateTimeKind.Utc), posted.PostedAtUtc);
+        Assert.Equal(1, await db.StockMovements.CountAsync(x => x.PartId == part.Id && x.QuantityChange == -1));
+        Assert.Equal(10m, await db.CashMovements.Where(x => x.SaleTenderId == posted.Tenders.Single().Id).SumAsync(x => x.AmountChange));
+        var evidence = await db.PaperRecoveryEntries.SingleAsync(x => x.SaleId == posted.Id);
+        Assert.Equal(request.PaperReference, evidence.PaperReference);
+        Assert.Equal(fixture.AdminActor, evidence.EnteredByUserId);
+        await Assert.ThrowsAsync<ConflictException>(() => fixture.Service(db, actor: fixture.AdminActor).PostPaperRecoveryAsync(request with
+        {
+            Sale = fixture.CashSale(part),
+        }));
+    }
+
+    [Fact]
+    public async Task Posted_sales_receive_unique_internal_receipt_numbers()
+    {
+        var part = await fixture.Part(3);
+        var first = await Post(fixture.CashSale(part));
+        var second = await Post(fixture.CashSale(part));
+        Assert.True(first.ReceiptNumber >= 100000);
+        Assert.Equal(first.ReceiptNumber + 1, second.ReceiptNumber);
+        await using var db = fixture.Open();
+        Assert.Equal(first.ReceiptNumber, (await db.Sales.SingleAsync(x => x.Id == first.Id)).ReceiptNumber);
     }
 
     [Fact]

@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="d94de2a6-fe70-47fc-a60d-fa07c8ab1aeb" name="user@MOUMNEH-LAPTOP 2026-10-24 22:25:03" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:25:03.7128918+03:00" queuing="2026-10-24T22:25:03.7128920+03:00" start="2026-10-24T22:24:43.2067917+03:00" finish="2026-10-24T22:25:03.7182447+03:00" />
+  <TestSettings name="default" id="b0ab8ddd-27ca-4c65-8b83-f3d782ef429f">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_25_03" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="c9c5d469-8e6d-43a5-9ee4-a016d882b9e6" testId="a93759f7-61cd-ff7c-ff34-5bb1a39bff31" testName="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests.Supplier_payment_fee_replay_and_reversal_keep_native_cash_lines_separate" computerName="MOUMNEH-LAPTOP" duration="00:00:00.9557402" startTime="2026-10-24T22:25:03.4373262+03:00" endTime="2026-10-24T22:25:03.4373393+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c9c5d469-8e6d-43a5-9ee4-a016d882b9e6" />
+    <UnitTestResult executionId="5a17ada7-a379-4d5e-b337-fe9dfdcccaca" testId="f775c466-b1f4-7fe2-c7d1-15379b5a1f9d" testName="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests.Lbp_supplier_payment_preserves_native_amount_and_is_in_business_day_expected_cash" computerName="MOUMNEH-LAPTOP" duration="00:00:00.1405057" startTime="2026-10-24T22:25:03.5787264+03:00" endTime="2026-10-24T22:25:03.5787267+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5a17ada7-a379-4d5e-b337-fe9dfdcccaca" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests.Lbp_supplier_payment_preserves_native_amount_and_is_in_business_day_expected_cash" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="f775c466-b1f4-7fe2-c7d1-15379b5a1f9d">
+      <Execution id="5a17ada7-a379-4d5e-b337-fe9dfdcccaca" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests" name="Lbp_supplier_payment_preserves_native_amount_and_is_in_business_day_expected_cash" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests.Supplier_payment_fee_replay_and_reversal_keep_native_cash_lines_separate" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="a93759f7-61cd-ff7c-ff34-5bb1a39bff31">
+      <Execution id="c9c5d469-8e6d-43a5-9ee4-a016d882b9e6" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests" name="Supplier_payment_fee_replay_and_reversal_keep_native_cash_lines_separate" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a93759f7-61cd-ff7c-ff34-5bb1a39bff31" executionId="c9c5d469-8e6d-43a5-9ee4-a016d882b9e6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f775c466-b1f4-7fe2-c7d1-15379b5a1f9d" executionId="5a17ada7-a379-4d5e-b337-fe9dfdcccaca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.08]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.14]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.15]   Starting:    InventStock.Tests&#xD;
+[xUnit.net 00:00:20.05]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

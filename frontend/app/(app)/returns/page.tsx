@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { usePostSaleReturn, useReturnableSale, useSalePaymentAccounts, useSaleSearch } from "@/lib/queries";
@@ -156,7 +157,7 @@ export default function ReturnsPage() {
   };
 
   return <div className="space-y-6">
-    <div><h1 className="text-xl font-semibold">Linked return</h1><p className="text-sm text-muted">Find the original posted sale. Paper-era returns and exchanges are not available in this screen yet.</p></div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h1 className="text-xl font-semibold">Linked return</h1><p className="text-sm text-muted">Find the original posted sale so quantity and refund limits remain exact.</p></div><Link href="/returns/legacy" className="rounded-lg border border-border px-3.5 py-2 text-sm font-medium hover:bg-surface-muted">Sold before InventStock</Link></div>
     {pending && <Alert tone="warning"><div className="space-y-2"><p>A return may already have posted. Do not create another one until you check its operation status.</p><p className="text-xs">Operation {pending.operationId}</p><div className="flex gap-2"><Button variant="secondary" onClick={() => void checkPending(pending)}>Check result</Button><Button variant="ghost" onClick={() => { if (user && window.confirm("Clear only after confirming the return did not commit. A late commit may still appear.")) { clearPendingReturn(user.id, pending.operationId); setPending(null); setReview(null); setOperationId(crypto.randomUUID()); } }}>Clear attempt</Button></div>{recoveryMessage && <p>{recoveryMessage}</p>}</div></Alert>}
     {error && <Alert>{error}</Alert>}
     {posted && <Alert tone="success">Return recorded: {dollars(posted.totalUsd)}. Operation {posted.operationId}. Refresh the original sale before another return.</Alert>}

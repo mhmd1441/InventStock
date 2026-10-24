@@ -20,6 +20,43 @@ public sealed class CashController(ICashService cash) : ControllerBase
         CancellationToken cancellationToken) =>
         Ok(await cash.SetOpeningBalanceAsync(accountId, request, cancellationToken));
 
+    [HttpGet("reconciliation")]
+    public async Task<ActionResult<CashReconciliationDayDto>> Reconciliation([FromQuery] DateOnly businessDate,
+        CancellationToken cancellationToken) => Ok(await cash.GetReconciliationDayAsync(businessDate, cancellationToken));
+
+    [HttpPost("accounts/{accountId:guid}/reconciliation")]
+    public async Task<ActionResult<CashReconciliationDto>> Reconcile(Guid accountId, PostCashReconciliationRequest request,
+        CancellationToken cancellationToken) => Ok(await cash.ReconcileAsync(accountId, request, cancellationToken));
+
+    [HttpPost("reconciliations/{reconciliationId:guid}/correction")]
+    public async Task<ActionResult<CashReconciliationCorrectionDto>> CorrectReconciliation(Guid reconciliationId,
+        PostCashReconciliationCorrectionRequest request, CancellationToken cancellationToken) =>
+        Ok(await cash.CorrectReconciliationAsync(reconciliationId, request, cancellationToken));
+
+    [HttpGet("supplier-payments")]
+    public async Task<ActionResult<IReadOnlyList<SupplierPaymentDto>>> SupplierPayments([FromQuery] int year, [FromQuery] int month,
+        CancellationToken cancellationToken) => Ok(await cash.ListSupplierPaymentsAsync(year, month, cancellationToken));
+
+    [HttpPost("supplier-payments")]
+    public async Task<ActionResult<SupplierPaymentDto>> SupplierPayment(PostSupplierPaymentRequest request,
+        CancellationToken cancellationToken) => Ok(await cash.PostSupplierPaymentAsync(request, cancellationToken));
+
+    [HttpPost("supplier-payments/{paymentId:guid}/reverse")]
+    public async Task<ActionResult<SupplierPaymentDto>> ReverseSupplierPayment(Guid paymentId, ReverseSupplierPaymentRequest request,
+        CancellationToken cancellationToken) => Ok(await cash.ReverseSupplierPaymentAsync(paymentId, request, cancellationToken));
+
+    [HttpGet("transfers")]
+    public async Task<ActionResult<IReadOnlyList<CashTransferDto>>> Transfers([FromQuery] int year, [FromQuery] int month,
+        CancellationToken cancellationToken) => Ok(await cash.ListTransfersAsync(year, month, cancellationToken));
+
+    [HttpPost("transfers")]
+    public async Task<ActionResult<CashTransferDto>> Transfer(PostCashTransferRequest request,
+        CancellationToken cancellationToken) => Ok(await cash.PostTransferAsync(request, cancellationToken));
+
+    [HttpPost("transfers/{transferId:guid}/reverse")]
+    public async Task<ActionResult<CashTransferDto>> ReverseTransfer(Guid transferId, ReverseCashTransferRequest request,
+        CancellationToken cancellationToken) => Ok(await cash.ReverseTransferAsync(transferId, request, cancellationToken));
+
     [HttpGet("categories")]
     public async Task<ActionResult<IReadOnlyList<ExpenseCategoryDto>>> Categories([FromQuery] bool includeInactive,
         CancellationToken cancellationToken) => Ok(await cash.ListCategoriesAsync(includeInactive, cancellationToken));

@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="dd361642-92d2-4669-a619-12719af5f706" name="user@MOUMNEH-LAPTOP 2026-10-24 22:24:42" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:24:42.2581402+03:00" queuing="2026-10-24T22:24:42.2581404+03:00" start="2026-10-24T22:24:21.2613822+03:00" finish="2026-10-24T22:24:42.4036122+03:00" />
+  <TestSettings name="default" id="b7a69668-cb0d-4acf-8431-7ea81f989972">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_24_42" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="3ef2ef05-26ba-4cff-9127-0f095d7db683" testId="fe890652-48d8-df21-4ec0-c3b8c676f2ff" testName="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Previous_close_becomes_next_day_opening_without_rewriting_history" computerName="MOUMNEH-LAPTOP" duration="00:00:00.2692470" startTime="2026-10-24T22:24:42.2939438+03:00" endTime="2026-10-24T22:24:42.2939440+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3ef2ef05-26ba-4cff-9127-0f095d7db683" />
+    <UnitTestResult executionId="a0b06552-77c6-4f52-bd7f-63d08a0eb162" testId="13e3221d-cce1-9288-b161-2b87b3940b25" testName="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.End_of_day_close_supersedes_a_partial_close_without_using_a_correction" computerName="MOUMNEH-LAPTOP" duration="00:00:00.2704251" startTime="2026-10-24T22:24:41.4659566+03:00" endTime="2026-10-24T22:24:41.4659567+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a0b06552-77c6-4f52-bd7f-63d08a0eb162" />
+    <UnitTestResult executionId="12abfee3-f1e9-473c-a588-d537dafc7117" testId="849e1d64-aa4d-60fb-1462-ecb32c8d6067" testName="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Beirut_day_close_snapshots_difference_replays_and_flags_late_same_day_entries" computerName="MOUMNEH-LAPTOP" duration="00:00:00.5575760" startTime="2026-10-24T22:24:42.0240085+03:00" endTime="2026-10-24T22:24:42.0240087+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="12abfee3-f1e9-473c-a588-d537dafc7117" />
+    <UnitTestResult executionId="191fa14f-cc13-4148-bd86-545eea45ee4f" testId="c7c80c24-00b9-e6b7-8427-9358d35bd1fa" testName="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Current_day_close_is_marked_partial_and_future_days_are_rejected" computerName="MOUMNEH-LAPTOP" duration="00:00:00.4651689" startTime="2026-10-24T22:24:41.1945649+03:00" endTime="2026-10-24T22:24:41.1945776+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="191fa14f-cc13-4148-bd86-545eea45ee4f" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.End_of_day_close_supersedes_a_partial_close_without_using_a_correction" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="13e3221d-cce1-9288-b161-2b87b3940b25">
+      <Execution id="a0b06552-77c6-4f52-bd7f-63d08a0eb162" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests" name="End_of_day_close_supersedes_a_partial_close_without_using_a_correction" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Current_day_close_is_marked_partial_and_future_days_are_rejected" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="c7c80c24-00b9-e6b7-8427-9358d35bd1fa">
+      <Execution id="191fa14f-cc13-4148-bd86-545eea45ee4f" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests" name="Current_day_close_is_marked_partial_and_future_days_are_rejected" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Previous_close_becomes_next_day_opening_without_rewriting_history" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="fe890652-48d8-df21-4ec0-c3b8c676f2ff">
+      <Execution id="3ef2ef05-26ba-4cff-9127-0f095d7db683" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests" name="Previous_close_becomes_next_day_opening_without_rewriting_history" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests.Beirut_day_close_snapshots_difference_replays_and_flags_late_same_day_entries" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="849e1d64-aa4d-60fb-1462-ecb32c8d6067">
+      <Execution id="12abfee3-f1e9-473c-a588-d537dafc7117" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCashReconciliationTests" name="Beirut_day_close_snapshots_difference_replays_and_flags_late_same_day_entries" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="fe890652-48d8-df21-4ec0-c3b8c676f2ff" executionId="3ef2ef05-26ba-4cff-9127-0f095d7db683" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="13e3221d-cce1-9288-b161-2b87b3940b25" executionId="a0b06552-77c6-4f52-bd7f-63d08a0eb162" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="849e1d64-aa4d-60fb-1462-ecb32c8d6067" executionId="12abfee3-f1e9-473c-a588-d537dafc7117" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7c80c24-00b9-e6b7-8427-9358d35bd1fa" executionId="191fa14f-cc13-4148-bd86-545eea45ee4f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.16]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Starting:    InventStock.Tests&#xD;
+[xUnit.net 00:00:20.68]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

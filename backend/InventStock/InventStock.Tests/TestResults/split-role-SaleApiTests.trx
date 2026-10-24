@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="fe6bb1a1-16c6-46a2-8c6d-760dcaa769b5" name="user@MOUMNEH-LAPTOP 2026-10-24 22:22:13" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:22:13.3671058+03:00" queuing="2026-10-24T22:22:13.3671061+03:00" start="2026-10-24T22:21:39.9707954+03:00" finish="2026-10-24T22:22:15.3913902+03:00" />
+  <TestSettings name="default" id="dab4b409-d294-4af2-a488-c98ad8041dab">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_22_13" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="4160f1bd-3c13-4963-b804-b4c2bb4cee0c" testId="57822aeb-c02e-c60e-6563-f5151b04c91e" testName="InventStock.Tests.Api.SaleApiTests.Staff_legacy_refund_is_public_safe_actor_scoped_and_audited" computerName="MOUMNEH-LAPTOP" duration="00:00:00.1539661" startTime="2026-10-24T22:22:14.1711858+03:00" endTime="2026-10-24T22:22:14.1711859+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4160f1bd-3c13-4963-b804-b4c2bb4cee0c" />
+    <UnitTestResult executionId="86a5069c-1b5b-4c41-af18-28458b9bbd38" testId="6d153db7-b679-f0e2-accc-830cf95b9917" testName="InventStock.Tests.Api.SaleApiTests.Staff_shortage_sale_is_flagged_and_catalogue_requires_recount" computerName="MOUMNEH-LAPTOP" duration="00:00:00.2801412" startTime="2026-10-24T22:22:13.5625349+03:00" endTime="2026-10-24T22:22:13.5625353+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="86a5069c-1b5b-4c41-af18-28458b9bbd38" />
+    <UnitTestResult executionId="55c03263-90dc-46e5-807a-a1d16e7b2992" testId="17304f83-5a98-a0a3-8d9b-7441de9e6c15" testName="InventStock.Tests.Api.SaleApiTests.Staff_can_find_older_sales_by_date_customer_part_and_amount_without_private_fields" computerName="MOUMNEH-LAPTOP" duration="00:00:00.4537027" startTime="2026-10-24T22:22:14.0167481+03:00" endTime="2026-10-24T22:22:14.0167484+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="55c03263-90dc-46e5-807a-a1d16e7b2992" />
+    <UnitTestResult executionId="bde1995d-f14c-4560-a55a-4efd2dad6095" testId="7ed006ff-c22a-b040-efb7-b3b3bd21a790" testName="InventStock.Tests.Api.SaleApiTests.Staff_linked_refund_is_public_safe_and_actor_scoped" computerName="MOUMNEH-LAPTOP" duration="00:00:00.6677089" startTime="2026-10-24T22:22:14.8398325+03:00" endTime="2026-10-24T22:22:14.8398327+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="bde1995d-f14c-4560-a55a-4efd2dad6095" />
+    <UnitTestResult executionId="afc496e7-b6cb-4c36-ae90-bf2b3c26d036" testId="f83250d9-8131-a0db-959d-1539f659408a" testName="InventStock.Tests.Api.SaleApiTests.Staff_can_post_and_recover_a_public_sale_but_cannot_access_cash_administration" computerName="MOUMNEH-LAPTOP" duration="00:00:00.4246541" startTime="2026-10-24T22:22:15.2652259+03:00" endTime="2026-10-24T22:22:15.2652262+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="afc496e7-b6cb-4c36-ae90-bf2b3c26d036" />
+    <UnitTestResult executionId="6085e69c-f102-4bdd-8680-db6473d567b0" testId="1561f8b7-fce9-1924-b81f-9111b8bf4fa6" testName="InventStock.Tests.Api.SaleApiTests.Admin_exception_review_combines_returns_and_stock_exceptions_but_denies_staff" computerName="MOUMNEH-LAPTOP" duration="00:00:01.4378224" startTime="2026-10-24T22:22:13.2588915+03:00" endTime="2026-10-24T22:22:13.2589084+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6085e69c-f102-4bdd-8680-db6473d567b0" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Staff_legacy_refund_is_public_safe_actor_scoped_and_audited" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="57822aeb-c02e-c60e-6563-f5151b04c91e">
+      <Execution id="4160f1bd-3c13-4963-b804-b4c2bb4cee0c" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Staff_legacy_refund_is_public_safe_actor_scoped_and_audited" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Staff_linked_refund_is_public_safe_and_actor_scoped" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="7ed006ff-c22a-b040-efb7-b3b3bd21a790">
+      <Execution id="bde1995d-f14c-4560-a55a-4efd2dad6095" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Staff_linked_refund_is_public_safe_and_actor_scoped" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Staff_can_post_and_recover_a_public_sale_but_cannot_access_cash_administration" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="f83250d9-8131-a0db-959d-1539f659408a">
+      <Execution id="afc496e7-b6cb-4c36-ae90-bf2b3c26d036" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Staff_can_post_and_recover_a_public_sale_but_cannot_access_cash_administration" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Admin_exception_review_combines_returns_and_stock_exceptions_but_denies_staff" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="1561f8b7-fce9-1924-b81f-9111b8bf4fa6">
+      <Execution id="6085e69c-f102-4bdd-8680-db6473d567b0" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Admin_exception_review_combines_returns_and_stock_exceptions_but_denies_staff" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Staff_shortage_sale_is_flagged_and_catalogue_requires_recount" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="6d153db7-b679-f0e2-accc-830cf95b9917">
+      <Execution id="86a5069c-1b5b-4c41-af18-28458b9bbd38" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Staff_shortage_sale_is_flagged_and_catalogue_requires_recount" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Api.SaleApiTests.Staff_can_find_older_sales_by_date_customer_part_and_amount_without_private_fields" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="17304f83-5a98-a0a3-8d9b-7441de9e6c15">
+      <Execution id="55c03263-90dc-46e5-807a-a1d16e7b2992" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Api.SaleApiTests" name="Staff_can_find_older_sales_by_date_customer_part_and_amount_without_private_fields" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="57822aeb-c02e-c60e-6563-f5151b04c91e" executionId="4160f1bd-3c13-4963-b804-b4c2bb4cee0c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6d153db7-b679-f0e2-accc-830cf95b9917" executionId="86a5069c-1b5b-4c41-af18-28458b9bbd38" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="17304f83-5a98-a0a3-8d9b-7441de9e6c15" executionId="55c03263-90dc-46e5-807a-a1d16e7b2992" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7ed006ff-c22a-b040-efb7-b3b3bd21a790" executionId="bde1995d-f14c-4560-a55a-4efd2dad6095" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f83250d9-8131-a0db-959d-1539f659408a" executionId="afc496e7-b6cb-4c36-ae90-bf2b3c26d036" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="1561f8b7-fce9-1924-b81f-9111b8bf4fa6" executionId="6085e69c-f102-4bdd-8680-db6473d567b0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="6" executed="6" passed="6" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:03.67]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:03.75]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:03.75]   Starting:    InventStock.Tests&#xD;
+[22:22:11 INF] Created role Admin. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:22:11 INF] Created role Staff. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:22:11 INF] Created seed administrator admin@inventstock.local. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:22:11 INF] Seeded demo catalogue with 6 parts. {"SourceContext": "InventStock.Infrastructure.Data.Seed.DatabaseSeeder"}&#xD;
+[22:22:11 WRN] The query uses the 'First'/'FirstOrDefault' operator without 'OrderBy' and filter operators. This may lead to unpredictable results. {"EventId": {"Id": 10103, "Name": "Microsoft.EntityFrameworkCore.Query.FirstWithoutOrderByAndFilterWarning"}, "SourceContext": "Microsoft.EntityFrameworkCore.Query"}&#xD;
+[22:22:11 WRN] Failed to determine the https port for redirect. {"EventId": {"Id": 3, "Name": "FailedToDeterminePort"}, "SourceContext": "Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware", "RequestId": "0HNPI0GDB9HCM", "RequestPath": "/api/auth/login"}&#xD;
+[22:22:12 INF] HTTP POST /api/auth/login responded 200 in 182.1629 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCM"}&#xD;
+[22:22:12 INF] HTTP POST /api/sales responded 201 in 640.1298 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCN"}&#xD;
+[22:22:13 INF] HTTP POST /api/sale-returns/legacy responded 201 in 237.6168 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCO"}&#xD;
+[22:22:13 INF] HTTP GET /api/admin/transaction-exceptions responded 403 in 2.1551 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCP"}&#xD;
+[22:22:13 INF] HTTP POST /api/auth/login responded 200 in 64.7330 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCQ"}&#xD;
+[22:22:13 INF] HTTP GET /api/admin/transaction-exceptions responded 200 in 126.9507 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCR"}&#xD;
+[22:22:13 INF] HTTP GET /api/admin/transaction-exceptions responded 200 in 16.9168 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCS"}&#xD;
+[22:22:13 INF] HTTP POST /api/sales responded 201 in 97.8013 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCT"}&#xD;
+[22:22:13 INF] HTTP GET /api/parts/7aa5379e-0ca6-4f94-af2c-1270cb894dcd responded 200 in 24.6090 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCU"}&#xD;
+[22:22:13 INF] HTTP POST /api/parts/7aa5379e-0ca6-4f94-af2c-1270cb894dcd/stock/count responded 201 in 120.8970 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HCV"}&#xD;
+[22:22:13 INF] HTTP GET /api/parts/7aa5379e-0ca6-4f94-af2c-1270cb894dcd responded 200 in 6.5450 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD0"}&#xD;
+[22:22:13 INF] HTTP POST /api/sales responded 201 in 169.8386 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD1"}&#xD;
+[22:22:13 INF] HTTP POST /api/sales responded 201 in 120.5068 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD2"}&#xD;
+[22:22:13 INF] HTTP GET /api/sales/search responded 200 in 56.5588 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD3"}&#xD;
+[22:22:13 INF] HTTP GET /api/sales/search responded 200 in 24.8953 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD4"}&#xD;
+[22:22:14 INF] HTTP GET /api/sales/search responded 200 in 20.0581 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD5"}&#xD;
+[22:22:14 INF] HTTP POST /api/sale-returns/legacy responded 201 in 58.8614 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD6"}&#xD;
+[22:22:14 INF] HTTP GET /api/sale-returns/legacy/operations/de6a0dcd-c2be-4dcb-8126-2aaf9df605be responded 200 in 42.0693 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD7"}&#xD;
+[22:22:14 ERR] HTTP GET /api/sale-returns/legacy/operations/de6a0dcd-c2be-4dcb-8126-2aaf9df605be responded 500 in 11.5667 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD8"}&#xD;
+InventStock.Application.Common.Exceptions.NotFoundException: Sold-before-InventStock return operation with identifier 'de6a0dcd-c2be-4dcb-8126-2aaf9df605be' was not found.&#xD;
+   at InventStock.Infrastructure.Services.SaleReturnService.GetLegacyOperationAsync(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleReturnService.cs:line 112&#xD;
+   at InventStock.Api.Controllers.SaleReturnsController.LegacyOperation(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\SaleReturnsController.cs:line 39&#xD;
+   at lambda_method3543(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:22:14 INF] Request GET /api/sale-returns/legacy/operations/de6a0dcd-c2be-4dcb-8126-2aaf9df605be rejected: Sold-before-InventStock return operation with identifier 'de6a0dcd-c2be-4dcb-8126-2aaf9df605be' was not found. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0GDB9HD8", "RequestPath": "/api/sale-returns/legacy/operations/de6a0dcd-c2be-4dcb-8126-2aaf9df605be"}&#xD;
+[22:22:14 INF] HTTP POST /api/sale-returns/legacy responded 401 in 1.5016 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HD9"}&#xD;
+[22:22:14 INF] HTTP POST /api/sales responded 201 in 150.5247 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDA"}&#xD;
+[22:22:14 INF] HTTP GET /api/sales/recent responded 200 in 24.3027 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDB"}&#xD;
+[22:22:14 INF] HTTP GET /api/sales/b3754c2a-ed28-4561-b378-b796c2aa2863 responded 200 in 37.5222 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDC"}&#xD;
+[22:22:14 INF] HTTP GET /api/sale-returns/sales/b3754c2a-ed28-4561-b378-b796c2aa2863/availability responded 200 in 27.9310 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDD"}&#xD;
+[22:22:14 INF] HTTP POST /api/sale-returns responded 201 in 310.2657 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDE"}&#xD;
+[22:22:14 INF] HTTP GET /api/sale-returns/operations/aaeafab3-caaa-4e5d-8770-03332f63d7e3 responded 200 in 40.7999 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDF"}&#xD;
+[22:22:14 INF] HTTP GET /api/sale-returns/sales/b3754c2a-ed28-4561-b378-b796c2aa2863/availability responded 200 in 32.6960 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDG"}&#xD;
+[22:22:14 ERR] HTTP GET /api/sale-returns/operations/aaeafab3-caaa-4e5d-8770-03332f63d7e3 responded 500 in 12.5854 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDH"}&#xD;
+InventStock.Application.Common.Exceptions.NotFoundException: Sale return operation with identifier 'aaeafab3-caaa-4e5d-8770-03332f63d7e3' was not found.&#xD;
+   at InventStock.Infrastructure.Services.SaleReturnService.GetOperationAsync(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleReturnService.cs:line 221&#xD;
+   at InventStock.Api.Controllers.SaleReturnsController.Operation(Guid operationId, CancellationToken ct) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\SaleReturnsController.cs:line 23&#xD;
+   at lambda_method4188(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:22:14 INF] Request GET /api/sale-returns/operations/aaeafab3-caaa-4e5d-8770-03332f63d7e3 rejected: Sale return operation with identifier 'aaeafab3-caaa-4e5d-8770-03332f63d7e3' was not found. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0GDB9HDH", "RequestPath": "/api/sale-returns/operations/aaeafab3-caaa-4e5d-8770-03332f63d7e3"}&#xD;
+[22:22:14 INF] HTTP POST /api/sale-returns responded 401 in 0.2247 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDI"}&#xD;
+[22:22:14 INF] HTTP POST /api/sales responded 201 in 75.8934 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDJ"}&#xD;
+[22:22:14 INF] HTTP GET /api/sales/operations/51e33573-63c4-49a4-87ec-60b2d79c1754 responded 200 in 29.1292 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDK"}&#xD;
+[22:22:15 INF] HTTP GET /api/sales/payment-accounts responded 200 in 27.7344 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDL"}&#xD;
+[22:22:15 INF] HTTP GET /api/admin/cash/accounts responded 403 in 0.5696 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDM"}&#xD;
+[22:22:15 INF] HTTP POST /api/sales responded 401 in 0.1245 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDN"}&#xD;
+[22:22:15 ERR] HTTP POST /api/sales responded 500 in 134.8312 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDO"}&#xD;
+InventStock.Application.Common.Exceptions.ConflictException: This operation ID belongs to another actor or sale payload.&#xD;
+   at InventStock.Infrastructure.Services.SaleService.PostCoreAsync(PostSaleRequest request, PaperRecoveryContext paperRecovery, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleService.cs:line 53&#xD;
+   at InventStock.Infrastructure.Services.SaleService.PostCoreAsync(PostSaleRequest request, PaperRecoveryContext paperRecovery, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleService.cs:line 199&#xD;
+   at InventStock.Api.Controllers.SalesController.Post(PostSaleRequest request, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\SalesController.cs:line 18&#xD;
+   at lambda_method1529(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:22:15 INF] Request POST /api/sales rejected: This operation ID belongs to another actor or sale payload. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0GDB9HDO", "RequestPath": "/api/sales"}&#xD;
+[22:22:15 ERR] HTTP POST /api/sales responded 500 in 87.6178 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDP"}&#xD;
+System.UnauthorizedAccessException: Attempted to perform an unauthorized operation.&#xD;
+   at InventStock.Infrastructure.Services.CounterAuthorization.RequireAsync(AppDbContext db, ICurrentUserService user, CancellationToken ct, Boolean adminOnly) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\CounterAuthorization.cs:line 16&#xD;
+   at InventStock.Infrastructure.Services.SaleService.PostCoreAsync(PostSaleRequest request, PaperRecoveryContext paperRecovery, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleService.cs:line 46&#xD;
+   at InventStock.Infrastructure.Services.SaleService.PostCoreAsync(PostSaleRequest request, PaperRecoveryContext paperRecovery, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleService.cs:line 199&#xD;
+   at InventStock.Api.Controllers.SalesController.Post(PostSaleRequest request, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\SalesController.cs:line 18&#xD;
+   at lambda_method1529(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:22:15 INF] Request POST /api/sales rejected: You are not allowed to perform this action. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0GDB9HDP", "RequestPath": "/api/sales"}&#xD;
+[22:22:15 ERR] HTTP GET /api/sales/operations/51e33573-63c4-49a4-87ec-60b2d79c1754 responded 500 in 6.6114 ms {"SourceContext": "Serilog.AspNetCore.RequestLoggingMiddleware", "RequestId": "0HNPI0GDB9HDQ"}&#xD;
+System.UnauthorizedAccessException: Attempted to perform an unauthorized operation.&#xD;
+   at InventStock.Infrastructure.Services.CounterAuthorization.RequireAsync(AppDbContext db, ICurrentUserService user, CancellationToken ct, Boolean adminOnly) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\CounterAuthorization.cs:line 16&#xD;
+   at InventStock.Infrastructure.Services.SaleService.GetOperationAsync(Guid operationId, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Infrastructure\Services\SaleService.cs:line 210&#xD;
+   at InventStock.Api.Controllers.SalesController.Operation(Guid operationId, CancellationToken cancellationToken) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Controllers\SalesController.cs:line 32&#xD;
+   at lambda_method4253(Closure, Object)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ActionMethodExecutor.AwaitableObjectResultExecutor.Execute(ActionContext actionContext, IActionResultTypeMapper mapper, ObjectMethodExecutor executor, Object controller, Object[] arguments)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeActionMethodAsync&gt;g__Awaited|12_0(ControllerActionInvoker invoker, ValueTask`1 actionResultValueTask)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeNextActionFilterAsync&gt;g__Awaited|10_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Rethrow(ActionExecutedContextSealed context)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.Next(State&amp; next, Scope&amp; scope, Object&amp; state, Boolean&amp; isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ControllerActionInvoker.&lt;InvokeInnerFilterAsync&gt;g__Awaited|13_0(ControllerActionInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeFilterPipelineAsync&gt;g__Awaited|20_0(ResourceInvoker invoker, Task lastTask, State next, Scope scope, Object state, Boolean isCompleted)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at Microsoft.AspNetCore.Mvc.Infrastructure.ResourceInvoker.&lt;InvokeAsync&gt;g__Awaited|17_0(ResourceInvoker invoker, Task task, IDisposable scope)&#xD;
+   at InventStock.Api.Middleware.TransactionReleaseMiddleware.InvokeAsync(HttpContext context) in C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Api\Middleware\TransactionReleaseMiddleware.cs:line 23&#xD;
+   at Microsoft.AspNetCore.Authorization.AuthorizationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.Authentication.AuthenticationMiddleware.Invoke(HttpContext context)&#xD;
+   at Microsoft.AspNetCore.RateLimiting.RateLimitingMiddleware.InvokeInternal(HttpContext context, EnableRateLimitingAttribute enableRateLimitingAttribute)&#xD;
+   at Serilog.AspNetCore.RequestLoggingMiddleware.Invoke(HttpContext httpContext)&#xD;
+[22:22:15 INF] Request GET /api/sales/operations/51e33573-63c4-49a4-87ec-60b2d79c1754 rejected: You are not allowed to perform this action. {"SourceContext": "InventStock.Api.Middleware.ExceptionHandlingMiddleware", "RequestId": "0HNPI0GDB9HDQ", "RequestPath": "/api/sales/operations/51e33573-63c4-49a4-87ec-60b2d79c1754"}&#xD;
+[xUnit.net 00:00:33.79]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

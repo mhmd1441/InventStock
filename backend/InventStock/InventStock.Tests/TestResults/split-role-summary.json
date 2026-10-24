@@ -1,0 +1,67 @@
+[
+    {
+        "Class":  "InventStock.Tests.Api.CustomerApiTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Api.PricingApiTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Api.SaleApiTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresSaleTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresSaleReturnTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresSaleExchangeTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresCustomerTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresCashTransferTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresCashReconciliationTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresSupplierPaymentTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresLegacySaleReturnTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.ReferenceUpgradeTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    },
+    {
+        "Class":  "InventStock.Tests.Infrastructure.PostgresCatalogueTests",
+        "Status":  "failed",
+        "ExitCode":  null
+    }
+]

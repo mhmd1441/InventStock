@@ -17,19 +17,18 @@ public class ReferenceUpgradeTests
     {
         var builder = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
         Assert.Equal("inventstock_test", builder.Database);
-        await TestPostgresExtensions.EnsurePublicAsync(builder.ConnectionString);
+        await TestPostgresSchemas.EnsurePublicAsync();
         var schema = "reviewed_upgrade_" + Guid.NewGuid().ToString("N");
         builder.SearchPath = schema + ",public";
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(builder.ConnectionString,
             npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", schema)).Options;
         var actor = new TestCurrentUser(Guid.NewGuid());
+        await TestPostgresSchemas.MigrateAsync(schema, "20261012143056_ReviewedSupplierImports");
         await using var db = new AppDbContext(options, actor);
 #pragma warning disable EF1002 // Schema identifier is exclusively a generated GUID with a fixed prefix.
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
         try
         {
             const string reviewedImports = "20261012143056_ReviewedSupplierImports";
-            await db.GetService<IMigrator>().MigrateAsync(reviewedImports);
 
             var categoryId = Guid.NewGuid();
             var supplierId = Guid.NewGuid();
@@ -71,7 +70,7 @@ public class ReferenceUpgradeTests
 
             var beforeIds = new[] { piecePartId, hosePartId };
             var beforeMovementIds = new[] { pieceInId, pieceOutId, hoseInId };
-            await db.Database.MigrateAsync();
+            await TestPostgresSchemas.MigrateExistingSchemaAsync(schema);
             db.ChangeTracker.Clear();
 
             Assert.Equal(beforeIds.Order(), (await db.Parts.Select(x => x.Id).ToListAsync()).Order());
@@ -98,10 +97,23 @@ public class ReferenceUpgradeTests
                 "20261014075323_SuggestedSellingPrice",
                 "20261014081617_SalePriceGuidanceSnapshot",
                 "20261014082611_DirectCutHoseSellingRate",
-                "20261015174820_SaleLookupIndexes"
+                "20261015174820_SaleLookupIndexes",
+                "20261015180443_LegacySaleReturns",
+                "20261017171314_AtomicSaleExchanges",
+                "20261017203857_DailyCashReconciliation",
+                "20261017211043_CashReconciliationCorrections",
+                "20261017212401_SupplierPayments",
+                "20261018074320_FinalizePartialCashReconciliations",
+                "20261018080125_CashAccountTransfers",
+                "20261018084113_SaleTenderAccountCorrections",
+                "20261018084631_SaleTenderAccountCorrectionReversal",
+                "20261018084816_ExpandCashMovementType",
+                "20261018114500_AddCashTransferSourceAccountIndex",
+                "20261020180251_PaperRecoveryEntries",
+                "20261020182119_InternalSaleReceipts"
             }, applied[(reviewedIndex + 1)..]);
         }
-        finally { await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE"); }
+        finally { await TestPostgresSchemas.DropAsync(schema); }
 #pragma warning restore EF1002
     }
 
@@ -110,18 +122,17 @@ public class ReferenceUpgradeTests
     {
         var builder = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
         Assert.Equal("inventstock_test", builder.Database);
-        await TestPostgresExtensions.EnsurePublicAsync(builder.ConnectionString);
+        await TestPostgresSchemas.EnsurePublicAsync();
         var schema = "upgrade_test_" + Guid.NewGuid().ToString("N");
         builder.SearchPath = schema + ",public";
         var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(builder.ConnectionString,
             npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", schema)).Options;
         var actor = new TestCurrentUser(Guid.NewGuid());
+        await TestPostgresSchemas.MigrateAsync(schema, "20261010205239_ReferenceIdentityAndAudit");
         await using var db = new AppDbContext(options, actor);
 #pragma warning disable EF1002 // Schema identifier is exclusively a generated GUID with a fixed prefix.
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
         try
         {
-            await db.GetService<IMigrator>().MigrateAsync("20261010205239_ReferenceIdentityAndAudit");
             var category = Category.Create("Legacy", null);
             var part = Part.Create("OLD-1", "Legacy part", null, category.Id, null, 15, 0, null);
             part.SetIdentity("  Febi  ", "Includes seal");
@@ -143,7 +154,7 @@ public class ReferenceUpgradeTests
                 INSERT INTO "SkuReferences" ("PartId", "ReferenceId", "LinkedAtUtc", "LinkedByUserId", "IsActive", "Revision")
                 VALUES ({part.Id}, {referenceId}, now(), {actor.UserId.Value}, TRUE, 0);
                 """);
-            await db.Database.MigrateAsync();
+            await TestPostgresSchemas.MigrateExistingSchemaAsync(schema);
             db.ChangeTracker.Clear();
             Assert.Equal(part.Id, (await db.Parts.SingleAsync()).Id);
             Assert.Equal(movement.Id, (await db.StockMovements.SingleAsync()).Id);
@@ -164,7 +175,7 @@ public class ReferenceUpgradeTests
             Assert.Single(await service.HistoryAsync(part.Id, referenceId));
             Assert.Equal(7, await new PartRepository(db).GetQuantityOnHandAsync(part.Id));
         }
-        finally { await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE"); }
+        finally { await TestPostgresSchemas.DropAsync(schema); }
 #pragma warning restore EF1002
     }
 }

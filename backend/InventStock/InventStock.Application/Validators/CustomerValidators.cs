@@ -1,5 +1,6 @@
 using FluentValidation;
 using InventStock.Application.DTOs.Customers;
+using InventStock.Domain.Entities;
 
 namespace InventStock.Application.Validators;
 
@@ -37,6 +38,17 @@ public sealed class PostCustomerPaymentRequestValidator : AbstractValidator<Post
         RuleForEach(x => x.Payments).NotNull().SetValidator(new SaleTenderValidator());
         RuleForEach(x => x.Change).NotNull().SetValidator(new SaleTenderValidator());
         RuleFor(x => x.Note).MaximumLength(500);
+    }
+}
+public sealed class PostPaperRecoveryCustomerPaymentRequestValidator : AbstractValidator<PostPaperRecoveryCustomerPaymentRequest>
+{
+    public PostPaperRecoveryCustomerPaymentRequestValidator()
+    {
+        RuleFor(x => x.Payment).NotNull().SetValidator(new PostCustomerPaymentRequestValidator());
+        RuleFor(x => x.OriginalOccurredAtUtc).Must(x => x.Kind == DateTimeKind.Utc && x >= new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc) && x <= DateTime.UtcNow);
+        RuleFor(x => x.PaperReference).NotEmpty().MaximumLength(PaperRecoveryEntry.PaperReferenceMaxLength);
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(PaperRecoveryEntry.ReasonMaxLength);
+        RuleFor(x => x.OriginalSellerNote).MaximumLength(PaperRecoveryEntry.OriginalSellerNoteMaxLength);
     }
 }
 

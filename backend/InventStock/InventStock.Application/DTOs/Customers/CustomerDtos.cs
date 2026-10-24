@@ -13,7 +13,7 @@ public sealed class CustomerStatementQuery : PagedQuery { }
 public sealed record CustomerStatementEntryDto(Guid Id, string Kind, decimal AmountUsd, Guid? SaleId,
     Guid? CustomerPaymentId, Guid? CustomerPaymentCorrectionId, Guid OperationId, Guid ActorId,
     DateTime RecordedAtUtc, DateTime? EffectiveAtUtc, string? Reason, Guid? OriginalOpeningEntryId,
-    decimal? CorrectedOpeningBalanceUsd, Guid? SaleReturnId);
+    decimal? CorrectedOpeningBalanceUsd, Guid? SaleReturnId, Guid? LegacySaleReturnId);
 public sealed record CustomerStatementDto(CustomerSummaryDto Summary, PagedResult<CustomerStatementEntryDto> Entries);
 public sealed record PostCustomerOpeningRequest(Guid OperationId, decimal BalanceUsd, DateTime AsOfUtc, string Reason);
 public sealed record CustomerOpeningDto(Guid Id, Guid CustomerId, Guid OperationId, Guid ActorId,
@@ -34,6 +34,14 @@ public sealed record PostCustomerPaymentRequest
     public IReadOnlyList<SaleTenderRequest> Payments { get; init; } = [];
     public IReadOnlyList<SaleTenderRequest> Change { get; init; } = [];
     public string? Note { get; init; }
+}
+public sealed record PostPaperRecoveryCustomerPaymentRequest
+{
+    public PostCustomerPaymentRequest Payment { get; init; } = new();
+    public DateTime OriginalOccurredAtUtc { get; init; }
+    public string PaperReference { get; init; } = string.Empty;
+    public string Reason { get; init; } = string.Empty;
+    public string? OriginalSellerNote { get; init; }
 }
 public sealed record CustomerPaymentDto(Guid Id, Guid OperationId, Guid CustomerId, string CustomerName,
     Guid ActorId, DateTime PostedAtUtc, decimal UsdCredit, decimal ExcessCreditUsd, decimal BalanceBeforeUsd,

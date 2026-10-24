@@ -351,6 +351,105 @@ export interface CashAccount {
   openingBalance: CashOpeningBalance | null;
 }
 
+export interface PostCashTransferRequest {
+  operationId: string;
+  sourceCashAccountId: string;
+  destinationCashAccountId: string;
+  transferredOn: string;
+  sourceAmount: number;
+  sourceCurrency: MoneyCurrency;
+  destinationAmount: number;
+  destinationCurrency: MoneyCurrency;
+  agreedRate: number;
+  feeCashAccountId: string | null;
+  feeAmount: number | null;
+  feeCurrency: MoneyCurrency | null;
+  note: string | null;
+}
+
+export interface CashTransfer {
+  id: string;
+  operationId: string;
+  sourceCashAccountId: string;
+  sourceAccountName: string;
+  destinationCashAccountId: string;
+  destinationAccountName: string;
+  transferredOn: string;
+  sourceAmount: number;
+  sourceCurrency: MoneyCurrency;
+  destinationAmount: number;
+  destinationCurrency: MoneyCurrency;
+  agreedRate: number;
+  feeCashAccountId: string | null;
+  feeAccountName: string | null;
+  feeAmount: number | null;
+  feeCurrency: MoneyCurrency | null;
+  note: string | null;
+  recordedAtUtc: string;
+  recordedByUserId: string;
+  isReversed: boolean;
+  reversalId: string | null;
+  reversalReason: string | null;
+  reversedAtUtc: string | null;
+}
+
+export interface CashReconciliation {
+  id: string;
+  cashAccountId: string;
+  businessDate: string;
+  openingAmount: number;
+  openingSource: "PreviousClose" | "AdminCount";
+  expectedClosingAmount: number;
+  countedAmount: number;
+  differenceAmount: number;
+  differenceReason: string | null;
+  countedAtUtc: string;
+  closedAtUtc: string;
+  countedByUserId: string;
+  isPartialDay: boolean;
+  operationId: string;
+  supersedesReconciliationId: string | null;
+}
+
+export interface CashReconciliationAccount {
+  cashAccountId: string;
+  accountCode: string;
+  accountName: string;
+  currency: MoneyCurrency;
+  expectedAmount: number | null;
+  lastCountedAmount: number | null;
+  reconciliation: CashReconciliation | null;
+  hasPostCloseMovements: boolean;
+  postCloseMovementCount: number;
+  postCloseNetAmount: number;
+}
+
+export interface CashReconciliationDay {
+  businessDate: string;
+  accounts: CashReconciliationAccount[];
+}
+
+export interface PostCashReconciliationRequest {
+  operationId: string;
+  businessDate: string;
+  openingAmount: number | null;
+  countedAmount: number;
+  differenceReason: string | null;
+  countedAtUtc: string;
+}
+
+export type SupplierPaymentLineKind = "Settlement" | "Fee";
+export interface SupplierPaymentLine { id: string; kind: SupplierPaymentLineKind; originalAmount: number; currency: MoneyCurrency; agreedUsdValue: number }
+export interface SupplierPayment {
+  id: string; operationId: string; supplierId: string; supplierName: string; cashAccountId: string; cashAccountName: string;
+  paidOn: string; note: string | null; receiptReference: string | null; recordedAtUtc: string; recordedByUserId: string;
+  lines: SupplierPaymentLine[]; isReversed: boolean; reversalId: string | null; reversalReason: string | null; reversedAtUtc: string | null;
+}
+export interface PostSupplierPaymentRequest {
+  operationId: string; supplierId: string; cashAccountId: string; paidOn: string; note: string | null; receiptReference: string | null;
+  lines: Array<{ kind: SupplierPaymentLineKind; originalAmount: number; currency: MoneyCurrency; agreedUsdValue: number }>;
+}
+
 export interface ExpenseCategory {
   id: string;
   name: string;
@@ -425,6 +524,7 @@ export interface CustomerStatementEntry {
   originalOpeningEntryId: string | null;
   correctedOpeningBalanceUsd: number | null;
   saleReturnId: string | null;
+  legacySaleReturnId: string | null;
 }
 
 export interface CustomerOpeningStatus {
@@ -501,8 +601,24 @@ export interface SaleTender {
   confirmedUsdAmount: number;
 }
 
+/** Admin-only audit record; never included in counter/staff result DTOs. */
+export interface SaleTenderAccountCorrection {
+  id: string;
+  operationId: string;
+  originalSaleTenderId: string;
+  originalCashAccountId: string;
+  correctCashAccountId: string;
+  currency: MoneyCurrency;
+  nativeAmount: number;
+  confirmedUsdAmount: number;
+  reason: string;
+  correctedAtUtc: string;
+  correctedByUserId: string;
+}
+
 export interface Sale {
   id: string;
+  receiptNumber: number;
   operationId: string;
   actorId: string;
   postedAtUtc: string;
@@ -511,6 +627,7 @@ export interface Sale {
   totalUsd: number;
   paymentsUsd: number;
   changeUsd: number;
+  exchangeCreditUsd: number;
   customerCreditUsedUsd: number;
   unpaidDebtUsd: number;
   lines: SaleLine[];
@@ -540,6 +657,38 @@ export interface SaleReturn {
   refunds: { id: string; cashAccountId: string; accountName: string; currency: MoneyCurrency; nativeAmount: number; confirmedUsdAmount: number }[];
 }
 
+export interface PostLegacySaleReturnRequest {
+  operationId: string; customerId: string | null; originalSaleDate: string | null;
+  originalReference: string | null; reason: string; confirmedTotalUsd: number; accountReductionUsd: number;
+  lines: { partId: string; quantity: number; refundUsd: number; condition: ReturnCondition;
+    physicalSeparationConfirmed: boolean; issueReason: string | null }[];
+  refunds: SaleTenderRequest[];
+}
+export interface LegacySaleReturn {
+  id: string; operationId: string; actorId: string; customerId: string | null; customerName: string | null;
+  originalSaleDate: string | null; originalReference: string | null; postedAtUtc: string;
+  reason: string; totalUsd: number; accountReductionUsd: number;
+  lines: { id: string; partId: string; position: number; partNumber: string; name: string; brand: string;
+    variant: string; stockUnit: StockUnit; quantity: number; refundUsd: number; condition: ReturnCondition;
+    issueReason: string | null }[];
+  refunds: { id: string; cashAccountId: string; accountName: string; currency: MoneyCurrency;
+    nativeAmount: number; confirmedUsdAmount: number }[];
+}
+
+export type TransactionExceptionKind = "LinkedReturn" | "LegacyReturn" | "StockShortage" |
+  "UncountedSale" | "CustomerPaymentCorrection" | "CustomerOpeningCorrection" |
+  "OutgoingPaymentReversal" | "PaperRecovery" | "SaleTenderAccountCorrection";
+export interface TransactionException {
+  id: string; kind: TransactionExceptionKind; occurredAtUtc: string; actorId: string; actorName: string;
+  operationId: string; amountUsd: number | null; reason: string; saleId: string | null;
+  customerId: string | null; customerName: string | null; partId: string | null;
+  partNumber: string | null; quantity: number | null; stockUnit: StockUnit | null; itemCount: number | null;
+}
+export interface TransactionExceptionQuery {
+  fromUtc?: string; toUtc?: string; kind?: TransactionExceptionKind;
+  page: number; pageSize: number; [key: string]: string | number | undefined;
+}
+
 export interface CustomerPaymentRequest {
   operationId: string;
   confirmedUsdCredit: number;
@@ -547,6 +696,15 @@ export interface CustomerPaymentRequest {
   payments: SaleTenderRequest[];
   change: SaleTenderRequest[];
   note: string | null;
+}
+
+/** Admin-only entry for a customer payment that was recorded on paper before InventStock. */
+export interface PaperRecoveryCustomerPaymentRequest {
+  payment: CustomerPaymentRequest;
+  originalOccurredAtUtc: string;
+  paperReference: string;
+  reason: string;
+  originalSellerNote: string | null;
 }
 
 export interface CustomerPayment {

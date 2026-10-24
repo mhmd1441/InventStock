@@ -10,7 +10,7 @@ import { clearPendingSale, readPendingSale, rememberPendingSale, type PendingSal
 import { formatStockQuantity, salePricePerBaseUnit, saleQuantityInBaseUnits } from "@/lib/quantity";
 import { parseTenderDrafts, preferredTenderAccount, type TenderDraft } from "@/lib/tender-math";
 import { TenderEditor, newTender } from "@/components/tender-editor";
-import type { Part, PostSaleRequest, Sale, SaleOperation } from "@/lib/types";
+import type { Part, PostSaleRequest, Sale, SaleOperation, SaleTender, SaleTenderAccountCorrection } from "@/lib/types";
 import { Alert, Button, Card, Field, Input, Spinner } from "@/components/ui";
 
 type CartLine = { key: string; part: Part; quantity: string; price: string; confirmed: boolean; reason: string };
@@ -32,6 +32,17 @@ export default function SalesPage() {
   const [pending, setPending] = useState<PendingSaleOperation | null>(null);
   const [recoveryMessage, setRecoveryMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [correctingTender, setCorrectingTender] = useState<SaleTender | null>(null);
+  const [correctAccountId, setCorrectAccountId] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [correction, setCorrection] = useState<SaleTenderAccountCorrection | null>(null);
+  const [correctionError, setCorrectionError] = useState<string | null>(null);
+  const [correcting, setCorrecting] = useState(false);
+  const [paperRecovery, setPaperRecovery] = useState(false);
+  const [paperOccurredAt, setPaperOccurredAt] = useState(() => new Date().toISOString().slice(0, 16));
+  const [paperReference, setPaperReference] = useState("");
+  const [paperReason, setPaperReason] = useState("");
+  const [paperSellerNote, setPaperSellerNote] = useState("");
   const parts = useParts({ search, page: 1, pageSize: 10 });
   const customers = useCustomers(customerSearch);
   const statement = useCustomerStatement(customerId);
@@ -158,10 +169,18 @@ export default function SalesPage() {
     const journal = { operationId: review.operationId, actorId: user.id, createdAtUtc: new Date().toISOString() };
     rememberPendingSale(journal); setPending(journal); setError(null);
     try {
-      const sale = await post.mutateAsync(review);
+      if (paperRecovery && (!paperReference.trim() || !paperReason.trim() || Number.isNaN(new Date(paperOccurredAt).getTime())))
+        throw new Error("Paper recovery needs the original time, a unique paper reference, and a reason.");
+      const sale = paperRecovery
+        ? await api.post<Sale>("/api/sales/paper-recovery", {
+            sale: review, originalOccurredAtUtc: new Date(paperOccurredAt).toISOString(),
+            paperReference: paperReference.trim(), reason: paperReason.trim(),
+            originalSellerNote: paperSellerNote.trim() || null,
+          })
+        : await post.mutateAsync(review);
       clearPendingSale(user.id, journal.operationId); setPending(null);
       setPosted(sale); setReview(null); setCart([]); setChange([]); setCredit("0"); setDebt("0");
-      setPayments([newTender(preferredAccount)]);
+      setPayments([newTender(preferredAccount)]); setPaperRecovery(false); setPaperReference(""); setPaperReason(""); setPaperSellerNote("");
       setOperationId(crypto.randomUUID());
     } catch (caught) {
       if (caught instanceof ApiError) { clearPendingSale(user.id, journal.operationId); setPending(null); setOperationId(crypto.randomUUID()); setReview(null); }
@@ -169,11 +188,49 @@ export default function SalesPage() {
     }
   };
 
+  const beginTenderCorrection = (tender: SaleTender) => {
+    setCorrectingTender(tender);
+    setCorrectAccountId("");
+    setCorrectionReason("");
+    setCorrection(null);
+    setCorrectionError(null);
+  };
+
+  const submitTenderCorrection = async () => {
+    if (!correctingTender || !correctAccountId || !correctionReason.trim()) {
+      setCorrectionError("Choose the correct account and enter a reason.");
+      return;
+    }
+    setCorrecting(true); setCorrectionError(null);
+    try {
+      const result = await api.post<SaleTenderAccountCorrection>(
+        `/api/sales/tenders/${correctingTender.id}/account-corrections`,
+        { operationId: crypto.randomUUID(), correctCashAccountId: correctAccountId, reason: correctionReason.trim() },
+      );
+      setCorrection(result);
+      setCorrectingTender(null);
+    } catch (caught) {
+      setCorrectionError(errorText(caught));
+    } finally { setCorrecting(false); }
+  };
+
   return <div className="space-y-6">
     <div><h1 className="text-xl font-semibold tracking-tight">Counter sale</h1><p className="text-sm text-muted">Search by any known number, choose the physical item, then settle the sale. This is not yet a receipt or a completed shop rollout.</p></div>
     {pending && <Alert tone="warning"><div className="space-y-2"><p>A sale has an uncertain result. Do not submit it again with a new ID until you check the server.</p><p className="text-xs">Operation {pending.operationId}</p><div className="flex gap-2"><Button variant="secondary" onClick={() => void checkPending(pending)}>Check result</Button><Button variant="ghost" onClick={() => { if (user && window.confirm("Only clear this after confirming it did not commit. A late commit could make a new sale a duplicate.")) { clearPendingSale(user.id, pending.operationId); setPending(null); setReview(null); setOperationId(crypto.randomUUID()); } }}>Clear unresolved attempt</Button></div>{recoveryMessage && <p>{recoveryMessage}</p>}</div></Alert>}
     {error && <Alert>{error}</Alert>}
-    {posted && <Alert tone="success">Sale recorded: {formatCents(BigInt(Math.round(posted.totalUsd * 100)))}. {posted.lines.some((line) => line.stockShortage) ? "Stock discrepancy: recount required." : "Stock and payment were posted together."} {posted.lines.some((line) => line.priceOverridden) && "Manual selling-price override recorded."} Operation {posted.operationId}. <Link href={`/returns?sale=${posted.id}`} className="underline">Return an item from this sale</Link></Alert>}
+    {posted && <><Alert tone="success">Sale #{posted.receiptNumber} recorded: {formatCents(BigInt(Math.round(posted.totalUsd * 100)))}. {posted.lines.some((line) => line.stockShortage) ? "Stock discrepancy: recount required." : "Stock and payment were posted together."} {posted.lines.some((line) => line.priceOverridden) && "Manual selling-price override recorded."} <Link href={`/sales/${posted.id}/receipt`} className="underline">Print / reprint internal receipt</Link> · <Link href={`/returns?sale=${posted.id}`} className="underline">Return an item from this sale</Link></Alert>
+      {canViewPrivate && <Card title="Admin · correct a tender account"><div className="space-y-3 p-5 text-sm">
+        <p className="text-muted">Use only when this posted sale was assigned to the wrong cash or Whish account. It records a new, dated correction; it never edits the sale, customer balance, change or a closed day.</p>
+        {posted.tenders.filter((tender) => !tender.isChange).map((tender) => <div key={tender.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3"><span>{tender.accountName} · {tender.nativeAmount} {tender.currency} (USD {tender.confirmedUsdAmount.toFixed(2)})</span><Button variant="secondary" onClick={() => beginTenderCorrection(tender)}>Correct account</Button></div>)}
+        {correctingTender && <div className="space-y-3 rounded-lg border border-warning p-3"><p><strong>Original:</strong> {correctingTender.accountName} · {correctingTender.nativeAmount} {correctingTender.currency}. The amount and currency cannot change.</p>
+          <Field label="Correct account"><select value={correctAccountId} onChange={(event) => setCorrectAccountId(event.target.value)} className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm"><option value="">Choose an account</option>{paymentAccounts.filter((account) => account.currency === correctingTender.currency && account.id !== correctingTender.cashAccountId).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></Field>
+          <Field label="Reason"><Input maxLength={500} value={correctionReason} onChange={(event) => setCorrectionReason(event.target.value)} placeholder="For example: customer paid through Whish, not cash" /></Field>
+          <div className="flex gap-2"><Button disabled={correcting} onClick={() => void submitTenderCorrection()}>{correcting ? "Posting…" : "Post account correction"}</Button><Button variant="ghost" onClick={() => { setCorrectingTender(null); setCorrectionError(null); }}>Cancel</Button></div>
+        </div>}
+        {correctionError && <Alert>{correctionError}</Alert>}
+        {correction && <Alert tone="success">Correction recorded from the original account to {paymentAccounts.find((account) => account.id === correction.correctCashAccountId)?.name ?? "the selected account"}. It is in the exceptions history.</Alert>}
+      </div></Card>}
+    </>}
 
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(300px,1fr)]">
       <div className="space-y-6">
@@ -237,7 +294,7 @@ export default function SalesPage() {
       <div className="space-y-6">
         <Card title="3 · Customer"><div className="space-y-3 p-5"><p className="text-xs text-muted">Anonymous cash sale is allowed. Debt or credit requires a named customer.</p>{customerId ? <div className="rounded-lg border border-border p-3"><strong>{selectedCustomer?.customer.name ?? "Loading customer…"}</strong><p className="text-xs text-muted">{selectedCustomer?.customer.distinguishingLabel} {selectedCustomer?.customer.phone}</p><p className="mt-1 text-sm">Balance: {selectedCustomer ? `${selectedCustomer.balanceUsd.toFixed(2)} USD ${selectedCustomer.balanceUsd < 0 ? "credit" : "debt"}` : "…"}</p><Button variant="ghost" onClick={() => { setCustomerId(null); setCredit("0"); setDebt("0"); setReview(null); }}>Use anonymous sale</Button></div> : <><Input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Search customer name or phone" />{customers.data?.items.map((item) => <button key={item.customer.id} type="button" onClick={() => { setCustomerId(item.customer.id); setCustomerSearch(""); setReview(null); }} className="block w-full rounded-lg border border-border p-2 text-left text-sm hover:bg-surface-muted">{item.customer.name} · {item.customer.distinguishingLabel ?? item.customer.phone ?? item.customer.id.slice(0, 8)} <span className="text-muted">({item.balanceUsd.toFixed(2)} USD)</span></button>)}<Link href="/customers" className="text-sm text-accent hover:underline">Create or review a customer →</Link></>}</div></Card>
         <Card title="4 · Payment"><div className="space-y-4 p-5">{accounts.isError && <Alert>Payment accounts are unavailable until the pending backend migrations are applied.</Alert>}{payments.map((row) => <TenderEditor key={row.key} row={row} accounts={paymentAccounts} title="Received" onPatch={(patch) => patchTender(setPayments, row.key, patch)} onRemove={() => { setPayments((items) => items.filter((x) => x.key !== row.key)); setReview(null); }} />)}<Button variant="secondary" onClick={() => { setPayments((rows) => [...rows, newTender(preferredAccount)]); setReview(null); }}>Add payment</Button><div className="border-t border-border pt-3"><p className="mb-2 text-sm font-medium">Explicit change given</p>{change.map((row) => <TenderEditor key={row.key} row={row} accounts={paymentAccounts} title="Change" onPatch={(patch) => patchTender(setChange, row.key, patch)} onRemove={() => { setChange((items) => items.filter((x) => x.key !== row.key)); setReview(null); }} />)}<Button variant="secondary" onClick={() => { setChange((rows) => [...rows, newTender(preferredAccount)]); setReview(null); }}>Add change</Button></div>{customerId && <div className="grid gap-3 sm:grid-cols-2"><Field label="Use customer credit · USD"><Input value={credit} onChange={(e) => { setCredit(e.target.value); setReview(null); }} inputMode="decimal" /></Field><Field label="Leave unpaid debt · USD"><Input value={debt} onChange={(e) => { setDebt(e.target.value); setReview(null); }} inputMode="decimal" /></Field></div>}<p className="text-xs text-muted">LBP/EUR: enter the native amount and the USD amount agreed with the customer. Whish is separate from physical cash. Change must be recorded explicitly.</p></div></Card>
-        <Card title="5 · Review and post"><div className="space-y-3 p-5"><Button className="w-full" disabled={Boolean(pending) || post.isPending || cart.length === 0} onClick={prepareReview}>Review sale</Button>{review && <div className="space-y-2 rounded-lg border border-accent p-3 text-sm"><p><strong>{formatCents(BigInt(Math.round(review.confirmedTotalUsd * 100)))}</strong> · {review.lines.length} line(s) · {selectedCustomer?.customer.name ?? "Anonymous"}</p><p>Received ${review.payments.reduce((sum, x) => sum + x.confirmedUsdAmount, 0).toFixed(2)}; change ${review.change.reduce((sum, x) => sum + x.confirmedUsdAmount, 0).toFixed(2)}; credit ${review.customerCreditUsedUsd.toFixed(2)}; debt ${review.unpaidDebtUsd.toFixed(2)}</p><Button className="w-full" disabled={post.isPending || Boolean(pending)} onClick={() => void submit()}>{post.isPending ? "Posting…" : "Confirm & post sale"}</Button></div>}</div></Card>
+        <Card title="5 · Review and post"><div className="space-y-3 p-5"><Button className="w-full" disabled={Boolean(pending) || post.isPending || cart.length === 0} onClick={prepareReview}>Review sale</Button>{review && <div className="space-y-2 rounded-lg border border-accent p-3 text-sm"><p><strong>{formatCents(BigInt(Math.round(review.confirmedTotalUsd * 100)))}</strong> · {review.lines.length} line(s) · {selectedCustomer?.customer.name ?? "Anonymous"}</p><p>Received ${review.payments.reduce((sum, x) => sum + x.confirmedUsdAmount, 0).toFixed(2)}; change ${review.change.reduce((sum, x) => sum + x.confirmedUsdAmount, 0).toFixed(2)}; credit ${review.customerCreditUsedUsd.toFixed(2)}; debt ${review.unpaidDebtUsd.toFixed(2)}</p>{canViewPrivate && <div className="space-y-3 rounded-lg bg-warning-surface p-3"><label className="flex items-center gap-2"><input type="checkbox" checked={paperRecovery} onChange={(event) => setPaperRecovery(event.target.checked)} /> Record this as a sale completed on paper</label>{paperRecovery && <><Field label="Original paper date and time"><Input type="datetime-local" value={paperOccurredAt} onChange={(event) => setPaperOccurredAt(event.target.value)} /></Field><Field label="Paper reference"><Input maxLength={100} value={paperReference} onChange={(event) => setPaperReference(event.target.value)} placeholder="Daily book page / receipt reference" /></Field><Field label="Why was it entered later?"><Input maxLength={500} value={paperReason} onChange={(event) => setPaperReason(event.target.value)} placeholder="Server was offline" /></Field><Field label="Original seller note · optional"><Input maxLength={500} value={paperSellerNote} onChange={(event) => setPaperSellerNote(event.target.value)} placeholder="Name from the paper book" /></Field><p className="text-xs text-muted">This posts the same stock and money rules at the original time. It is permanently flagged for owner review.</p></>}</div>}<Button className="w-full" disabled={post.isPending || Boolean(pending)} onClick={() => void submit()}>{post.isPending ? "Posting…" : paperRecovery ? "Post paper-recovery sale" : "Confirm & post sale"}</Button></div>}</div></Card>
       </div>
     </div>
   </div>;

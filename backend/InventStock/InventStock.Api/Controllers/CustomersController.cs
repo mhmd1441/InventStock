@@ -44,6 +44,13 @@ public sealed class CustomersController(ICustomerService customers) : Controller
         var payment = await customers.PayAsync(id, request, ct);
         return Created($"/api/customers/operations/payments/{payment.OperationId}", payment);
     }
+    [HttpPost("{id:guid}/payments/paper-recovery")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<ActionResult<CustomerPaymentDto>> PaperRecoveryPayment(Guid id, PostPaperRecoveryCustomerPaymentRequest request, CancellationToken ct)
+    {
+        var payment = await customers.PayPaperRecoveryAsync(id, request, ct);
+        return Created($"/api/customers/operations/payments/{payment.OperationId}", payment);
+    }
     [HttpPost("payments/{paymentId:guid}/corrections")]
     public async Task<ActionResult<CustomerPaymentCorrectionDto>> Correct(Guid paymentId, CorrectCustomerPaymentRequest request, CancellationToken ct) => Ok(await customers.CorrectPaymentAsync(paymentId, request, ct));
     [HttpGet("operations/profiles/{operationId:guid}")]

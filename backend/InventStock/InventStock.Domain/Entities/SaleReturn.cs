@@ -14,12 +14,13 @@ public sealed class SaleReturn : AuditableEntity
     public DateTime PostedAtUtc { get; private set; }
     public string Reason { get; private set; } = null!;
     public decimal TotalUsd { get; private set; }
+    public decimal ExchangeAppliedUsd { get; private set; }
     public decimal AccountReductionUsd { get; private set; }
     public List<SaleReturnLine> Lines { get; private set; } = [];
     public List<SaleRefundTender> Refunds { get; private set; } = [];
 
     public static SaleReturn Create(Sale sale, Guid operationId, Guid actorId, string fingerprint,
-        string reason, decimal totalUsd, decimal accountReductionUsd)
+        string reason, decimal totalUsd, decimal accountReductionUsd, decimal exchangeAppliedUsd = 0)
     {
         var now = DateTime.UtcNow;
         return new()
@@ -27,7 +28,8 @@ public sealed class SaleReturn : AuditableEntity
             SaleId = sale.Id, CustomerId = sale.CustomerId, OperationId = operationId,
             ActorId = actorId, PayloadFingerprint = fingerprint, Reason = reason.Trim(),
             PostedAtUtc = new DateTime(now.Ticks - now.Ticks % 10, DateTimeKind.Utc),
-            TotalUsd = totalUsd, AccountReductionUsd = accountReductionUsd
+            TotalUsd = totalUsd, AccountReductionUsd = accountReductionUsd,
+            ExchangeAppliedUsd = exchangeAppliedUsd
         };
     }
 }

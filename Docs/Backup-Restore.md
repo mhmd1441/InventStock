@@ -2,7 +2,7 @@
 
 Use this before importing authoritative data and before every migration of the persistent shop database. Replace the example database names only after reviewing the active connection string. Never restore over the source database.
 
-## Create the backup
+## Manual development backup
 
 ```powershell
 $backupStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -12,7 +12,9 @@ pg_dump -h localhost -p 5432 -U postgres -d InventStock -Fc -f $backupPath
 Get-Item -LiteralPath $backupPath | Select-Object FullName,Length,LastWriteTime
 ```
 
-Keep an encrypted copy off the shop computer. Do not place dumps inside the repository; `*.dump`, `*.backup`, `*.bak` and `backups/` are ignored.
+For any authoritative catalogue or transaction data, use `Scripts/Backup-InventStock.ps1` rather than this unencrypted development example. It creates authenticated encrypted `.dump.enc` files, verifies an independent second destination, and reads PostgreSQL authentication only from a private `pgpass.conf`. The 64-byte encryption key stays outside both backup destinations; setup and full-PC recovery are in [Real-Database-Setup.md](Real-Database-Setup.md). Do not place dumps inside the repository; `*.dump`, `*.backup`, `*.bak` and `backups/` are ignored.
+
+Use `-BackupSchedule Frequent` every 15 minutes during shop hours and `-BackupSchedule Nightly` once outside shop hours. Defaults retain 192 frequent copies and 30 nightly copies at each destination; `-KeepLast` may override the matching generation without mixing retention sets. During shop hours, `-CheckOnly -MaximumAgeMinutes 30` exits non-zero when protection is stale.
 
 ## Verify by restoring to a separate database
 
@@ -25,7 +27,7 @@ psql -h localhost -p 5432 -U postgres -d InventStockRestoreCheck -c 'SELECT COUN
 psql -h localhost -p 5432 -U postgres -d InventStockRestoreCheck -c 'SELECT COUNT(*) FROM "StockMovements";'
 ```
 
-Compare part, customer, movement and reference counts with the source. Sample important part IDs and calculated stock totals. A backup is accepted only after this restore succeeds.
+Compare part, customer, movement and reference counts with the source. Sample important part IDs and calculated stock totals. A backup is accepted only after this restore succeeds. Follow [Backup-Restore-Drill.md](Backup-Restore-Drill.md) for the repeatable encrypted drill and evidence to record.
 
 ## Migration rehearsal
 

@@ -2,6 +2,47 @@
 
 Historical evidence only. For the next action, decisions and safety rules, read `STATE.md` instead.
 
+## 2026-10-22 — checkpoint compacted
+
+- `STATE.md` was rewritten as the short operational checkpoint; historical narrative stays here.
+
+## 2026-10-22 — reconciliation frontend verification and legacy-return smoke harness
+
+- Corrected ESLint configuration to ignore generated Playwright HTML reports and test-result files. The previous lint failure was tooling-only: ESLint was parsing generated/minified browser-report assets, not an application defect.
+- The reconciliation client contract fix passed client tests **22/22**, ESLint, TypeScript and an isolated production build. Next temporarily added the isolated build directory to `tsconfig.json`; that generated entry was removed after the build.
+- Added a disposable-only Playwright specification for a clearly labelled sold-before-InventStock cash return. It has TypeScript coverage but has not been run against a temporary API/database yet.
+
+## 2026-10-22 — daily-reconciliation browser-smoke specification
+
+- Added `frontend/e2e/daily-reconciliation.spec.ts` and a stable private-card selector. The test signs in as an admin, deliberately reveals private mode, enters matching USD opening/physical counts and confirms the current-day partial close display.
+- The first run exposed a real frontend/API contract mismatch: the API returns reconciliation `accountCode` and `accountName`, while the TypeScript client expected `cashAccountCode` and `cashAccountName`. That made account names blank in the card. The client contract and UI were corrected and each account now carries a deterministic test identifier.
+- `npx tsc --noEmit` passed. The corrected Chromium smoke passed **1/1** against a fresh disposable PostgreSQL 17/API/Next environment. A read-only database check confirmed `SAFE_USD` recorded a partial close with opening, expected and physical count all **100 USD**, and zero difference. Temporary servers/database were stopped/dropped; no normal database or Git action occurred.
+
+## 2026-10-22 — supplier-payment browser posting smoke
+
+- Added `frontend/e2e/supplier-payment.spec.ts`. On a fresh disposable PostgreSQL 17 database, an admin deliberately revealed private mode, selected a supplier and the USD physical safe, then posted a $100 settlement through the real cash-page form. Chromium passed **1/1**.
+- The first attempt found only a test-selector problem: a React refresh could replace the labelled control while Playwright held it. The supplier-payment card now has a stable test-only CSS hook and the smoke test scopes its two native selects through that card. A read-only database check confirmed exactly **1** supplier payment and exactly **one $100** linked cash-out. No normal database was touched. The temporary API/frontend were stopped; Docker became unavailable during the final disposable-database drop, so its removal needs a simple verification when Docker is back.
+
+## 2026-10-22 — linked-return browser posting and JSON contract repair
+
+- Added `frontend/e2e/linked-return.spec.ts`. It finds a temporary paid sale, selects one piece for return, allocates the full refund to the USD safe, reviews and posts. Chromium passed **1/1** against a disposable PostgreSQL 17 environment.
+- The test exposed a real integration bug: the UI posts documented `ReturnCondition` strings such as `Sellable`, but the API only accepted numeric enum values. `Program.cs` now configures `JsonStringEnumConverter`, accepting the readable client contract while retaining numeric compatibility. A Release solution build passed (0 errors; only existing offline NuGet audit warnings). A read-only query verified one return line and a net stock-ledger quantity of 34—the original demo count after the temporary sale and return.
+
+## 2026-10-22 — reviewed supplier-import browser smoke
+
+- Added `frontend/e2e/supplier-import.spec.ts`. On a fresh disposable PostgreSQL 17 database with demo data only, an admin pasted one CSV row, prepared it, staged it, selected `Create new SKU`, reviewed it and committed it through the browser. Chromium result: **1/1**.
+- A read-only query confirmed the imported `BROWSER-IMPORT-001` SKU had **0** `StockMovements` and **1** supplier cost observation. Temporary API/frontend processes and the disposable database were removed afterwards; no real supplier file or shop database was touched.
+
+## 2026-10-22 — paper-payment and transfer browser smoke
+
+- A fresh temporary PostgreSQL 17 database, Release API and Next development server verified the expanded Chromium smoke harness. The admin flow created a temporary customer, reached the private paper-era customer-payment form, and reached the private transfer/Whish-cash-out form. Staff could use public transaction pages but could not access cash, pricing or exceptions; cross-tab sign-out also passed.
+- Results: admin reachability **1/1**, staff privacy **1/1**, cross-tab sign-out **1/1**. Each was run against a fresh temporary API process because the production-style login limiter intentionally rejects repeated diagnostic logins from the same local IP. Only the disposable `inventstock_browser_smoke_20261022` database and temporary ports were used.
+
+## 2026-10-20 — disposable Playwright transaction-screen smoke
+
+- Added a Chromium Playwright harness for admin/private reachability, staff private-screen denial, and cross-tab sign-out. The admin and staff checks passed against a newly migrated disposable PostgreSQL 17 database with temporary API/frontend servers and temporary users.
+- The first cross-tab sign-out attempt hit the temporary API's login rate limiter after earlier diagnostics. A clean retry using a fresh temporary API passed **1/1**. All three smoke checks are therefore green; temporary servers and `inventstock_browser_smoke_20261020` were stopped/dropped afterwards. No normal database was touched.
+
 ## 2026-10-14 — return browser-smoke attempt blocked by browser control
 
 - A fresh disposable PostgreSQL 17 `inventstock_test` was migrated and demo-seeded by the Release API; a separate Next frontend reached ready on port 3001. No normal/shop database was touched.

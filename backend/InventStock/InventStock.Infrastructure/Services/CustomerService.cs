@@ -97,7 +97,7 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
             .Skip(query.Skip).Take(query.PageSize).Select(x => new CustomerStatementEntryDto(x.Id, x.Kind, x.AmountUsd,
                 x.SaleId, x.CustomerPaymentId, x.CustomerPaymentCorrectionId, x.OperationId, x.ActorId,
                 x.CreatedAtUtc, x.EffectiveAtUtc, x.Reason, x.OriginalOpeningEntryId,
-                x.CorrectedOpeningBalanceUsd, x.SaleReturnId)).ToListAsync(ct);
+                x.CorrectedOpeningBalanceUsd, x.SaleReturnId, x.LegacySaleReturnId)).ToListAsync(ct);
         await tx.CommitAsync(ct);
         return new(new(Map(customer), Normalize(balance)), new(rows, count, query.Page, query.PageSize));
     }
@@ -198,20 +198,36 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
             ?? throw new NotFoundException("Customer opening correction", operationId));
     }
 
-    public async Task<CustomerPaymentDto> PayAsync(Guid id, PostCustomerPaymentRequest request, CancellationToken ct = default)
+    public Task<CustomerPaymentDto> PayAsync(Guid id, PostCustomerPaymentRequest request, CancellationToken ct = default) =>
+        PayCoreAsync(id, request, null, ct);
+
+    public async Task<CustomerPaymentDto> PayPaperRecoveryAsync(Guid id, PostPaperRecoveryCustomerPaymentRequest request,
+        CancellationToken ct = default)
+    {
+        await new PostPaperRecoveryCustomerPaymentRequestValidator().ValidateAndThrowAsync(request, ct);
+        return await PayCoreAsync(id, request.Payment, new PaperRecoveryContext(request.OriginalOccurredAtUtc,
+            request.PaperReference.Trim(), request.Reason.Trim(), request.OriginalSellerNote?.Trim()), ct);
+    }
+
+    private async Task<CustomerPaymentDto> PayCoreAsync(Guid id, PostCustomerPaymentRequest request,
+        PaperRecoveryContext? paperRecovery, CancellationToken ct)
     {
         await new PostCustomerPaymentRequestValidator().ValidateAndThrowAsync(request, ct);
         var fingerprint = Hash(new { id, Usd = Number(request.ConfirmedUsdCredit), Excess = Number(request.ConfirmedExcessCreditUsd),
-            Payments = CanonicalTenders(request.Payments), Change = CanonicalTenders(request.Change), Note = Clean(request.Note) });
+            Payments = CanonicalTenders(request.Payments), Change = CanonicalTenders(request.Change), Note = Clean(request.Note),
+            Paper = paperRecovery is null ? null : new { paperRecovery.OriginalOccurredAtUtc, paperRecovery.PaperReference, paperRecovery.Reason, paperRecovery.OriginalSellerNote } });
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await OperationGuard.LockAsync(db, request.OperationId, "CustomerPayment", ct);
-        var actor = await Authorize(ct);
+        var actor = await Authorize(ct, paperRecovery is not null);
         var replay = await PaymentQuery().SingleOrDefaultAsync(x => x.OperationId == request.OperationId, ct);
         if (replay is not null)
         {
             CheckReplay(replay.ActorId, actor, replay.PayloadFingerprint, fingerprint);
             return Map(replay);
         }
+        if (paperRecovery is not null && await db.PaperRecoveryEntries.AnyAsync(
+            x => x.PaperReference == paperRecovery.PaperReference, ct))
+            throw new ConflictException("This paper reference was already recovered.");
         var customer = await LockCustomer(id, ct);
         var balance = await Balance(id, ct);
         var net = request.Payments.Sum(x => x.ConfirmedUsdAmount) - request.Change.Sum(x => x.ConfirmedUsdAmount);
@@ -220,7 +236,7 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
         if (request.ConfirmedExcessCreditUsd != excess)
             throw new ConflictException("Review the current customer balance and explicitly confirm the excess to keep as customer credit, or record change.");
         var payment = CustomerPayment.Create(customer, request.OperationId, actor, fingerprint, net, excess, balance,
-            Clean(request.Note), Microseconds(DateTime.UtcNow));
+            Clean(request.Note), Microseconds(paperRecovery?.OriginalOccurredAtUtc ?? DateTime.UtcNow));
         var tenders = request.Payments.Select(x => (Request: x, Change: false))
             .Concat(request.Change.Select(x => (Request: x, Change: true))).ToArray();
         var ids = tenders.Select(x => x.Request.CashAccountId).Distinct().ToArray();
@@ -235,6 +251,9 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
             db.CashMovements.Add(CashMovement.CustomerTender(tender, actor, payment.PostedAtUtc));
         }
         db.CustomerPayments.Add(payment);
+        if (paperRecovery is not null)
+            db.PaperRecoveryEntries.Add(PaperRecoveryEntry.ForCustomerPayment(paperRecovery.PaperReference,
+                payment.PostedAtUtc, paperRecovery.Reason, paperRecovery.OriginalSellerNote, payment.Id, actor, DateTime.UtcNow));
         db.CustomerAccountEntries.Add(CustomerAccountEntry.Payment(id, payment.Id, request.OperationId, actor, net));
         await db.SaveChangesAsync(ct);
         var result = Map(payment);
@@ -325,4 +344,6 @@ public sealed class CustomerService(AppDbContext db, ICurrentUserService user) :
             x.IsChange, Normalize(x.NativeAmount), Normalize(x.ConfirmedUsdAmount))).ToArray());
     private static CustomerPaymentCorrectionDto Map(CustomerPaymentCorrection c) => new(c.Id, c.OperationId, c.CustomerId,
         c.OriginalPaymentId, c.ActorId, c.CorrectedAtUtc, c.Reason, Normalize(c.RestoredDebtUsd), Normalize(c.BalanceAfterUsd));
+    private sealed record PaperRecoveryContext(DateTime OriginalOccurredAtUtc, string PaperReference,
+        string Reason, string? OriginalSellerNote);
 }

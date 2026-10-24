@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using InventStock.Application.DTOs.Sales;
 using InventStock.Domain.Entities;
 using InventStock.Domain.Enums;
@@ -148,6 +150,116 @@ public sealed class SaleApiTests(PostgresSaleApiFactory factory) : IClassFixture
         using var anonymous = factory.CreateClient();
         using var denied = await anonymous.PostAsJsonAsync("/api/sale-returns", request);
         Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
+
+    [Fact]
+    public async Task Staff_legacy_refund_is_public_safe_actor_scoped_and_audited()
+    {
+        Guid partId;
+        Guid accountId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var category = await db.Categories.FirstAsync();
+            var part = Part.Create("LEGACY-" + Guid.NewGuid().ToString("N"), "Old paper-sale hose",
+                null, category.Id, null, 765.43m, 0, null);
+            partId = part.Id;
+            db.Parts.Add(part);
+            await db.SaveChangesAsync();
+            accountId = await db.CashAccounts.Where(x => x.Code == "SAFE_USD")
+                .Select(x => x.Id).SingleAsync();
+        }
+
+        var request = new PostLegacySaleReturnRequest
+        {
+            OperationId = Guid.NewGuid(),
+            OriginalSaleDate = new DateOnly(2025, 6, 1),
+            OriginalReference = "Paper receipt 104",
+            Reason = "Sale predates InventStock",
+            ConfirmedTotalUsd = 12,
+            Lines = [new(partId, 1, 12, ReturnCondition.Sellable)],
+            Refunds = [new(accountId, MoneyCurrency.USD, 12, 12)]
+        };
+        using var staff = await factory.CreateStaffClientAsync();
+        using var posted = await staff.PostAsJsonAsync("/api/sale-returns/legacy", request);
+        Assert.Equal(HttpStatusCode.Created, posted.StatusCode);
+        var result = await posted.Content.ReadFromJsonAsync<LegacySaleReturnDto>(new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            Converters = { new JsonStringEnumConverter() }
+        });
+        Assert.NotNull(result);
+        Assert.Equal("Paper receipt 104", result.OriginalReference);
+        var json = await posted.Content.ReadAsStringAsync();
+        foreach (var secret in new[] { "supplier", "cost", "765.43" })
+            Assert.DoesNotContain(secret, json, StringComparison.OrdinalIgnoreCase);
+
+        using var status = await staff.GetAsync($"/api/sale-returns/legacy/operations/{request.OperationId}");
+        Assert.Equal(HttpStatusCode.OK, status.StatusCode);
+        using var admin = await factory.CreateAdminClientAsync();
+        using var otherActor = await admin.GetAsync($"/api/sale-returns/legacy/operations/{request.OperationId}");
+        Assert.Equal(HttpStatusCode.NotFound, otherActor.StatusCode);
+        using var anonymous = factory.CreateClient();
+        using var denied = await anonymous.PostAsJsonAsync("/api/sale-returns/legacy", request);
+        Assert.Equal(HttpStatusCode.Unauthorized, denied.StatusCode);
+    }
+
+    [Fact]
+    public async Task Admin_exception_review_combines_returns_and_stock_exceptions_but_denies_staff()
+    {
+        Guid partId;
+        Guid accountId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var category = await db.Categories.FirstAsync();
+            var actor = await db.Users.Where(x => x.Email == ApiFactory.StaffEmail).Select(x => x.Id).SingleAsync();
+            var part = Part.Create("EXCEPTION-" + Guid.NewGuid().ToString("N"), "Exception test hose",
+                null, category.Id, null, 543.21m, 0, null);
+            partId = part.Id;
+            db.Parts.Add(part);
+            db.StockMovements.Add(StockMovement.PhysicalCount(part.Id, 0, 0, actor, "Counted zero"));
+            await db.SaveChangesAsync();
+            accountId = await db.CashAccounts.Where(x => x.Code == "SAFE_USD").Select(x => x.Id).SingleAsync();
+        }
+
+        using var staff = await factory.CreateStaffClientAsync();
+        var shortage = new PostSaleRequest
+        {
+            OperationId = Guid.NewGuid(), ConfirmedTotalUsd = 7,
+            Lines = [new(partId, 1, 7, true, "Physical piece found after counted zero")],
+            Payments = [new(accountId, MoneyCurrency.USD, 7, 7)]
+        };
+        using var saleResponse = await staff.PostAsJsonAsync("/api/sales", shortage);
+        Assert.Equal(HttpStatusCode.Created, saleResponse.StatusCode);
+        var sale = await saleResponse.Content.ReadFromJsonAsync<SaleDto>();
+        var legacy = new PostLegacySaleReturnRequest
+        {
+            OperationId = Guid.NewGuid(), Reason = "Paper sale predates InventStock", ConfirmedTotalUsd = 5,
+            Lines = [new(partId, 1, 5, ReturnCondition.Sellable)],
+            Refunds = [new(accountId, MoneyCurrency.USD, 5, 5)]
+        };
+        using var legacyResponse = await staff.PostAsJsonAsync("/api/sale-returns/legacy", legacy);
+        Assert.Equal(HttpStatusCode.Created, legacyResponse.StatusCode);
+
+        using var staffDenied = await staff.GetAsync("/api/admin/transaction-exceptions");
+        Assert.Equal(HttpStatusCode.Forbidden, staffDenied.StatusCode);
+        using var admin = await factory.CreateAdminClientAsync();
+        var from = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(-1).ToString("O"));
+        var to = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddDays(1).ToString("O"));
+        using var response = await admin.GetAsync($"/api/admin/transaction-exceptions?fromUtc={from}&toUtc={to}&page=1&pageSize=100");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains(sale!.Id.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(legacy.OperationId.ToString(), body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("StockShortage", body);
+        Assert.Contains("LegacyReturn", body);
+        foreach (var secret in new[] { "supplier", "cost", "543.21" })
+            Assert.DoesNotContain(secret, body, StringComparison.OrdinalIgnoreCase);
+
+        using var filtered = await admin.GetAsync($"/api/admin/transaction-exceptions?fromUtc={from}&toUtc={to}&kind=StockShortage&page=1&pageSize=100");
+        var filteredBody = await filtered.Content.ReadAsStringAsync();
+        Assert.Contains("StockShortage", filteredBody);
+        Assert.DoesNotContain("LegacyReturn", filteredBody);
     }
 
     [Fact]

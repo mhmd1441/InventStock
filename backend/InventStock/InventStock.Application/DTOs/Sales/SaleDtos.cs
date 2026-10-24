@@ -15,15 +15,25 @@ public sealed record PostSaleRequest
     public IReadOnlyList<SaleTenderRequest> Change { get; init; } = [];
 }
 
+/// <summary>Admin-only entry of a sale that was completed on paper before it reached InventStock.</summary>
+public sealed record PostPaperRecoverySaleRequest
+{
+    public PostSaleRequest Sale { get; init; } = new();
+    public DateTime OriginalOccurredAtUtc { get; init; }
+    public string PaperReference { get; init; } = string.Empty;
+    public string Reason { get; init; } = string.Empty;
+    public string? OriginalSellerNote { get; init; }
+}
+
 // Quantity and price are both per immutable stock base unit (piece or centimeter).
 public sealed record SaleLineRequest(Guid PartId, int Quantity, decimal UnitSellingPriceUsd,
     bool PhysicalGoodsConfirmed = false, string? StockExceptionReason = null);
 public sealed record SaleTenderRequest(Guid CashAccountId, MoneyCurrency Currency, decimal NativeAmount, decimal ConfirmedUsdAmount);
 
 // Counter DTOs deliberately have no cost observation, purchase price, or supplier fields.
-public sealed record SaleDto(Guid Id, Guid OperationId, Guid ActorId, DateTime PostedAtUtc,
+public sealed record SaleDto(Guid Id, long ReceiptNumber, Guid OperationId, Guid ActorId, DateTime PostedAtUtc,
     Guid? CustomerId, string? CustomerName, decimal TotalUsd, decimal PaymentsUsd, decimal ChangeUsd,
-    decimal CustomerCreditUsedUsd, decimal UnpaidDebtUsd,
+    decimal ExchangeCreditUsd, decimal CustomerCreditUsedUsd, decimal UnpaidDebtUsd,
     IReadOnlyList<SaleLineDto> Lines, IReadOnlyList<SaleTenderDto> Tenders);
 public sealed record SaleLineDto(Guid Id, Guid PartId, int Position, string PartNumber, string Name,
     string Brand, string Variant, StockUnit StockUnit, int Quantity, decimal UnitSellingPriceUsd, decimal LineTotalUsd,
@@ -31,6 +41,18 @@ public sealed record SaleLineDto(Guid Id, Guid PartId, int Position, string Part
     decimal? SuggestedUnitPriceUsd, bool PriceOverridden);
 public sealed record SaleTenderDto(Guid Id, Guid CashAccountId, string AccountName, MoneyCurrency Currency,
     bool IsChange, decimal NativeAmount, decimal ConfirmedUsdAmount);
+public sealed record CorrectSaleTenderAccountRequest
+{
+    public Guid OperationId { get; init; }
+    public Guid CorrectCashAccountId { get; init; }
+    public string Reason { get; init; } = string.Empty;
+}
+public sealed record SaleTenderAccountCorrectionDto(Guid Id, Guid OperationId, Guid OriginalSaleTenderId,
+    Guid OriginalCashAccountId, Guid CorrectCashAccountId, MoneyCurrency Currency, decimal NativeAmount,
+    decimal ConfirmedUsdAmount, string Reason, DateTime CorrectedAtUtc, Guid CorrectedByUserId);
+public sealed record ReverseSaleTenderAccountCorrectionRequest { public Guid OperationId { get; init; } public string Reason { get; init; } = string.Empty; }
+public sealed record SaleTenderAccountCorrectionReversalDto(Guid Id, Guid OperationId, Guid SaleTenderAccountCorrectionId,
+    string Reason, DateTime ReversedAtUtc, Guid ReversedByUserId);
 public sealed record SaleOperationDto(string Status, SaleDto Sale);
 public sealed record SalePaymentAccountDto(Guid Id, string Name, MoneyCurrency Currency, CashAccountKind Kind);
 public sealed record SaleSummaryDto(Guid Id, DateTime PostedAtUtc, string? CustomerName, decimal TotalUsd,

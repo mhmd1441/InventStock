@@ -1,6 +1,6 @@
 # Counter-sale backend posting contract
 
-This is the sale-posting contract, not an operational sales release. A counter UI and linked returns/refunds exist in code; paper-era returns, exchanges, receipts, reconciliation, backup and deployment remain unfinished.
+This is the sale-posting contract, not an operational sales release. Counter sales, linked returns, sold-before-InventStock returns and the atomic exchange backend exist in code. The exchange UI, receipts, reconciliation, backup and deployment remain unfinished.
 
 ## Amounts and rounding
 
@@ -23,6 +23,17 @@ This is the sale-posting contract, not an operational sales release. A counter U
 - Operation ID is permanent. The shared operation guard serializes all current stock/hold/receiving/cash/sale commands. Same actor and canonical payload replay the saved immutable result. Changed payload or actor conflicts. Status returns a committed result only to its original actor. Current active-user status and Admin/Staff membership are checked in the database for posting, replay, recovery and payment-account lookup.
 - A failed/missing HTTP response must be resolved through `GET /api/sales/operations/{operationId}` and, if retrying, the same ID and exact payload. No automatic request replay.
 
+## Atomic exchange
+
+- One exchange owns both a capped linked return and a replacement sale. Lock order is operation, original-sale customer, sorted original sale lines, then every returned/replacement SKU in ascending Guid order.
+- Returned value is explicitly divided: `return total = applied to replacement + cash/Whish refund + customer-account reduction`.
+- The replacement independently balances: `replacement total = return applied + payments - change + existing customer credit used + unpaid debt`.
+- An anonymous exchange cannot reduce an account, use customer credit or leave debt. A named exchange stays attached to the original sale's immutable customer identity.
+- The return uses cumulative original-line quantity and cent caps. Faulty returns are added physically and held in quarantine in the same transaction. Only sellable returned quantity can fund same-transaction stock availability.
+- Replacement stock uses the normal uncounted/shortage/quarantine rules. A returned quarantined unit is never treated as available replacement stock.
+- The child return, replacement sale, stock movements, cash movements, customer entries and exchange link commit together. The replacement sale snapshots returned value as explicit exchange credit so its own database settlement constraint remains independently auditable.
+- Recovery uses `GET /api/sale-exchanges/operations/{operationId}`. Same actor and exact payload replay; changed payload, another actor or cross-command operation-ID reuse conflicts. Refresh notifications are sent only after commit.
+
 ## Scope remaining
 
-Customer and counter-sale UI were smoke-tested on a disposable database before the later opening-correction, linked-return and suggested-pricing screens. Those later browser flows are not verified. Older-sale lookup, paper-era returns, receipt numbering/printing and reconciliation remain unfinished. No normal database migration is authorized.
+Customer and counter-sale UI were smoke-tested on a disposable database before the later opening-correction, return, pricing and exchange work. Those later browser flows are not verified. The atomic exchange PostgreSQL tests are written but cannot run while Docker Desktop is unavailable. Exchange UI, receipt numbering/printing and reconciliation remain unfinished. No normal database migration is authorized.

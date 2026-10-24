@@ -19,6 +19,28 @@ public sealed class PostgresCustomerTests(PostgresSaleFixture fixture) : IClassF
     };
 
     [Fact]
+    public async Task Paper_recovery_payment_is_admin_only_idempotent_and_keeps_original_time()
+    {
+        var customer = await fixture.Customer(20);
+        var occurred = DateTime.UtcNow.AddHours(-3);
+        var request = new PostPaperRecoveryCustomerPaymentRequest
+        {
+            Payment = Payment(usd: 10), OriginalOccurredAtUtc = occurred,
+            PaperReference = "PAPER-PAYMENT-" + Guid.NewGuid().ToString("N"),
+            Reason = "Recorded from the daily paper book.", OriginalSellerNote = "Father"
+        };
+        await using var db = fixture.Open();
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.CustomerService(db).PayPaperRecoveryAsync(customer.Id, request));
+        var service = fixture.CustomerService(db, fixture.AdminActor);
+        var posted = await service.PayPaperRecoveryAsync(customer.Id, request);
+        Assert.Equal(new DateTime(occurred.Ticks - occurred.Ticks % 10, DateTimeKind.Utc), posted.PostedAtUtc);
+        Assert.Equal(JsonSerializer.Serialize(posted), JsonSerializer.Serialize(await service.PayPaperRecoveryAsync(customer.Id, request)));
+        Assert.Equal(10m, await db.CashMovements.Where(x => x.CustomerPaymentTenderId == posted.Tenders.Single().Id).SumAsync(x => x.AmountChange));
+        Assert.Equal(10m, (await service.StatementAsync(customer.Id, new())).Summary.BalanceUsd);
+        Assert.Equal(request.PaperReference, (await db.PaperRecoveryEntries.SingleAsync(x => x.CustomerPaymentId == posted.Id)).PaperReference);
+    }
+
+    [Fact]
     public async Task Profiles_are_audited_revisioned_and_allow_distinct_name_twins()
     {
         await using var db = fixture.Open();

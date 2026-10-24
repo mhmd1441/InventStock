@@ -1,6 +1,7 @@
 using InventStock.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -23,6 +24,8 @@ public sealed class PostgresSaleApiFactory : ApiFactory
         if (connection.Database != "inventstock_test") throw new InvalidOperationException("Only disposable inventstock_test is allowed.");
         connection.SearchPath = schema + ",public";
         builder.UseEnvironment(Environments.Staging);
+        builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { ["TransactionRelease:Enabled"] = "true" }));
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<AppDbContext>>();
@@ -34,23 +37,15 @@ public sealed class PostgresSaleApiFactory : ApiFactory
 
     protected override async Task PrepareDatabaseAsync(AppDbContext db)
     {
-        await TestPostgresExtensions.EnsurePublicAsync(Environment.GetEnvironmentVariable("INVENTSTOCK_TEST_POSTGRES"));
-#pragma warning disable EF1002 // Private generated schema, never supplied by a request.
-        await db.Database.ExecuteSqlRawAsync($"CREATE SCHEMA \"{schema}\"");
-#pragma warning restore EF1002
+        await TestPostgresSchemas.MigrateAsync(schema);
         created = true;
-        await db.Database.MigrateAsync();
     }
 
     public override async Task DisposeAsync()
     {
         if (created)
         {
-            using var scope = Services.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-#pragma warning disable EF1002
-            await db.Database.ExecuteSqlRawAsync($"DROP SCHEMA \"{schema}\" CASCADE");
-#pragma warning restore EF1002
+            await TestPostgresSchemas.DropAsync(schema);
         }
         await base.DisposeAsync();
     }

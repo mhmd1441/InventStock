@@ -1,5 +1,6 @@
 using FluentValidation;
 using InventStock.Application.DTOs.Sales;
+using InventStock.Domain.Entities;
 
 namespace InventStock.Application.Validators;
 
@@ -31,6 +32,18 @@ public sealed class PostSaleRequestValidator : AbstractValidator<PostSaleRequest
     }
 }
 
+public sealed class PostPaperRecoverySaleRequestValidator : AbstractValidator<PostPaperRecoverySaleRequest>
+{
+    public PostPaperRecoverySaleRequestValidator()
+    {
+        RuleFor(x => x.Sale).NotNull().SetValidator(new PostSaleRequestValidator());
+        RuleFor(x => x.OriginalOccurredAtUtc).Must(x => x.Kind == DateTimeKind.Utc && x >= new DateTime(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc) && x <= DateTime.UtcNow);
+        RuleFor(x => x.PaperReference).NotEmpty().MaximumLength(PaperRecoveryEntry.PaperReferenceMaxLength);
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(PaperRecoveryEntry.ReasonMaxLength);
+        RuleFor(x => x.OriginalSellerNote).MaximumLength(PaperRecoveryEntry.OriginalSellerNoteMaxLength);
+    }
+}
+
 public sealed class SaleTenderValidator : AbstractValidator<SaleTenderRequest>
 {
     public SaleTenderValidator()
@@ -41,5 +54,24 @@ public sealed class SaleTenderValidator : AbstractValidator<SaleTenderRequest>
         RuleFor(x => x.ConfirmedUsdAmount).InclusiveBetween(0.01m, 999999999m).PrecisionScale(18, 2, true);
         RuleFor(x => x).Must(x => x.Currency != Domain.Enums.MoneyCurrency.USD || x.NativeAmount == x.ConfirmedUsdAmount)
             .WithMessage("USD tender must equal its confirmed USD settlement.");
+    }
+}
+
+public sealed class CorrectSaleTenderAccountRequestValidator : AbstractValidator<CorrectSaleTenderAccountRequest>
+{
+    public CorrectSaleTenderAccountRequestValidator()
+    {
+        RuleFor(x => x.OperationId).NotEmpty();
+        RuleFor(x => x.CorrectCashAccountId).NotEmpty();
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
+    }
+}
+
+public sealed class ReverseSaleTenderAccountCorrectionRequestValidator : AbstractValidator<ReverseSaleTenderAccountCorrectionRequest>
+{
+    public ReverseSaleTenderAccountCorrectionRequestValidator()
+    {
+        RuleFor(x => x.OperationId).NotEmpty();
+        RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
     }
 }

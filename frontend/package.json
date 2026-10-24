@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:client": "tsc lib/api.ts lib/types.ts lib/pending-stock-operation.ts lib/pending-sale-operation.ts lib/pending-return-operation.ts lib/pending-customer-operation.ts lib/sale-math.ts lib/return-math.ts lib/tender-math.ts lib/supplier-import.ts lib/quantity.ts --outDir .test-build --module commonjs --target es2022 --lib es2022,dom --skipLibCheck && node --test tests/*.test.mjs"
+    "test:client": "tsc lib/api.ts lib/types.ts lib/pending-stock-operation.ts lib/pending-sale-operation.ts lib/pending-return-operation.ts lib/pending-legacy-return-operation.ts lib/pending-customer-operation.ts lib/sale-math.ts lib/return-math.ts lib/tender-math.ts lib/supplier-import.ts lib/quantity.ts --outDir .test-build --module commonjs --target es2022 --lib es2022,dom --skipLibCheck && node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -20,6 +22,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

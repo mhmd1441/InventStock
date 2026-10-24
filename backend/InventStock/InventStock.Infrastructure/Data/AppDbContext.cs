@@ -41,18 +41,29 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<CashAccount> CashAccounts => Set<CashAccount>();
     public DbSet<ExpenseCategory> ExpenseCategories => Set<ExpenseCategory>();
     public DbSet<CashOpeningBalance> CashOpeningBalances => Set<CashOpeningBalance>();
+    public DbSet<CashReconciliation> CashReconciliations => Set<CashReconciliation>();
+    public DbSet<CashReconciliationCorrection> CashReconciliationCorrections => Set<CashReconciliationCorrection>();
     public DbSet<CashMovement> CashMovements => Set<CashMovement>();
     public DbSet<OutgoingPayment> OutgoingPayments => Set<OutgoingPayment>();
     public DbSet<OutgoingPaymentReversal> OutgoingPaymentReversals => Set<OutgoingPaymentReversal>();
+    public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
+    public DbSet<SupplierPaymentLine> SupplierPaymentLines => Set<SupplierPaymentLine>();
+    public DbSet<SupplierPaymentReversal> SupplierPaymentReversals => Set<SupplierPaymentReversal>();
+    public DbSet<CashTransfer> CashTransfers => Set<CashTransfer>();
+    public DbSet<CashTransferReversal> CashTransferReversals => Set<CashTransferReversal>();
     public DbSet<Sale> Sales => Set<Sale>();
     public DbSet<SaleLine> SaleLines => Set<SaleLine>();
     public DbSet<SaleTender> SaleTenders => Set<SaleTender>();
+    public DbSet<SaleTenderAccountCorrection> SaleTenderAccountCorrections => Set<SaleTenderAccountCorrection>();
+    public DbSet<SaleTenderAccountCorrectionReversal> SaleTenderAccountCorrectionReversals => Set<SaleTenderAccountCorrectionReversal>();
     public DbSet<SaleReturn> SaleReturns => Set<SaleReturn>();
     public DbSet<SaleReturnLine> SaleReturnLines => Set<SaleReturnLine>();
     public DbSet<SaleRefundTender> SaleRefundTenders => Set<SaleRefundTender>();
     public DbSet<LegacySaleReturn> LegacySaleReturns => Set<LegacySaleReturn>();
     public DbSet<LegacySaleReturnLine> LegacySaleReturnLines => Set<LegacySaleReturnLine>();
     public DbSet<LegacySaleRefundTender> LegacySaleRefundTenders => Set<LegacySaleRefundTender>();
+    public DbSet<SaleExchange> SaleExchanges => Set<SaleExchange>();
+    public DbSet<PaperRecoveryEntry> PaperRecoveryEntries => Set<PaperRecoveryEntry>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerAccountEntry> CustomerAccountEntries => Set<CustomerAccountEntry>();
     public DbSet<CustomerProfileEvent> CustomerProfileEvents => Set<CustomerProfileEvent>();
@@ -65,7 +76,13 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-        builder.HasPostgresExtension("pg_trgm");
+        if (Database.IsNpgsql())
+        {
+            builder.HasPostgresExtension("pg_trgm");
+            builder.HasSequence<long>("SaleReceiptNumbers").StartsAt(100000);
+            builder.Entity<Sale>().Property(x => x.ReceiptNumber)
+                .HasDefaultValueSql("nextval('\"SaleReceiptNumbers\"')").ValueGeneratedOnAdd();
+        }
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 
@@ -86,6 +103,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
         if (ChangeTracker.Entries().Any(e => e.State is EntityState.Modified or EntityState.Deleted &&
             e.Entity is Sale or SaleLine or SaleTender or SaleReturn or SaleReturnLine or SaleRefundTender
                 or LegacySaleReturn or LegacySaleReturnLine or LegacySaleRefundTender
+                or SaleExchange
+                or PaperRecoveryEntry
                 or CustomerAccountEntry or StockMovement or CustomerProfileEvent
                 or CustomerPayment or CustomerPaymentTender or CustomerPaymentCorrection))
             throw new InvalidOperationException("Posted sale and ledger records cannot be edited or deleted.");
@@ -106,9 +125,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
             ChangeTracker.Entries<SupplierImportRow>().Any(e => e.State == EntityState.Deleted))
             throw new InvalidOperationException("Supplier import evidence cannot be deleted.");
         if (ChangeTracker.Entries<CashOpeningBalance>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<CashReconciliation>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<CashReconciliationCorrection>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
             ChangeTracker.Entries<CashMovement>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
             ChangeTracker.Entries<OutgoingPayment>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
-            ChangeTracker.Entries<OutgoingPaymentReversal>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            ChangeTracker.Entries<OutgoingPaymentReversal>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<SupplierPayment>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<SupplierPaymentLine>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<SupplierPaymentReversal>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<CashTransfer>().Any(e => e.State is EntityState.Modified or EntityState.Deleted) ||
+            ChangeTracker.Entries<CashTransferReversal>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
             throw new InvalidOperationException("Posted cash records cannot be edited or deleted; create a linked reversal.");
         var now = DateTime.UtcNow;
         var userId = _currentUser?.UserId;

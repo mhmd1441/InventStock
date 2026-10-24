@@ -23,14 +23,23 @@ public static class OperationGuard
             (kind != "CustomerPayment" && await db.CustomerPayments.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "CustomerCorrection" && await db.CustomerPaymentCorrections.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Sale" && await db.Sales.AnyAsync(x => x.OperationId == id, ct)) ||
+            (kind != "SaleTenderAccountCorrection" && await db.SaleTenderAccountCorrections.AnyAsync(x => x.OperationId == id, ct)) ||
+            (kind != "SaleTenderAccountCorrectionReversal" && await db.SaleTenderAccountCorrectionReversals.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "SaleReturn" && await db.SaleReturns.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "LegacySaleReturn" && await db.LegacySaleReturns.AnyAsync(x => x.OperationId == id, ct)) ||
+            (kind != "SaleExchange" && await db.SaleExchanges.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Stock" && await db.StockMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Hold" && await db.StockHoldMovements.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Receipt" && await db.PurchaseReceipts.AnyAsync(x => x.OperationId == id, ct)) ||
             (kind != "Cash" && (await db.CashOpeningBalances.AnyAsync(x => x.OperationId == id, ct) ||
                 await db.OutgoingPayments.AnyAsync(x => x.OperationId == id, ct) ||
-                await db.OutgoingPaymentReversals.AnyAsync(x => x.OperationId == id, ct))))
+                await db.OutgoingPaymentReversals.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.CashReconciliations.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.CashReconciliationCorrections.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.SupplierPayments.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.SupplierPaymentReversals.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.CashTransfers.AnyAsync(x => x.OperationId == id, ct) ||
+                await db.CashTransferReversals.AnyAsync(x => x.OperationId == id, ct))))
             throw new ConflictException("This operation ID is already used by another command.");
     }
 }

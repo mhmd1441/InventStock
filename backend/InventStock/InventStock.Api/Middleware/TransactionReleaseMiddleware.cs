@@ -7,10 +7,12 @@ public sealed class TransactionReleaseMiddleware(RequestDelegate next, IConfigur
     [
         new("/api/sales"),
         new("/api/sale-returns"),
+        new("/api/sale-exchanges"),
         new("/api/customers"),
         new("/api/admin/cash"),
         new("/api/pricing"),
-        new("/api/admin/pricing")
+        new("/api/admin/pricing"),
+        new("/api/admin/transaction-exceptions")
     ];
 
     public async Task InvokeAsync(HttpContext context)
@@ -22,7 +24,10 @@ public sealed class TransactionReleaseMiddleware(RequestDelegate next, IConfigur
             return;
         }
 
-        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        // Hide unfinished transaction surfaces rather than advertising that they exist.
+        // Normal endpoint authorization still runs first, so callers without the endpoint's
+        // role may receive 403 before this gate is reached.
+        context.Response.StatusCode = StatusCodes.Status404NotFound;
         context.Response.Headers.CacheControl = "no-store";
         await context.Response.WriteAsJsonAsync(new
         {

@@ -22,11 +22,12 @@ const navigation = [
   { href: "/imports", label: "Imports", adminOnly: true },
   { href: "/cash", label: "Cash out", adminOnly: true },
   { href: "/pricing", label: "Pricing rules", adminOnly: true },
+  { href: "/exceptions", label: "Exceptions", adminOnly: true },
   { href: "/users", label: "Users", adminOnly: true },
 ];
 
 const transactionReleaseEnabled = process.env.NEXT_PUBLIC_TRANSACTION_RELEASE_ENABLED === "true";
-const transactionPages = ["/sales", "/returns", "/customers", "/cash", "/pricing"];
+const transactionPages = ["/sales", "/returns", "/customers", "/cash", "/pricing", "/exceptions"];
 
 export default function AppLayout({
   children,

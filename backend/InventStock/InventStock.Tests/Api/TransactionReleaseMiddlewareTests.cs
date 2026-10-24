@@ -10,10 +10,12 @@ public sealed class TransactionReleaseMiddlewareTests
     [InlineData("/api/sales")]
     [InlineData("/api/sales/operations/123")]
     [InlineData("/api/sale-returns")]
+    [InlineData("/api/sale-exchanges")]
     [InlineData("/api/customers/123/payments")]
     [InlineData("/api/admin/cash")]
     [InlineData("/api/pricing/suggestions")]
     [InlineData("/api/admin/pricing/policy")]
+    [InlineData("/api/admin/transaction-exceptions")]
     [InlineData("/api/parts/845f5957-d848-4bf8-ae8a-a745939554bd/stock/in")]
     [InlineData("/api/parts/845f5957-d848-4bf8-ae8a-a745939554bd/stock/out")]
     public async Task Default_off_blocks_transaction_routes(string path)
@@ -31,7 +33,7 @@ public sealed class TransactionReleaseMiddlewareTests
         await middleware.InvokeAsync(context);
 
         Assert.False(nextCalled);
-        Assert.Equal(StatusCodes.Status503ServiceUnavailable, context.Response.StatusCode);
+        Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
         Assert.Equal("no-store", context.Response.Headers.CacheControl.ToString());
     }
 

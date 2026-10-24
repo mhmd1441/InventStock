@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="ecbbc0ed-9f18-47e5-aaaa-b61338203899" name="user@MOUMNEH-LAPTOP 2026-10-24 22:27:15" runUser="MOUMNEH-LAPTOP\user" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-10-24T22:27:15.6912086+03:00" queuing="2026-10-24T22:27:15.6912089+03:00" start="2026-10-24T22:26:19.3422301+03:00" finish="2026-10-24T22:27:43.6533584+03:00" />
+  <TestSettings name="default" id="6883bf3f-50d3-4cd2-a8aa-3fc9e6fb6248">
+    <Deployment runDeploymentRoot="user_MOUMNEH-LAPTOP_2026-10-24_22_27_15" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="a4eb6ebf-ba7b-49c7-963d-b4f05912090f" testId="92e4aa62-b5bc-e300-01fb-97bb705ee5f0" testName="InventStock.Tests.Infrastructure.PostgresCatalogueTests.SimultaneousLastUnitSales_OneCommitsOneConflicts" computerName="MOUMNEH-LAPTOP" duration="00:00:02.5602480" startTime="2026-10-24T22:27:17.1091346+03:00" endTime="2026-10-24T22:27:17.1091349+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a4eb6ebf-ba7b-49c7-963d-b4f05912090f" />
+    <UnitTestResult executionId="ae180789-32d0-4785-95eb-b1337872aafa" testId="3b521a1a-b61b-c4ee-6241-853cde16ebb3" testName="InventStock.Tests.Infrastructure.PostgresCatalogueTests.SearchBenchmark_20000Parts_280000References_100000Movements" computerName="MOUMNEH-LAPTOP" duration="00:00:25.2859933" startTime="2026-10-24T22:27:42.3959686+03:00" endTime="2026-10-24T22:27:42.3959688+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ae180789-32d0-4785-95eb-b1337872aafa">
+      <Output>
+        <StdOut>1000000582: p50=59.8ms, p95=67.6ms, max=70.0ms&#xD;
+A1000000582: p50=95.8ms, p95=104.2ms, max=108.2ms&#xD;
+~/00582: p50=97.6ms, p95=141.2ms, max=143.7ms&#xD;
+1 000-000-582: p50=76.6ms, p95=102.0ms, max=102.6ms&#xD;
+fil: p50=161.1ms, p95=174.4ms, max=176.6ms&#xD;
+000058: p50=111.1ms, p95=151.6ms, max=158.5ms&#xD;
+filter: p50=127.9ms, p95=166.2ms, max=169.9ms&#xD;
+PartNumber: p50=8.9ms, p95=14.5ms, max=17.1ms&#xD;
+PartNumber: p50=15.1ms, p95=22.7ms, max=27.8ms&#xD;
+QuantityOnHand: p50=392.0ms, p95=464.7ms, max=575.1ms</StdOut>
+      </Output>
+    </UnitTestResult>
+    <UnitTestResult executionId="41615940-f26c-4a59-8ad1-040d066fe448" testId="b4b145f7-7826-5815-61d4-3d0591afa6e3" testName="InventStock.Tests.Infrastructure.PostgresCatalogueTests.ConcurrentDuplicateOperation_CommitsOneMovementAndReturnsSameOutcome" computerName="MOUMNEH-LAPTOP" duration="00:00:00.2558472" startTime="2026-10-24T22:27:42.6523752+03:00" endTime="2026-10-24T22:27:42.6523754+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="41615940-f26c-4a59-8ad1-040d066fe448" />
+    <UnitTestResult executionId="03629c11-0578-4653-97e7-54bdf0dd56be" testId="36966801-2525-cb1e-2952-5f90843c850d" testName="InventStock.Tests.Infrastructure.PostgresCatalogueTests.CounterSearch_UsesTwoQueries_NoSupplierJoinOrPrivateColumns" computerName="MOUMNEH-LAPTOP" duration="00:00:00.3937105" startTime="2026-10-24T22:27:14.5481389+03:00" endTime="2026-10-24T22:27:14.5481515+03:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03629c11-0578-4653-97e7-54bdf0dd56be" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCatalogueTests.SearchBenchmark_20000Parts_280000References_100000Movements" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="3b521a1a-b61b-c4ee-6241-853cde16ebb3">
+      <Execution id="ae180789-32d0-4785-95eb-b1337872aafa" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCatalogueTests" name="SearchBenchmark_20000Parts_280000References_100000Movements" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCatalogueTests.ConcurrentDuplicateOperation_CommitsOneMovementAndReturnsSameOutcome" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="b4b145f7-7826-5815-61d4-3d0591afa6e3">
+      <Execution id="41615940-f26c-4a59-8ad1-040d066fe448" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCatalogueTests" name="ConcurrentDuplicateOperation_CommitsOneMovementAndReturnsSameOutcome" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCatalogueTests.CounterSearch_UsesTwoQueries_NoSupplierJoinOrPrivateColumns" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="36966801-2525-cb1e-2952-5f90843c850d">
+      <Execution id="03629c11-0578-4653-97e7-54bdf0dd56be" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCatalogueTests" name="CounterSearch_UsesTwoQueries_NoSupplierJoinOrPrivateColumns" />
+    </UnitTest>
+    <UnitTest name="InventStock.Tests.Infrastructure.PostgresCatalogueTests.SimultaneousLastUnitSales_OneCommitsOneConflicts" storage="c:\users\user\desktop\folders\personal_projects\inventstock\backend\inventstock\inventstock.tests\bin\release\net8.0\inventstock.tests.dll" id="92e4aa62-b5bc-e300-01fb-97bb705ee5f0">
+      <Execution id="a4eb6ebf-ba7b-49c7-963d-b4f05912090f" />
+      <TestMethod codeBase="C:\Users\user\Desktop\Folders\Personal_Projects\InventStock\backend\InventStock\InventStock.Tests\bin\Release\net8.0\InventStock.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner2/netcoreapp" className="InventStock.Tests.Infrastructure.PostgresCatalogueTests" name="SimultaneousLastUnitSales_OneCommitsOneConflicts" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="92e4aa62-b5bc-e300-01fb-97bb705ee5f0" executionId="a4eb6ebf-ba7b-49c7-963d-b4f05912090f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3b521a1a-b61b-c4ee-6241-853cde16ebb3" executionId="ae180789-32d0-4785-95eb-b1337872aafa" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="b4b145f7-7826-5815-61d4-3d0591afa6e3" executionId="41615940-f26c-4a59-8ad1-040d066fe448" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="36966801-2525-cb1e-2952-5f90843c850d" executionId="03629c11-0578-4653-97e7-54bdf0dd56be" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="4" executed="4" passed="4" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.5.3.1+6b60a9e56a (64-bit .NET 8.0.32)&#xD;
+[xUnit.net 00:00:00.10]   Discovering: InventStock.Tests&#xD;
+[xUnit.net 00:00:00.16]   Discovered:  InventStock.Tests&#xD;
+[xUnit.net 00:00:00.17]   Starting:    InventStock.Tests&#xD;
+[xUnit.net 00:01:23.81]   Finished:    InventStock.Tests&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

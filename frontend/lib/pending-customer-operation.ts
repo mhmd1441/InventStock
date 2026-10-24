@@ -1,6 +1,6 @@
 /** Non-secret financial-operation recovery marker, scoped to its original actor. */
 export interface PendingCustomerOperation {
-  kind: "profile" | "payment" | "correction" | "opening" | "openingCorrection";
+  kind: "profile" | "payment" | "paperPayment" | "correction" | "opening" | "openingCorrection";
   operationId: string;
   actorId: string;
   customerId: string;
@@ -15,7 +15,7 @@ export function readPendingCustomerOperation(actorId: string): PendingCustomerOp
   if (!raw) return null;
   try {
     const value = JSON.parse(raw) as PendingCustomerOperation;
-    return value.actorId === actorId && ["profile", "payment", "correction", "opening", "openingCorrection"].includes(value.kind) ? value : null;
+    return value.actorId === actorId && ["profile", "payment", "paperPayment", "correction", "opening", "openingCorrection"].includes(value.kind) ? value : null;
   } catch { return null; }
 }
 export function clearPendingCustomerOperation(actorId: string, operationId: string) {
