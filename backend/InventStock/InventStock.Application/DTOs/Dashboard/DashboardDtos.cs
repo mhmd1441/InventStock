@@ -34,6 +34,10 @@ public sealed record DashboardSummaryDto
 
     public decimal TotalStockValue { get; init; }
 
+    public int UnreviewedExceptionCount { get; init; }
+
+    public DateTime? ExceptionCountSinceUtc { get; init; }
+
     public IReadOnlyList<StockMovementDto> RecentMovements { get; init; } = Array.Empty<StockMovementDto>();
 
     public IReadOnlyList<PartDto> LowStockParts { get; init; } = Array.Empty<PartDto>();

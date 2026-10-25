@@ -20,6 +20,20 @@ public sealed class SupplierImportService(AppDbContext db, ICurrentUserService c
             throw new ConflictException("This supplier file has already been staged.");
         if (request.Rows.Select(x => x.SourceRowNumber).Distinct().Count() != request.Rows.Count)
             throw new ConflictException("Source row numbers must be unique within an import.");
+        var duplicate = request.Rows.GroupBy(x => new
+            {
+                Number = Part.NormalizePartNumber(x.PartNumber),
+                Brand = (x.Brand ?? string.Empty).Trim().ToUpperInvariant(),
+                Variant = (x.Variant ?? string.Empty).Trim().ToUpperInvariant(),
+                Name = x.Name.Trim().ToUpperInvariant(),
+                SupplierCode = (x.SupplierCode ?? string.Empty).Trim().ToUpperInvariant(),
+                x.CatalogueCost,
+                x.Currency,
+                x.TaxTreatment
+            })
+            .FirstOrDefault(x => x.Count() > 1);
+        if (duplicate is not null)
+            throw new ConflictException("The supplier file contains an exact duplicate row. Remove it before review.");
 
         var batch = SupplierImportBatch.Create(request.SupplierId, request.SourceFileName, hash);
         foreach (var row in request.Rows.OrderBy(x => x.SourceRowNumber))

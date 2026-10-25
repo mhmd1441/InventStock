@@ -19,6 +19,7 @@ export default function DashboardPage() {
     { label: "Counted parts", value: formatNumber(data.countedParts) },
     { label: "Not counted", value: formatNumber(data.notCountedParts), tone: data.notCountedParts > 0 ? ("warning" as const) : undefined },
     ...("totalStockValue" in data ? [{ label: "Counted stock value", value: formatCurrency(data.totalStockValue) }] : []),
+    ...("unreviewedExceptionCount" in data ? [{ label: "Exceptions since last close", value: formatNumber(data.unreviewedExceptionCount), tone: data.unreviewedExceptionCount > 0 ? ("warning" as const) : undefined, href: "/exceptions" }] : []),
     {
       label: "Needs reorder",
       value: formatNumber(data.lowStockCount),
@@ -53,6 +54,7 @@ export default function DashboardPage() {
             >
               {stat.value}
             </p>
+            {"href" in stat && stat.href && <Link href={stat.href} className="mt-2 inline-block text-xs text-accent hover:underline">Review exceptions →</Link>}
           </div>
         ))}
       </div>

@@ -112,3 +112,14 @@ Historical evidence only. For the next action, decisions and safety rules, read 
 - Added a general `SaleLines.PartId` lookup index while preserving the filtered shortage index; generated `SaleLookupIndexes` without applying it to a normal database.
 - Added PostgreSQL coverage for combined filters, older sales, pagination and cost/supplier privacy. Updated the populated migration rehearsal to assert the exact named chain from `ReviewedSupplierImports`.
 
+## 2026-10-25 — reviewable V1 source completion and verification
+
+- Finished the reviewable V1 code queue: guarded one-command verification and benchmark scripts; pilot/counter/paper-fallback docs; advanced browser specifications; robust messy-import checks; counter keyboard/tender shortcuts; dashboard exception attention; and the linked-sale exchange screen with recovery.
+- Corrected compile issues in the new dashboard exception count (explicit `SaleLines`/`Sales` joins and `CashReconciliation.ClosedAtUtc`) and exchange calculation null handling. The hostile fixture’s seed-only timeout was raised from 30 to 180 seconds so the intended 20k-SKU/~280k-reference/100k-movement synthetic dataset can be created on slower Docker/Windows disks; application query timeouts did not change.
+- Final disposable PostgreSQL 17 suite: **207/207 passed** in 1.28 minutes (`TestResults/full-backend-v1-final.log`). Frontend source checks: **23/23** client tests, ESLint and TypeScript passed. Next production build compiles and type-checks, but Windows fails while creating generated `.next` directories with `EPERM`, even after a clean generated-output cache; no product-code failure was reported.
+
+## 2026-10-25 — disposable browser-smoke runner hardening
+
+- Exercised the guarded runner only against `inventstock_browser_smoke`. It exposed two runner defects before any browser assertion: the disposable staff user used invalid role `Employee` instead of `Staff`, and stopping the wrapper shell could leave an API child process holding port 7057. Both are fixed: the runner now uses `Staff`, refuses occupied ports and terminates only the process trees it started.
+- A later sandbox attempt completed API migration/seeding and disposable-user setup but did not return a Playwright report despite no remaining local API/frontend/browser process. It was interrupted; the exact disposable database was explicitly dropped afterwards. This is **not** a browser-test pass or failure. Owner-PC `Run-BrowserSmoke.ps1` remains the authoritative next check.
+

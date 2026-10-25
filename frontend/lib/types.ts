@@ -154,6 +154,8 @@ export interface CounterDashboardSummary {
 export interface AdminDashboardSummary extends CounterDashboardSummary {
   totalSuppliers: number;
   totalStockValue: number;
+  unreviewedExceptionCount: number;
+  exceptionCountSinceUtc: string | null;
 }
 
 export type DashboardSummary = CounterDashboardSummary | AdminDashboardSummary;
@@ -655,6 +657,19 @@ export interface SaleReturn {
   postedAtUtc: string; reason: string; totalUsd: number; accountReductionUsd: number;
   lines: { id: string; saleLineId: string; partId: string; quantity: number; refundUsd: number; condition: ReturnCondition; issueReason: string | null }[];
   refunds: { id: string; cashAccountId: string; accountName: string; currency: MoneyCurrency; nativeAmount: number; confirmedUsdAmount: number }[];
+}
+
+export interface PostSaleExchangeRequest {
+  operationId: string; originalSaleId: string; reason: string;
+  confirmedReturnTotalUsd: number; returnAppliedUsd: number; accountReductionUsd: number;
+  returnLines: PostSaleReturnRequest["lines"]; refunds: SaleTenderRequest[];
+  confirmedReplacementTotalUsd: number; customerCreditUsedUsd: number; unpaidDebtUsd: number;
+  replacementLines: SaleLineRequest[]; payments: SaleTenderRequest[]; change: SaleTenderRequest[];
+}
+export interface SaleExchange {
+  id: string; operationId: string; actorId: string; originalSaleId: string; customerId: string | null;
+  postedAtUtc: string; returnTotalUsd: number; returnAppliedUsd: number; refundUsd: number;
+  accountReductionUsd: number; replacementTotalUsd: number; replacementSale: Sale;
 }
 
 export interface PostLegacySaleReturnRequest {

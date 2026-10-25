@@ -14,4 +14,5 @@ public sealed record InventoryTotals(
 public interface IStatisticsRepository
 {
     Task<InventoryTotals> GetInventoryTotalsAsync(CancellationToken cancellationToken = default, bool includePrivate = true);
+    Task<DateTime?> GetLastCashCloseAtUtcAsync(CancellationToken cancellationToken = default);
 }

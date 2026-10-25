@@ -9,6 +9,24 @@ namespace InventStock.Infrastructure.Services;
 
 public sealed class TransactionExceptionService(AppDbContext db) : ITransactionExceptionService
 {
+    public async Task<int> CountSinceAsync(DateTime fromUtc, CancellationToken ct = default)
+    {
+        var from = Normalize(fromUtc);
+        return await db.SaleReturns.CountAsync(x => x.PostedAtUtc >= from, ct)
+            + await db.LegacySaleReturns.CountAsync(x => x.PostedAtUtc >= from, ct)
+            + await db.SaleLines.Join(db.Sales, line => line.SaleId, sale => sale.Id,
+                (line, sale) => new { line, sale })
+                .CountAsync(x => x.line.StockShortage && x.sale.PostedAtUtc >= from, ct)
+            + await db.SaleLines.Join(db.Sales, line => line.SaleId, sale => sale.Id,
+                (line, sale) => new { line, sale })
+                .CountAsync(x => x.line.StockException && !x.line.StockShortage && x.sale.PostedAtUtc >= from, ct)
+            + await db.CustomerPaymentCorrections.CountAsync(x => x.CorrectedAtUtc >= from, ct)
+            + await db.CustomerAccountEntries.CountAsync(x => x.Kind == "OpeningCorrection" && x.CreatedAtUtc >= from, ct)
+            + await db.OutgoingPaymentReversals.CountAsync(x => x.ReversedAtUtc >= from, ct)
+            + await db.SaleTenderAccountCorrections.CountAsync(x => x.CorrectedAtUtc >= from, ct)
+            + await db.PaperRecoveryEntries.CountAsync(x => x.EnteredAtUtc >= from, ct);
+    }
+
     public async Task<PagedResult<TransactionExceptionDto>> ListAsync(TransactionExceptionQuery query,
         CancellationToken ct = default)
     {

@@ -58,4 +58,7 @@ public sealed class StatisticsRepository : IStatisticsRepository
             countedParts,
             notCountedParts);
     }
+
+    public Task<DateTime?> GetLastCashCloseAtUtcAsync(CancellationToken cancellationToken = default) =>
+        _db.CashReconciliations.AsNoTracking().MaxAsync(x => (DateTime?)x.ClosedAtUtc, cancellationToken);
 }

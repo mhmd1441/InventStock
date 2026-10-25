@@ -74,6 +74,16 @@ function parseTax(value: string): TaxTreatment {
   throw new Error(`Unsupported TVA value “${value}”. Use Included, Excluded or Unknown.`);
 }
 
+function parseCost(value: string, row: number) {
+  const normalized = value.trim().replace(/\s/g, "");
+  if (!normalized) return null;
+  if (!/^\d+(?:[.,]\d+)?$/.test(normalized))
+    throw new Error(`Row ${row} has an invalid cost. Use digits with one dot or comma decimal separator and no thousands separators.`);
+  const amount = Number(normalized.replace(",", "."));
+  if (!Number.isFinite(amount) || amount < 0) throw new Error(`Row ${row} has an invalid non-negative cost.`);
+  return amount;
+}
+
 export function parseSupplierImportText(text: string): StageSupplierImportRowRequest[] {
   const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim());
   if (lines.length < 2) throw new Error("The file needs a header row and at least one data row.");
@@ -85,8 +95,10 @@ export function parseSupplierImportText(text: string): StageSupplierImportRowReq
   if (!headers.includes("partNumber") || !headers.includes("name"))
     throw new Error("Required columns are PartNumber and Name (Number/SKU and Description are accepted aliases).");
 
-  return lines.slice(1).map((line, rowIndex) => {
+  const parsed = lines.slice(1).map((line, rowIndex) => {
     const cells = parseLine(line, delimiter);
+    if (cells.length > rawHeaders.length && cells.slice(rawHeaders.length).some((cell) => cell.trim()))
+      throw new Error(`Row ${rowIndex + 2} contains more values than the header. Quote values containing the delimiter.`);
     const values = new Map<keyof StageSupplierImportRowRequest, string>();
     headers.forEach((header, index) => {
       if (header) values.set(header, cells[index] ?? "");
@@ -94,10 +106,11 @@ export function parseSupplierImportText(text: string): StageSupplierImportRowReq
     const partNumber = values.get("partNumber")?.trim() ?? "";
     const name = values.get("name")?.trim() ?? "";
     if (!partNumber || !name) throw new Error(`Row ${rowIndex + 2} requires both PartNumber and Name.`);
+    if (partNumber.length > 100 || name.length > 200 || (values.get("brand")?.trim().length ?? 0) > 100 ||
+        (values.get("variant")?.trim().length ?? 0) > 120 || (values.get("supplierCode")?.trim().length ?? 0) > 100)
+      throw new Error(`Row ${rowIndex + 2} contains a field longer than the supported import limit.`);
     const rawCost = values.get("catalogueCost")?.trim() ?? "";
-    const catalogueCost = rawCost ? Number(rawCost.replace(/,/g, "")) : null;
-    if (catalogueCost !== null && (!Number.isFinite(catalogueCost) || catalogueCost < 0))
-      throw new Error(`Row ${rowIndex + 2} has an invalid non-negative cost.`);
+    const catalogueCost = parseCost(rawCost, rowIndex + 2);
     const currency = parseCurrency(values.get("currency") ?? "");
     if ((catalogueCost !== null) !== (currency !== null))
       throw new Error(`Row ${rowIndex + 2} must provide cost and currency together, or leave both blank.`);
@@ -114,6 +127,15 @@ export function parseSupplierImportText(text: string): StageSupplierImportRowReq
       taxTreatment: parseTax(values.get("taxTreatment") ?? ""),
     };
   });
+  const seen = new Set<string>();
+  for (const row of parsed) {
+    const { sourceRowNumber, ...identity } = row;
+    void sourceRowNumber;
+    const key = JSON.stringify(identity, Object.keys(identity).sort());
+    if (seen.has(key)) throw new Error(`Duplicate supplier row detected at source row ${row.sourceRowNumber}. Remove it before review.`);
+    seen.add(key);
+  }
+  return parsed;
 }
 
 export async function sha256Hex(text: string) {

@@ -51,7 +51,11 @@ public sealed class PostgresCatalogueFixture : IAsyncLifetime
         await TestPostgresSchemas.EnsurePublicAsync();
         builder.SearchPath = _schema + ",public";
         builder.Timeout = 10;
-        builder.CommandTimeout = 30;
+        // This fixture deliberately creates 20k SKUs, ~280k references and 100k
+        // movements.  The application queries still use their ordinary command
+        // timeout; only one-off disposable benchmark seeding receives more time
+        // on slower Docker/Windows disks.
+        builder.CommandTimeout = 180;
         _connectionString = builder.ConnectionString;
         await TestPostgresSchemas.MigrateAsync(_schema);
         _created = true;

@@ -12,15 +12,18 @@ public sealed class DashboardService : IDashboardService
     private readonly IStatisticsRepository _statistics;
     private readonly IStockMovementRepository _movements;
     private readonly IPartRepository _parts;
+    private readonly ITransactionExceptionService _exceptions;
 
     public DashboardService(
         IStatisticsRepository statistics,
         IStockMovementRepository movements,
-        IPartRepository parts)
+        IPartRepository parts,
+        ITransactionExceptionService exceptions)
     {
         _statistics = statistics;
         _movements = movements;
         _parts = parts;
+        _exceptions = exceptions;
     }
 
     public async Task<CounterDashboardDto> GetCounterSummaryAsync(CancellationToken cancellationToken = default)
@@ -45,6 +48,9 @@ public sealed class DashboardService : IDashboardService
         var totals = await _statistics.GetInventoryTotalsAsync(cancellationToken);
         var recentMovements = await _movements.GetRecentAsync(RecentMovementCount, cancellationToken);
         var lowStockParts = await _parts.GetLowStockAsync(LowStockPreviewCount, cancellationToken);
+        var lastClose = await _statistics.GetLastCashCloseAtUtcAsync(cancellationToken);
+        var exceptionFrom = lastClose ?? DateTime.UnixEpoch;
+        var exceptionCount = await _exceptions.CountSinceAsync(exceptionFrom, cancellationToken);
 
         return new DashboardSummaryDto
         {
@@ -57,6 +63,8 @@ public sealed class DashboardService : IDashboardService
             CountedParts = totals.CountedParts,
             NotCountedParts = totals.NotCountedParts,
             TotalStockValue = totals.TotalStockValue,
+            UnreviewedExceptionCount = exceptionCount,
+            ExceptionCountSinceUtc = lastClose,
             RecentMovements = recentMovements,
             LowStockParts = lowStockParts
         };

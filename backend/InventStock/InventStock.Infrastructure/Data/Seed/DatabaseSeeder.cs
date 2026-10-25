@@ -153,13 +153,15 @@ public sealed class DatabaseSeeder
             Part.Create("FLT-2001", "Oil Filter", "Spin-on oil filter", filters.Id, denso.Id, 8.75m, 25, "7501234567891"),
             Part.Create("FLT-2002", "Cabin Air Filter", "Activated carbon cabin filter", filters.Id, denso.Id, 14.20m, 15, null),
             Part.Create("ELC-3001", "12V Battery 70Ah", "Maintenance-free lead-acid battery", electrical.Id, bosch.Id, 120.00m, 4, null),
-            Part.Create("ELC-3002", "Oxygen Sensor", "Upstream lambda sensor", electrical.Id, denso.Id, 58.90m, 8, null)
+            Part.Create("ELC-3002", "Oxygen Sensor", "Upstream lambda sensor", electrical.Id, denso.Id, 58.90m, 8, null),
+            Part.Create("HOSE-CUT-8", "8mm oil hose", "Demo cut hose sold by the metre", brakes.Id, null, 0m, 100, null)
         };
+        parts[^1].SetStockUnit(Domain.Enums.StockUnit.Centimeter, hasStockHistory: false);
 
         _db.Parts.AddRange(parts);
         await _db.SaveChangesAsync(cancellationToken);
 
-        var openingStock = new[] { 40, 12, 60, 30, 3, 9 };
+        var openingStock = new[] { 40, 12, 60, 30, 3, 9, 1000 };
         for (var i = 0; i < parts.Length; i++)
         {
             _db.StockMovements.Add(

@@ -45,7 +45,9 @@
     ".next-reconciliation-smoke/types/**/*.ts",
     ".next-reconciliation-smoke/dev/types/**/*.ts",
     ".next-reconciliation-diag/types/**/*.ts",
-    ".next-reconciliation-diag/dev/types/**/*.ts"
+    ".next-reconciliation-diag/dev/types/**/*.ts",
+    ".next-browser-smoke/types/**/*.ts",
+    ".next-browser-smoke/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

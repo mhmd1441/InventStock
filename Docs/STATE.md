@@ -3,16 +3,16 @@
 ## Current
 - Catalogue, stock, suppliers, imports, cash, sales, customers, returns, pricing, reconciliation and internal receipts are implemented in code; transaction release is **OFF**.
 - All 37 EF migrations through `InternalSaleReceipts` are applied to local `InventStockDev`; it is development-only, not a shop deployment.
-- Last full backend: **206/206** baseline on disposable PostgreSQL 17. Current split-role PostgreSQL coverage: **64/64** passed (`inventstock_migrator` setup, `inventstock_app` runtime). Last frontend: **22/22**, ESLint, TypeScript and production build.
+- Last full backend: **207/207** passed on disposable PostgreSQL 17 (2026-10-25; `TestResults/full-backend-v1-final.log`). Current split-role PostgreSQL coverage: **64/64** passed (`inventstock_migrator` setup, `inventstock_app` runtime). Frontend source checks: **23/23**, ESLint and TypeScript passed; Next production packaging is blocked by a Windows `EPERM` generated-`.next` directory error after compilation.
 - Disposable browser passes: admin/staff/session, supplier import, linked return, supplier payment and daily reconciliation.
-- `Scripts/Run-BrowserSmoke.ps1` is written and syntax-checked, but has not been run locally by the owner.
-- Browser smoke now discovers 11 serial scenarios, including sale/receipt, opening correction, complete paper payment, exceptions and legacy return. The complete wrapper has not been run by the owner.
+- `Scripts/Run-BrowserSmoke.ps1` is written and exercised through disposable migration/seed/user creation, but has no completed Playwright result yet. Its 2026-10-25 browser pack failed before app interaction because Playwright Chromium was not installed (13 failed, 3 skipped); a reporter override then kept the HTML server open. The runner now preflights Chromium before creating its disposable database, launches via `cmd /c CALL`, and preserves the configured HTML `open: never` setting.
+- The transaction browser pack spans nine serial spec files, including sale/receipt, opening correction, complete paper payment, exceptions, legacy return, advanced sale/return and exchange. The complete wrapper has no authoritative PASS yet.
 - Encrypted frequent/nightly backup, two-destination verification, bounded retention, 30-minute health check and restore drill passed on disposable PostgreSQL 17; Windows Task Scheduler is not installed/tested on the shop PC.
 - Windows LAN deployment scripts/docs are written: one Caddy HTTPS port, loopback-only API/frontend/PostgreSQL, startup/restart tasks, firewall isolation and release/rollback procedure. They are build/syntax verified but not installed on the shop PC.
 - Priority: protected real catalogue onboarding, not enabling shop transactions.
 
 ## Next steps
-1. Run `Run-BrowserSmoke.ps1` locally and fix only confirmed failures; the complete 11-scenario pack remains unexecuted.
+1. Run `Run-BrowserSmoke.ps1` from an ordinary owner PowerShell session and retain its final PASS/FAIL logs; the sandbox-run wrapper reached setup but did not return a Playwright result.
 2. Install/test deployment plus frequent/nightly backup tasks on the shop PC; verify reboot, LAN HTTPS, offline UI and next-morning backup results.
 3. Exchange UI (optional; do not block catalogue pilot).
 4. Review 50 real import rows, then scale only after search/privacy/no-movement checks.
@@ -20,11 +20,18 @@
 6. Ask accountant about legal invoice/receipt obligations.
 
 ## Work queue
+- Reviewable V1 item 1 (one-command verification): partly done — `Scripts/Verify-All.ps1` is written with disposable-container/database guards and consolidated PASS/FAIL/SKIPPED logs; the wrapper is not run. Its backend child separately passed **207/207**, while the frontend packaging child is blocked by Windows generated-output `EPERM`.
+- Reviewable V1 item 2 (pilot/operator docs): done — pilot setup/import/search runbook, one-page counter cheat sheet, and numbered paper-fallback/recovery procedure written; documentation only, not exercised on the shop PC.
+- Reviewable V1 item 3 (advanced browser coverage): written, not run — mixed LBP/Whish/debt, committed-response-loss recovery, faulty quarantine/over-return, cut-hose metre and exchange scenarios added; disposable demo seed gains a cut-hose fixture. The wrapper's API/database setup was exercised; live Playwright verification remains pending.
+- Reviewable V1 item 4 (messy imports): done and focused-verified — 100-row parser matrix handles two-brand collisions, leading zeros, separators/case, Arabic, unknown brand/cost/TVA and comma/dot decimals; wrong currency, overlong values, excess columns and exact duplicates reject explicitly. Frontend 23/23 and backend import tests 3/3 passed, including PostgreSQL catalogue-only/no-stock/no-cash and duplicate-file rejection.
+- Reviewable V1 item 5 (hostile search runner): written, not run as requested — guarded PostgreSQL 17 script executes the existing 20k-SKU/~280k-reference/100k-movement benchmark and writes parsed p50/p95/max Markdown plus raw log.
+- Reviewable V1 item 6 (counter speed): code complete and source-verified — search autofocuses; Enter adds the first ranked result; the last tender account is remembered per user; Enter on focused Review submits the unchanged review. Common suggested-price USD sale changes from about 6 explicit actions/4 pointer actions to 5 explicit actions/1 pointer action; no safety review was removed.
+- Reviewable V1 item 7 (exception attention): code complete and backend-verified — admin dashboard counts operational exceptions since the latest recorded cash close (or all history before the first close) and links to the private exceptions list; counter dashboard DTO remains unchanged.
 - Database security: done and verified on disposable PostgreSQL 17 — script safely transfers a postgres-owned DB to migrator; app DDL plus five ledger mutations denied; `Parts.NeedsRecount` allowed; trigger denial and backup-role dump/restore (`1|1|1|37`) passed. Split-role fixture coverage is **64/64** passed in per-class TRX reports.
 - 15-minute backup: script/docs done and disposable verification passed — frequent/nightly retention sets, two encrypted destinations, 30-minute health warning, authenticated restore and source/restore comparisons. Real Windows Task Scheduler installation remains owner/shop-PC work.
 - LAN/HTTPS deployment: scripts/docs written and compile/syntax checked — standalone frontend, loopback reverse proxy trust, startup/restart tasks, LAN-only firewall and safe update/rollback. Actual task/firewall/certificate/reboot/LAN installation remains shop-PC work.
 - Browser specs: required cheap gaps are written and TypeScript/test discovery pass — receipt print/reprint, opening correction, complete paper payment, exceptions and sold-before return. Live wrapper run remains owner-PC work.
-- Exchange UI: not started; only eligible after items above complete.
+- Reviewable V1 item 8 (exchange UI): code complete and source-verified, browser pending — linked sale exchange UI returns selected original lines, adds replacement lines, explicitly allocates replacement credit/refund/account reduction/payment/change, preserves operation-status recovery, and has a disposable browser spec. No live browser pass yet.
 
 ## Open items and risks
 - Do not enable transactions: backup/recovery and browser coverage remain incomplete.
@@ -32,6 +39,8 @@
 - Task Scheduler backup jobs are documented but not installed/tested under the shop Windows account; scripts alone do not provide scheduled protection.
 - Deployment tasks, Caddy private CA trust and firewall rules are not installed/tested; real-PC reboot, second-client LAN and internet-disconnected checks remain mandatory.
 - Codex Windows browser orchestration is unreliable; the local smoke script is authoritative.
+- Smoke-runner setup corrections were made on 2026-10-25 (valid `Staff` role and owned process-tree cleanup). A sandbox execution stalled after setup with no browser result; it was interrupted and its exact disposable database was dropped.
+- Next production packaging is currently blocked by a Windows `EPERM` while Next creates generated `.next` directories, even after a clean cache; source compilation, lint and type checks pass. Treat this as a local Windows/tooling blocker until reproduced on the owner PC.
 - Benchmark and messy-import verification are deferred to the owner's PC before a 1,000-item import.
 - PDF parsing, hose remnants and formal accounting are deferred; exchange UI is optional.
 - Suggested prices may reveal approximate cost to staff who know the formula; accepted tradeoff needs review.
@@ -103,6 +112,6 @@ Set-ExecutionPolicy -Scope Process Bypass; .\Scripts\Run-BrowserSmoke.ps1
 - Database role/security: disposable PostgreSQL 17 app DDL/ledger denial, `NeedsRecount` update, trigger denial, backup-role dump/restore and all 64 split-role PostgreSQL tests passed.
 - Backup/recovery: disposable encrypted two-destination dump/restore counts and stock sum matched; 30-minute fresh/stale check and separate frequent/nightly retention passed. Scheduler execution remains unverified.
 - Deployment code: backend Release build passed; frontend standalone production build passed; all deployment PowerShell scripts parse. Caddy, scheduled tasks, firewall, certificate trust, reboot and LAN access are not run here.
-- Frontend: 22/22 client tests, ESLint, TypeScript and production build passed.
+- Frontend source: 23/23 client tests, ESLint and TypeScript passed on 2026-10-25; production build compiled and type-checked but failed while packaging generated `.next` output with Windows `EPERM`.
 - Browser: admin/staff/session, supplier import, linked return, supplier payment and reconciliation passed.
-- Browser pack: 11 tests discovered serially; legacy return, receipt/reprint, opening correction, exceptions and complete paper payment are written/type-checked but have no live pass. Pricing override and broader mixed-tender/recovery cases remain uncovered.
+- Browser pack: nine serial spec files are present; legacy return, receipt/reprint, opening correction, exceptions, complete paper payment, advanced sale/return and exchange are written/type-checked but have no authoritative complete-pack pass. Pricing override remains uncovered.

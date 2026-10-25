@@ -58,6 +58,8 @@ import type {
   SaleReturn,
   PostLegacySaleReturnRequest,
   LegacySaleReturn,
+  PostSaleExchangeRequest,
+  SaleExchange,
   SellingPriceSuggestion,
   PricingPolicy,
   AdminPriceCalculation,
@@ -236,6 +238,16 @@ export function usePostLegacySaleReturn() {
       await client.invalidateQueries({ queryKey: ["customer-statement"] });
       await client.invalidateQueries({ queryKey: ["customers"] });
     } });
+}
+
+export function usePostSaleExchange() {
+  const client = useQueryClient();
+  return useMutation({ mutationFn: (request: PostSaleExchangeRequest) => api.post<SaleExchange>("/api/sale-exchanges", request),
+    onSuccess: async (_, request) => { await invalidateStockViews(client);
+      await client.invalidateQueries({ queryKey: queryKeys.returnableSale(request.originalSaleId) });
+      await client.invalidateQueries({ queryKey: ["customer-statement"] }); await client.invalidateQueries({ queryKey: ["customers"] });
+      await client.invalidateQueries({ queryKey: ["sale-search"] }); await client.invalidateQueries({ queryKey: queryKeys.recentSales }); },
+  });
 }
 
 export function useTransactionExceptions(query: TransactionExceptionQuery) {
